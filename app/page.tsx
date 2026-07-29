@@ -1,15 +1,14 @@
 import {
   ArrowRightIcon,
-  BoxesIcon,
   CircleCheckIcon,
   CloudCogIcon,
   Globe2Icon,
   LockKeyholeIcon,
   NetworkIcon,
-  ShieldCheckIcon,
   UserRoundIcon,
 } from "lucide-react"
 import { headers } from "next/headers"
+import Image from "next/image"
 import Link from "next/link"
 
 import { Badge } from "@/components/ui/badge"
@@ -53,60 +52,18 @@ export default async function LoginPage() {
   return (
     <main className="login-shell">
       <div className="login-frame">
-        <section className="login-intro" aria-labelledby="login-heading">
-          <div className="flex items-center gap-3">
-            <span className="brand-mark" aria-hidden="true">
-              <BoxesIcon />
-            </span>
-            <div>
-              <p className="text-base font-semibold tracking-tight">KubeDeck</p>
-              <p className="text-xs text-muted-foreground">
-                Kubernetes service launchpad
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <Badge variant="secondary">
-              <ShieldCheckIcon data-icon="inline-start" />
-              Owner-only workspace
-            </Badge>
-            <h1
-              id="login-heading"
-              className="mt-5 max-w-xl text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl"
-            >
-              One secure entry to your
-              <span className="text-primary"> cluster cockpit.</span>
-            </h1>
-            <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
-              Open web apps, inspect internal DNS and ports, and scan service
-              health across your Rancher Desktop Kubernetes environment.
-            </p>
-          </div>
-
-          <div className="login-facts" aria-label="Workspace summary">
-            <div>
-              <CircleCheckIcon aria-hidden="true" />
-              <span>
-                <small>Node status</small>
-                <strong>1 ready</strong>
-              </span>
-            </div>
-            <div>
-              <CloudCogIcon aria-hidden="true" />
-              <span>
-                <small>Catalog</small>
-                <strong>32 endpoints</strong>
-              </span>
-            </div>
-            <div>
-              <NetworkIcon aria-hidden="true" />
-              <span>
-                <small>Cluster DNS</small>
-                <strong>cluster.local</strong>
-              </span>
-            </div>
-          </div>
+        <section className="login-banner" aria-labelledby="login-heading">
+          <h1 id="login-heading" className="sr-only">
+            KubeDeck — your Kubernetes ecosystem, one click away
+          </h1>
+          <Image
+            src="/og.png"
+            width={1731}
+            height={909}
+            alt="KubeDeck Kubernetes ecosystem banner showing connected web apps and services"
+            priority
+            sizes="(max-width: 900px) calc(100vw - 32px), 62vw"
+          />
         </section>
 
         <Card className="login-card [--card-spacing:--spacing(6)]">

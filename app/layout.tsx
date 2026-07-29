@@ -38,8 +38,8 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [
         {
           url: socialImage,
-          width: 1200,
-          height: 630,
+          width: 1731,
+          height: 909,
           alt: "KubeDeck Kubernetes launchpad",
         },
       ],

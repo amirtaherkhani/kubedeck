@@ -33,7 +33,7 @@ test("server-renders the private KubeDeck login page", async () => {
 
   const html = await response.text();
   assert.match(html, /Sign in to KubeDeck/);
-  assert.match(html, /Owner-only workspace/);
+  assert.match(html, /KubeDeck Kubernetes ecosystem banner/);
   assert.match(html, /Amir Taherkhani/);
   assert.match(html, /amir@example\.com/);
   assert.match(html, /Continue to dashboard/);
@@ -83,6 +83,9 @@ test("ships the finished product assets without starter preview code", async () 
 
   assert.match(loginPage, /export const dynamic = "force-dynamic"/);
   assert.match(loginPage, /oai-authenticated-user-email/);
+  assert.match(loginPage, /src="\/og\.png"/);
+  assert.match(loginPage, /width=\{1731\}/);
+  assert.match(loginPage, /height=\{909\}/);
   assert.match(loginPage, /href="\/dashboard"/);
   assert.match(dashboardPage, /const webApps:/);
   assert.match(dashboardPage, /const services:/);
@@ -97,6 +100,8 @@ test("ships the finished product assets without starter preview code", async () 
     [...socialImage.subarray(0, 8)],
     [137, 80, 78, 71, 13, 10, 26, 10],
   );
+  assert.equal(socialImage.readUInt32BE(16), 1731);
+  assert.equal(socialImage.readUInt32BE(20), 909);
 
   await assert.rejects(
     access(new URL("../app/_sites-preview", import.meta.url)),
