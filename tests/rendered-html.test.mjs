@@ -243,6 +243,8 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(migration, /CREATE TABLE `admin_users`/);
   assert.match(hosting, /"d1": "DB"/);
   assert.match(layout, /summary_large_image/);
+  assert.match(layout, /Manrope/);
+  assert.doesNotMatch(layout, /\bGeist\b/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.deepEqual(
     [...socialImage.subarray(0, 8)],
