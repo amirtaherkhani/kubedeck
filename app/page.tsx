@@ -1,18 +1,9 @@
-import {
-  ArrowRightIcon,
-  CircleCheckIcon,
-  CloudCogIcon,
-  Globe2Icon,
-  LockKeyholeIcon,
-  NetworkIcon,
-  UserRoundIcon,
-} from "lucide-react"
-import { headers } from "next/headers"
+import { LockKeyholeIcon, ShieldCheckIcon } from "lucide-react"
 import Image from "next/image"
-import Link from "next/link"
+import { redirect } from "next/navigation"
 
+import { AdminAuthForm } from "@/components/admin-auth-form"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardAction,
@@ -22,32 +13,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+import { getAdmin, getCurrentAdmin } from "@/lib/auth"
 
 export const dynamic = "force-dynamic"
 
-function decodeDisplayName(
-  value: string | null,
-  encoding: string | null
-): string | null {
-  if (!value || encoding !== "percent-encoded-utf-8") return null
-
-  try {
-    return decodeURIComponent(value)
-  } catch {
-    return null
-  }
-}
-
 export default async function LoginPage() {
-  const requestHeaders = await headers()
-  const email = requestHeaders.get("oai-authenticated-user-email")
-  const fullName = decodeDisplayName(
-    requestHeaders.get("oai-authenticated-user-full-name"),
-    requestHeaders.get("oai-authenticated-user-full-name-encoding")
-  )
-  const displayName = fullName ?? email?.split("@")[0] ?? "Private operator"
-  const identityDetail = email ?? "Owner-only Sites access"
+  const admin = await getAdmin()
+  if (admin && (await getCurrentAdmin())) redirect("/dashboard")
+
+  const isSetup = !admin
 
   return (
     <main className="login-shell">
@@ -68,73 +42,34 @@ export default async function LoginPage() {
 
         <Card className="login-card [--card-spacing:--spacing(6)]">
           <CardHeader>
-            <CardTitle>Sign in to KubeDeck</CardTitle>
+            <CardTitle>
+              {isSetup ? "Create the admin account" : "Sign in to KubeDeck"}
+            </CardTitle>
             <CardDescription>
-              Continue with the private identity already verified by this
-              workspace.
+              {isSetup
+                ? "Complete this one-time setup with the administrator’s name, email, and password."
+                : "Use the configured administrator email and password to open the cluster dashboard."}
             </CardDescription>
             <CardAction>
-              <Badge variant="outline">
-                <LockKeyholeIcon data-icon="inline-start" />
-                Private
+              <Badge variant={isSetup ? "secondary" : "outline"}>
+                {isSetup ? (
+                  <ShieldCheckIcon data-icon="inline-start" />
+                ) : (
+                  <LockKeyholeIcon data-icon="inline-start" />
+                )}
+                {isSetup ? "First setup" : "Private"}
               </Badge>
             </CardAction>
           </CardHeader>
 
-          <CardContent className="flex flex-col gap-5">
-            <div className="login-identity">
-              <span className="resource-icon" aria-hidden="true">
-                <UserRoundIcon />
-              </span>
-              <span className="min-w-0 flex-1">
-                <small>Verified identity</small>
-                <strong>{displayName}</strong>
-                <span>{identityDetail}</span>
-              </span>
-              <CircleCheckIcon
-                className="size-5 shrink-0 text-primary"
-                aria-label="Identity verified"
-              />
-            </div>
-
-            <div className="login-connection">
-              <div>
-                <Globe2Icon aria-hidden="true" />
-                <span>Workspace</span>
-                <strong>Private access</strong>
-              </div>
-              <div>
-                <CloudCogIcon aria-hidden="true" />
-                <span>Context</span>
-                <strong>rancher-desktop</strong>
-              </div>
-              <div>
-                <NetworkIcon aria-hidden="true" />
-                <span>Discovery</span>
-                <strong>Read-only snapshot</strong>
-              </div>
-            </div>
-
-            <Separator />
-
-            <p className="text-xs leading-5 text-muted-foreground">
-              KubeDeck does not request or store Rancher tokens, kubeconfig
-              files, or cluster credentials on this screen.
-            </p>
+          <CardContent>
+            <AdminAuthForm mode={isSetup ? "setup" : "login"} />
           </CardContent>
 
-          <CardFooter className="flex-col gap-3">
-            <Button
-              size="lg"
-              className="w-full"
-              render={<Link href="/dashboard" />}
-              nativeButton={false}
-            >
-              Continue to dashboard
-              <ArrowRightIcon data-icon="inline-end" />
-            </Button>
+          <CardFooter>
             <p className="text-center text-[11px] text-muted-foreground">
-              Access is enforced before this page loads.
+              Passwords are salted and hashed. The dashboard session is
+              HTTP-only and expires after 12 hours.
             </p>
           </CardFooter>
         </Card>

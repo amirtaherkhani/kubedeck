@@ -228,91 +228,12 @@
 
 .login-card {
   width: 100%;
-  max-width: 27rem;
+  max-width: 29rem;
   justify-self: end;
   border-color: color-mix(in oklch, var(--primary), transparent 68%);
   box-shadow:
     0 28px 80px color-mix(in oklch, black, transparent 58%),
     inset 0 1px 0 color-mix(in oklch, white, transparent 92%);
-}
-
-.login-identity {
-  display: flex;
-  min-width: 0;
-  gap: 0.8rem;
-  align-items: center;
-  border: 1px solid var(--border);
-  border-radius: 0.85rem;
-  padding: 0.9rem;
-  background: color-mix(in oklch, var(--background), transparent 16%);
-}
-
-.login-identity small {
-  color: var(--muted-foreground);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.login-identity > span:nth-child(2) {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.login-identity strong,
-.login-identity span span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.login-identity strong {
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.login-identity span span {
-  color: var(--muted-foreground);
-  font-size: 0.7rem;
-}
-
-.login-connection {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: 0.85rem;
-  background: color-mix(in oklch, var(--background), transparent 28%);
-}
-
-.login-connection > div {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.65rem;
-  align-items: center;
-  padding: 0.7rem 0.85rem;
-}
-
-.login-connection > div + div {
-  border-top: 1px solid var(--border);
-}
-
-.login-connection svg {
-  width: 0.9rem;
-  height: 0.9rem;
-  color: var(--muted-foreground);
-}
-
-.login-connection span {
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
-}
-
-.login-connection strong {
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-align: right;
 }
 
 .hero-panel {
