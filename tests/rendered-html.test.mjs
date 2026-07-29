@@ -97,7 +97,9 @@ test("renders one-time admin setup and creates a hashed admin account", async (t
   assert.match(html, /Admin email/);
   assert.match(html, /Confirm password/);
   assert.match(html, /stores only a salted hash/);
-  assert.match(html, /KubeDeck Kubernetes ecosystem banner/);
+  assert.match(html, /Global multi-cluster/);
+  assert.match(html, /All Kubernetes clusters, nodes, apps, and services/);
+  assert.doesNotMatch(html, /Rancher Desktop/i);
 
   const unverifiedSetup = await runtime.request("/api/auth/setup", {
     method: "POST",
@@ -187,9 +189,11 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(html, /postgresql\.storage\.svc\.cluster\.local/);
   assert.match(html, /kube-dns\.kube-system\.svc\.cluster\.local/);
   assert.match(html, /10\.43\.0\.10/);
-  assert.match(html, /Node resources/);
+  assert.match(html, /Fleet resources/);
+  assert.match(html, /Global discovery connected/);
   assert.match(html, /Last deploy/);
   assert.match(html, /Sign out/);
+  assert.doesNotMatch(html, /rancher[- ]desktop/i);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
 
   const logout = await runtime.request("/api/auth/logout", {
@@ -203,6 +207,7 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
 test("ships the admin schema, migration, and finished product assets", async () => {
   const [
     loginPage,
+    topologyHero,
     dashboardPage,
     dashboardClient,
     authSource,
@@ -214,6 +219,10 @@ test("ships the admin schema, migration, and finished product assets", async () 
     socialImage,
   ] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../components/kubedeck-topology-hero.tsx", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8"),
     readFile(
       new URL("../app/dashboard/dashboard-client.tsx", import.meta.url),
@@ -232,10 +241,13 @@ test("ships the admin schema, migration, and finished product assets", async () 
   ]);
 
   assert.match(loginPage, /<AdminAuthForm mode=\{isSetup/);
-  assert.match(loginPage, /unoptimized/);
+  assert.match(loginPage, /KubeDeckTopologyHero/);
+  assert.match(topologyHero, /topology-route/);
+  assert.match(topologyHero, /Animated global Kubernetes topology/);
   assert.match(dashboardPage, /getCurrentAdmin/);
   assert.match(dashboardClient, /const webApps:/);
   assert.match(dashboardClient, /const operationalMeta:/);
+  assert.doesNotMatch(dashboardClient, /rancher[- ]desktop/i);
   assert.match(authSource, /PBKDF2/);
   assert.match(authSource, /httpOnly: true/);
   assert.match(authSource, /sameSite: "strict"/);

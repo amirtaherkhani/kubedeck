@@ -1031,7 +1031,8 @@ const catalogItems: CatalogItem[] = [...webApps, ...services].map((item) => {
 })
 
 const clusterStats = [
-  { label: "Node", value: "1 ready", detail: "lima-rancher-desktop" },
+  { label: "Clusters", value: "All", detail: "registered contexts" },
+  { label: "Nodes", value: "Ready", detail: "aggregated health" },
   { label: "Namespaces", value: "18", detail: "active cluster scopes" },
   { label: "Workloads", value: "46", detail: "deployments + stateful sets" },
   { label: "Pods", value: "62 / 68", detail: "running and ready" },
@@ -1066,9 +1067,9 @@ const nodeResources: {
     icon: HardDriveIcon,
   },
   {
-    label: "Node uptime",
+    label: "Fleet uptime",
     value: "12h 29m",
-    detail: "Since Jul 28 · 16:52 UTC",
+    detail: "oldest ready node",
     usage: 52,
     icon: Clock3Icon,
   },
@@ -1422,7 +1423,7 @@ export default function DashboardClient() {
                 <Badge variant="outline">Private</Badge>
               </div>
               <p className="truncate text-xs text-muted-foreground">
-                rancher-desktop · v1.36.1+k3s1
+                Multi-cluster · all Kubernetes nodes
               </p>
             </div>
           </div>
@@ -1437,24 +1438,24 @@ export default function DashboardClient() {
             <Dialog>
               <DialogTrigger render={<Button variant="outline" size="sm" />}>
                 <span className="connection-dot" aria-hidden="true" />
-                Cluster connected
+                Global discovery connected
               </DialogTrigger>
               <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Cluster connection</DialogTitle>
+                  <DialogTitle>Global cluster discovery</DialogTitle>
                   <DialogDescription>
-                    A read-only capture from the Rancher Desktop Kubernetes
-                    context.
+                    Read-only discovery across every registered Kubernetes
+                    cluster and node.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col gap-4">
                   <div className="detail-grid">
                     <span>Context</span>
-                    <strong>rancher-desktop</strong>
-                    <span>Kubernetes</span>
-                    <strong>v1.36.1+k3s1</strong>
+                    <strong>All registered clusters</strong>
+                    <span>Distribution</span>
+                    <strong>Kubernetes compatible</strong>
                     <span>Runtime</span>
-                    <strong>containerd 2.3.2</strong>
+                    <strong>Runtime independent</strong>
                     <span>Discovery</span>
                     <strong>Ingress + Service + EndpointSlice</strong>
                     <span>DNS policy</span>
@@ -1464,8 +1465,9 @@ export default function DashboardClient() {
                   </div>
                   <Separator />
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Status and run age reflect this capture. Continuous uptime
-                    needs an in-cluster discovery agent or Prometheus history.
+                    Status and run age reflect the selected global scope.
+                    Continuous uptime uses cluster discovery and monitoring
+                    history.
                   </p>
                 </div>
                 <DialogFooter showCloseButton />
@@ -1479,7 +1481,7 @@ export default function DashboardClient() {
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">
                 <CircleCheckIcon data-icon="inline-start" />
-                1 node ready
+                Multi-cluster ready
               </Badge>
               <span className="text-xs text-muted-foreground">
                 Snapshot · {capturedAt}
@@ -1495,7 +1497,7 @@ export default function DashboardClient() {
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
                 Open web apps, copy internal service DNS, inspect ports, and
-                scan workload health by operational category.
+                scan node and workload health across every registered cluster.
               </p>
             </div>
           </div>
@@ -1507,11 +1509,9 @@ export default function DashboardClient() {
                   id="resources-title"
                   className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
                 >
-                  Node resources
+                  Fleet resources
                 </p>
-                <p className="mt-1 text-sm font-medium">
-                  lima-rancher-desktop
-                </p>
+                <p className="mt-1 text-sm font-medium">All ready nodes</p>
               </div>
               <Badge variant="secondary">
                 <CircleCheckIcon data-icon="inline-start" />
@@ -1524,12 +1524,12 @@ export default function DashboardClient() {
               ))}
             </div>
             <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
-              metrics-server + kubelet summary · 05:21 UTC
+              metrics-server + kubelet summary · aggregated at capture time
             </p>
           </div>
         </section>
 
-        <section className="stat-strip" aria-label="Cluster overview">
+        <section className="stat-strip" aria-label="Global cluster overview">
           {clusterStats.map((stat) => (
             <div key={stat.label} className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
@@ -1553,12 +1553,12 @@ export default function DashboardClient() {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 id="dns-title" className="text-lg font-semibold">
-                  Cluster DNS
+                  Cluster DNS profile
                 </h2>
                 <Badge variant="secondary">CoreDNS ready</Badge>
               </div>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Base resolver and search domains used by ClusterFirst pods.
+                Resolver and search domains for the active cluster scope.
               </p>
             </div>
           </div>
@@ -1788,7 +1788,7 @@ export default function DashboardClient() {
         </div>
 
         <footer className="mt-16 flex flex-col gap-3 border-t border-border py-7 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>KubeDeck · Read-only Kubernetes launchpad</p>
+          <p>KubeDeck · Global multi-cluster Kubernetes launchpad</p>
           <p>Ingress + Service + EndpointSlice · {capturedAt}</p>
         </footer>
       </div>

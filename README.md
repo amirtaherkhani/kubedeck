@@ -1,8 +1,9 @@
 # KubeDeck
 
-KubeDeck is a private Kubernetes launchpad for browsing web applications and
-services by category, checking their status and uptime, and opening or copying
-their ingress, cluster DNS, IP, and port information.
+KubeDeck is a private, distribution-independent Kubernetes launchpad for
+browsing clusters, nodes, web applications, and services by category, checking
+their status and uptime, and opening or copying their ingress, cluster DNS, IP,
+and port information.
 
 ## Local development
 

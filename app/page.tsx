@@ -1,8 +1,8 @@
 import { LockKeyholeIcon, ShieldCheckIcon } from "lucide-react"
-import Image from "next/image"
 import { redirect } from "next/navigation"
 
 import { AdminAuthForm } from "@/components/admin-auth-form"
+import { KubeDeckTopologyHero } from "@/components/kubedeck-topology-hero"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -26,20 +26,7 @@ export default async function LoginPage() {
   return (
     <main className="login-shell">
       <div className="login-frame">
-        <section className="login-banner" aria-labelledby="login-heading">
-          <h1 id="login-heading" className="sr-only">
-            KubeDeck — your Kubernetes ecosystem, one click away
-          </h1>
-          <Image
-            src="/og.png"
-            width={1731}
-            height={909}
-            alt="KubeDeck Kubernetes ecosystem banner showing connected web apps and services"
-            priority
-            unoptimized
-            sizes="(max-width: 900px) calc(100vw - 32px), 62vw"
-          />
-        </section>
+        <KubeDeckTopologyHero />
 
         <Card className="login-card [--card-spacing:--spacing(6)]">
           <CardHeader>

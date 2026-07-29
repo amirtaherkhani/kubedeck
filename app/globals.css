@@ -257,26 +257,333 @@
   display: grid;
   width: 100%;
   max-width: 86rem;
-  grid-template-columns: minmax(0, 1.9fr) minmax(360px, 0.8fr);
+  grid-template-columns: minmax(0, 1.75fr) minmax(360px, 0.8fr);
   gap: clamp(1.25rem, 3vw, 2.5rem);
   align-items: center;
 }
 
-.login-banner {
-  overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--primary), transparent 68%);
-  border-radius: 1.15rem;
-  background: #020c1b;
-  box-shadow:
-    0 30px 90px color-mix(in oklch, black, transparent 54%),
-    0 0 42px color-mix(in oklch, var(--primary), transparent 88%),
-    inset 0 1px 0 color-mix(in oklch, white, transparent 92%);
+.login-topology {
+  display: grid;
+  min-height: 34rem;
+  grid-template-columns: minmax(250px, 0.78fr) minmax(340px, 1.22fr);
+  gap: clamp(1.5rem, 3vw, 3rem);
+  align-items: center;
 }
 
-.login-banner img {
+.topology-copy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.topology-wordmark {
+  margin-top: 1.25rem;
+  font-size: clamp(3.4rem, 7vw, 6.5rem);
+  line-height: 0.9;
+  font-weight: 700;
+  letter-spacing: -0.065em;
+}
+
+.topology-wordmark span {
+  color: var(--primary);
+}
+
+.topology-summary {
+  max-width: 23ch;
+  margin-top: 1.6rem;
+  color: color-mix(in oklch, var(--foreground), transparent 12%);
+  font-size: clamp(1.05rem, 2vw, 1.45rem);
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+.topology-scope-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  margin-top: 1.75rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.topology-scope-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.topology-scope-list span::before {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: var(--chart-2);
+  content: "";
+}
+
+.topology-visual {
+  position: relative;
+  min-height: 32rem;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.topology-grid {
+  position: absolute;
+  inset: 6% 2% 12%;
+  z-index: -3;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(
+      color-mix(in oklch, var(--primary), transparent 89%) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--primary), transparent 89%) 1px,
+      transparent 1px
+    );
+  background-size: 2.5rem 2.5rem;
+  mask-image: radial-gradient(circle, black 18%, transparent 72%);
+}
+
+.topology-orbit {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  z-index: -2;
+  border: 1px dashed color-mix(in oklch, var(--chart-2), transparent 58%);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.topology-orbit--outer {
+  width: min(82%, 27rem);
+  aspect-ratio: 1;
+}
+
+.topology-orbit--inner {
+  width: min(48%, 15.5rem);
+  aspect-ratio: 1;
+  border-color: color-mix(in oklch, var(--primary), transparent 68%);
+}
+
+.topology-route {
+  position: absolute;
+  z-index: -1;
   display: block;
-  width: 100%;
-  height: auto;
+  height: 1px;
+  overflow: visible;
+  background: color-mix(in oklch, var(--chart-2), transparent 35%);
+  transform-origin: left center;
+}
+
+.topology-route i {
+  position: absolute;
+  left: 0;
+  top: -0.2rem;
+  display: block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--chart-2);
+  animation: topology-flow 3.2s linear infinite;
+}
+
+.topology-route--north {
+  left: 50%;
+  top: 17%;
+  width: 29%;
+  transform: rotate(90deg);
+}
+
+.topology-route--northwest {
+  left: 20%;
+  top: 29%;
+  width: 34%;
+  transform: rotate(31deg);
+}
+
+.topology-route--northeast {
+  left: 51%;
+  top: 45%;
+  width: 36%;
+  transform: rotate(-33deg);
+}
+
+.topology-route--southwest {
+  left: 18%;
+  top: 72%;
+  width: 39%;
+  transform: rotate(-42deg);
+}
+
+.topology-route--south {
+  left: 50%;
+  top: 54%;
+  width: 29%;
+  transform: rotate(90deg);
+}
+
+.topology-route--southeast {
+  left: 51%;
+  top: 52%;
+  width: 38%;
+  transform: rotate(38deg);
+}
+
+.topology-route--northwest i,
+.topology-route--south i {
+  animation-delay: -1.05s;
+}
+
+.topology-route--northeast i,
+.topology-route--southeast i {
+  animation-delay: -2.1s;
+}
+
+.topology-node {
+  position: absolute;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.1rem;
+  height: 3.1rem;
+  border: 1px solid color-mix(in oklch, var(--primary), transparent 36%);
+  border-radius: 0.85rem;
+  background: var(--card);
+  color: var(--chart-2);
+}
+
+.topology-node svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.topology-node--core {
+  left: 50%;
+  top: 46%;
+  width: 5.6rem;
+  height: 5.6rem;
+  flex-direction: column;
+  gap: 0.4rem;
+  border-width: 2px;
+  border-color: var(--primary);
+  background: var(--secondary);
+  color: var(--primary);
+  transform: translate(-50%, -50%);
+}
+
+.topology-node--core::after {
+  position: absolute;
+  inset: -0.45rem;
+  border: 1px solid var(--primary);
+  border-radius: 1.1rem;
+  content: "";
+  animation: topology-scan 2.8s ease-out infinite;
+}
+
+.topology-node--core svg {
+  width: 1.65rem;
+  height: 1.65rem;
+}
+
+.topology-node--core small {
+  color: var(--foreground);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.topology-node--north {
+  left: 50%;
+  top: 9%;
+  transform: translateX(-50%);
+}
+
+.topology-node--northwest {
+  left: 13%;
+  top: 23%;
+}
+
+.topology-node--northeast {
+  right: 10%;
+  top: 21%;
+}
+
+.topology-node--southwest {
+  left: 12%;
+  bottom: 18%;
+}
+
+.topology-node--south {
+  left: 50%;
+  bottom: 8%;
+  transform: translateX(-50%);
+}
+
+.topology-node--southeast {
+  right: 11%;
+  bottom: 17%;
+}
+
+.topology-legend {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  display: flex;
+  width: max-content;
+  gap: 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  transform: translateX(-50%);
+}
+
+.topology-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.topology-legend i {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: var(--success);
+}
+
+@keyframes topology-flow {
+  0%,
+  8% {
+    left: 0;
+    opacity: 0;
+  }
+
+  18%,
+  82% {
+    opacity: 1;
+  }
+
+  92%,
+  100% {
+    left: calc(100% - 0.4rem);
+    opacity: 0;
+  }
+}
+
+@keyframes topology-scan {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.92);
+  }
+
+  75%,
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
 }
 
 .login-card {
@@ -341,7 +648,7 @@
 
 .stat-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1px;
   margin-top: 1rem;
   overflow: hidden;
@@ -683,6 +990,10 @@
     justify-self: stretch;
   }
 
+  .login-topology {
+    min-height: 30rem;
+  }
+
   .hero-panel {
     grid-template-columns: 1fr;
   }
@@ -693,6 +1004,24 @@
 }
 
 @media (max-width: 720px) {
+  .login-topology {
+    min-height: auto;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .topology-copy {
+    align-items: center;
+    text-align: center;
+  }
+
+  .topology-scope-list {
+    justify-content: center;
+  }
+
+  .topology-visual {
+    min-height: 27rem;
+  }
+
   .stat-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -730,8 +1059,26 @@
     padding: 1rem;
   }
 
-  .login-banner {
-    border-radius: 0.85rem;
+  .topology-wordmark {
+    font-size: clamp(3rem, 18vw, 4.5rem);
+  }
+
+  .topology-visual {
+    min-height: 23rem;
+  }
+
+  .topology-node {
+    width: 2.7rem;
+    height: 2.7rem;
+  }
+
+  .topology-node--core {
+    width: 4.8rem;
+    height: 4.8rem;
+  }
+
+  .topology-legend {
+    gap: 0.65rem;
   }
 
   .hero-panel {
