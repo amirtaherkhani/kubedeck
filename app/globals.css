@@ -208,6 +208,30 @@
   background: color-mix(in oklch, var(--background), transparent 18%);
 }
 
+.resource-meter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.resource-metric {
+  min-width: 0;
+  border: 1px solid color-mix(in oklch, var(--border), transparent 12%);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in oklch, var(--primary), transparent 94%),
+      color-mix(in oklch, var(--card), transparent 12%)
+    );
+}
+
+.resource-metric [data-slot="progress-indicator"] {
+  background: linear-gradient(90deg, var(--primary), var(--chart-2));
+}
+
 .stat-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -521,7 +545,8 @@
   font-size: 0.75rem;
 }
 
-.detail-grid > strong {
+.detail-grid > strong,
+.detail-grid > time {
   min-width: 0;
   color: var(--foreground);
   font-size: 0.8125rem;

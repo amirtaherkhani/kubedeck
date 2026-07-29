@@ -17,6 +17,7 @@ import {
   Clock3Icon,
   CloudCogIcon,
   CopyIcon,
+  CpuIcon,
   DatabaseIcon,
   ExternalLinkIcon,
   EyeIcon,
@@ -27,6 +28,7 @@ import {
   KeyRoundIcon,
   Layers3Icon,
   MailIcon,
+  MemoryStickIcon,
   MessageSquareIcon,
   NetworkIcon,
   SearchIcon,
@@ -124,7 +126,7 @@ type OperationalMeta = {
   totalEndpoints: number
   uptime: string
   uptimeHours: number
-  startedAt?: string
+  lastDeployedAt: string
 }
 
 type CatalogItem = CatalogBase &
@@ -641,7 +643,7 @@ const services: CatalogBase[] = [
 ]
 
 const clusterDomain = "cluster.local"
-const capturedAt = "Jul 29, 2026 · 05:05 UTC"
+const capturedAt = "Jul 29, 2026 · 05:21 UTC"
 
 const operationalMeta: Record<string, OperationalMeta> = {
   grafana: {
@@ -652,7 +654,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "4d 9h",
     uptimeHours: 105.97,
-    startedAt: "Jul 24 · 19:07 UTC",
+    lastDeployedAt: "2026-07-24T19:07:45Z",
   },
   radar: {
     category: "observability",
@@ -662,7 +664,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "1h 2m",
     uptimeHours: 1.04,
-    startedAt: "Jul 29 · 04:03 UTC",
+    lastDeployedAt: "2026-07-29T04:03:48Z",
   },
   infisical: {
     category: "platform",
@@ -672,7 +674,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "58m",
     uptimeHours: 0.98,
-    startedAt: "Jul 29 · 04:07 UTC",
+    lastDeployedAt: "2026-07-29T04:07:02Z",
   },
   n8n: {
     category: "automation",
@@ -682,7 +684,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 12h",
     uptimeHours: 252.93,
-    startedAt: "Jul 18 · 16:10 UTC",
+    lastDeployedAt: "2026-07-18T16:10:06Z",
   },
   temporal: {
     category: "automation",
@@ -692,7 +694,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.4,
-    startedAt: "Jul 18 · 08:41 UTC",
+    lastDeployedAt: "2026-07-18T08:41:41Z",
   },
   "nats-ui": {
     category: "messaging",
@@ -702,7 +704,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.51,
-    startedAt: "Jul 18 · 08:35 UTC",
+    lastDeployedAt: "2026-07-18T08:35:14Z",
   },
   "kafka-ui": {
     category: "messaging",
@@ -712,7 +714,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.68,
-    startedAt: "Jul 18 · 08:25 UTC",
+    lastDeployedAt: "2026-07-18T08:25:06Z",
   },
   "minio-console": {
     category: "data",
@@ -722,7 +724,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.7,
-    startedAt: "Jul 18 · 08:24 UTC",
+    lastDeployedAt: "2026-07-18T08:24:10Z",
   },
   pgadmin: {
     category: "data",
@@ -732,7 +734,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.49,
-    startedAt: "Jul 18 · 08:36 UTC",
+    lastDeployedAt: "2026-07-18T08:36:18Z",
   },
   "redis-commander": {
     category: "data",
@@ -742,7 +744,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.49,
-    startedAt: "Jul 18 · 08:36 UTC",
+    lastDeployedAt: "2026-07-18T08:36:50Z",
   },
   rabbitmq: {
     category: "messaging",
@@ -752,7 +754,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.72,
-    startedAt: "Jul 18 · 08:22 UTC",
+    lastDeployedAt: "2026-07-18T08:22:36Z",
   },
   mailpit: {
     category: "developer",
@@ -762,7 +764,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.5,
-    startedAt: "Jul 18 · 08:36 UTC",
+    lastDeployedAt: "2026-07-18T08:36:06Z",
   },
   "mongo-ui": {
     category: "data",
@@ -772,7 +774,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.67,
-    startedAt: "Jul 18 · 08:25 UTC",
+    lastDeployedAt: "2026-07-18T08:25:49Z",
   },
   "schema-registry-ui": {
     category: "messaging",
@@ -782,7 +784,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.47,
-    startedAt: "Jul 18 · 08:37 UTC",
+    lastDeployedAt: "2026-07-18T08:37:41Z",
   },
   "jaeger-ui": {
     category: "observability",
@@ -792,7 +794,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.68,
-    startedAt: "Jul 18 · 08:24 UTC",
+    lastDeployedAt: "2026-07-18T08:24:55Z",
   },
   grpcui: {
     category: "developer",
@@ -802,7 +804,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.69,
-    startedAt: "Jul 18 · 08:24 UTC",
+    lastDeployedAt: "2026-07-18T08:24:44Z",
   },
   "k6-dashboard": {
     category: "automation",
@@ -812,6 +814,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 0,
     uptime: "Not running",
     uptimeHours: 0,
+    lastDeployedAt: "2026-07-16T18:16:20Z",
   },
   "finance-api": {
     category: "platform",
@@ -821,7 +824,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 2,
     uptime: "7h 48m",
     uptimeHours: 7.82,
-    startedAt: "Jul 28 · 21:17 UTC",
+    lastDeployedAt: "2026-07-28T21:17:19Z",
   },
   "dev-io-mcp": {
     category: "developer",
@@ -831,7 +834,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "4d 22h",
     uptimeHours: 118.24,
-    startedAt: "Jul 24 · 06:51 UTC",
+    lastDeployedAt: "2026-07-24T06:51:20Z",
   },
   diago: {
     category: "developer",
@@ -841,7 +844,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "1d 9h",
     uptimeHours: 33.94,
-    startedAt: "Jul 27 · 19:09 UTC",
+    lastDeployedAt: "2026-07-27T19:09:47Z",
   },
   postgresql: {
     category: "data",
@@ -851,7 +854,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "4d 17h",
     uptimeHours: 113.69,
-    startedAt: "Jul 24 · 11:24 UTC",
+    lastDeployedAt: "2026-07-24T11:24:21Z",
   },
   redis: {
     category: "data",
@@ -861,7 +864,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.73,
-    startedAt: "Jul 18 · 08:22 UTC",
+    lastDeployedAt: "2026-07-18T08:22:23Z",
   },
   mongodb: {
     category: "data",
@@ -871,7 +874,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.71,
-    startedAt: "Jul 18 · 08:23 UTC",
+    lastDeployedAt: "2026-07-18T08:23:33Z",
   },
   nats: {
     category: "messaging",
@@ -881,7 +884,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 3,
     uptime: "1d 19h",
     uptimeHours: 43.28,
-    startedAt: "Jul 27 · 09:49 UTC",
+    lastDeployedAt: "2026-07-27T09:49:43Z",
   },
   kafka: {
     category: "messaging",
@@ -891,7 +894,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.72,
-    startedAt: "Jul 18 · 08:23 UTC",
+    lastDeployedAt: "2026-07-18T08:23:00Z",
   },
   prometheus: {
     category: "observability",
@@ -901,7 +904,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "4d 9h",
     uptimeHours: 105.97,
-    startedAt: "Jul 24 · 19:07 UTC",
+    lastDeployedAt: "2026-07-24T19:07:46Z",
   },
   loki: {
     category: "observability",
@@ -911,7 +914,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "9h 57m",
     uptimeHours: 9.95,
-    startedAt: "Jul 28 · 19:08 UTC",
+    lastDeployedAt: "2026-07-28T19:08:55Z",
   },
   tempo: {
     category: "observability",
@@ -921,7 +924,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "4d 9h",
     uptimeHours: 105.96,
-    startedAt: "Jul 24 · 19:08 UTC",
+    lastDeployedAt: "2026-07-24T19:08:23Z",
   },
   alloy: {
     category: "observability",
@@ -931,7 +934,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "9h 57m",
     uptimeHours: 9.96,
-    startedAt: "Jul 28 · 19:08 UTC",
+    lastDeployedAt: "2026-07-28T19:08:33Z",
   },
   "temporal-frontend": {
     category: "automation",
@@ -941,7 +944,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.41,
-    startedAt: "Jul 18 · 08:41 UTC",
+    lastDeployedAt: "2026-07-18T08:41:39Z",
   },
   "minio-api": {
     category: "data",
@@ -951,7 +954,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.7,
-    startedAt: "Jul 18 · 08:24 UTC",
+    lastDeployedAt: "2026-07-18T08:24:10Z",
   },
   "schema-registry": {
     category: "messaging",
@@ -961,7 +964,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     totalEndpoints: 1,
     uptime: "10d 20h",
     uptimeHours: 260.48,
-    startedAt: "Jul 18 · 08:37 UTC",
+    lastDeployedAt: "2026-07-18T08:37:10Z",
   },
 }
 
@@ -1033,8 +1036,67 @@ const clusterStats = [
   { label: "Pods", value: "62 / 68", detail: "running and ready" },
 ] as const
 
+const nodeResources: {
+  label: string
+  value: string
+  detail: string
+  usage: number
+  icon: LucideIcon
+}[] = [
+  {
+    label: "CPU",
+    value: "6%",
+    detail: "626m / 10 cores",
+    usage: 6,
+    icon: CpuIcon,
+  },
+  {
+    label: "Memory",
+    value: "38%",
+    detail: "12.0 / 31.3 GiB",
+    usage: 38,
+    icon: MemoryStickIcon,
+  },
+  {
+    label: "Storage",
+    value: "53%",
+    detail: "52.3 / 97.9 GiB",
+    usage: 53,
+    icon: HardDriveIcon,
+  },
+  {
+    label: "Node uptime",
+    value: "12h 29m",
+    detail: "Since Jul 28 · 16:52 UTC",
+    usage: 52,
+    icon: Clock3Icon,
+  },
+]
+
 function getCategory(category: CategoryId) {
   return categoryConfig.find((item) => item.id === category)!
+}
+
+function formatUtcTimestamp(timestamp: string) {
+  const date = new Date(timestamp)
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ]
+  const hours = String(date.getUTCHours()).padStart(2, "0")
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0")
+
+  return `${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()} · ${hours}:${minutes} UTC`
 }
 
 function matchesSearch(item: CatalogItem, search: string) {
@@ -1087,6 +1149,36 @@ function StatusBadge({ status }: { status: CatalogStatus }) {
   )
 }
 
+function ResourceMetric({
+  label,
+  value,
+  detail,
+  usage,
+  icon: Icon,
+}: (typeof nodeResources)[number]) {
+  return (
+    <div className="resource-metric">
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">
+          <Icon className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+          <span className="truncate">{label}</span>
+        </span>
+        <strong className="shrink-0 text-sm font-semibold tabular-nums">
+          {value}
+        </strong>
+      </div>
+      <Progress
+        value={usage}
+        aria-label={`${label}: ${value}`}
+        className="mt-3"
+      />
+      <p className="mt-2 truncate text-[10px] text-muted-foreground">
+        {detail}
+      </p>
+    </div>
+  )
+}
+
 function AvailabilityGraphic({ item }: { item: CatalogItem }) {
   const endpointLabel =
     item.totalEndpoints > 0
@@ -1117,10 +1209,23 @@ function AvailabilityGraphic({ item }: { item: CatalogItem }) {
           </ProgressLabel>
           <ProgressValue>{() => item.uptime}</ProgressValue>
         </Progress>
-        <p className="mt-2 truncate text-[11px] text-muted-foreground">
-          {item.startedAt
-            ? `Started ${item.startedAt} · 7d scale`
-            : "No active endpoint at capture"}
+        <div className="mt-2 flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className="shrink-0 font-medium text-foreground/80">
+            Last deploy
+          </span>
+          <span aria-hidden="true">·</span>
+          <time
+            dateTime={item.lastDeployedAt}
+            className="truncate tabular-nums"
+            title={item.lastDeployedAt}
+          >
+            {formatUtcTimestamp(item.lastDeployedAt)}
+          </time>
+        </div>
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          {item.status === "attention"
+            ? "No active endpoint at capture"
+            : "Current run shown on a 7-day scale"}
         </p>
       </div>
     </div>
@@ -1386,26 +1491,32 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="resource-meter" aria-label="Node resource use">
-            <div className="flex items-end justify-between gap-6">
+          <div className="resource-meter" aria-labelledby="resources-title">
+            <div className="flex items-start justify-between gap-6">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Node pressure
+                <p
+                  id="resources-title"
+                  className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
+                >
+                  Node resources
                 </p>
-                <p className="mt-2 text-2xl font-semibold">Healthy</p>
+                <p className="mt-1 text-sm font-medium">
+                  lima-rancher-desktop
+                </p>
               </div>
-              <ActivityIcon className="size-7 text-primary" aria-hidden="true" />
+              <Badge variant="secondary">
+                <CircleCheckIcon data-icon="inline-start" />
+                Healthy
+              </Badge>
             </div>
-            <div className="mt-5 flex flex-col gap-4">
-              <Progress value={5}>
-                <ProgressLabel>CPU</ProgressLabel>
-                <ProgressValue>{() => "598m · 5%"}</ProgressValue>
-              </Progress>
-              <Progress value={38}>
-                <ProgressLabel>Memory</ProgressLabel>
-                <ProgressValue>{() => "12.0 GiB · 38%"}</ProgressValue>
-              </Progress>
+            <div className="resource-meter-grid">
+              {nodeResources.map((resource) => (
+                <ResourceMetric key={resource.label} {...resource} />
+              ))}
             </div>
+            <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
+              metrics-server + kubelet summary · 05:21 UTC
+            </p>
           </div>
         </section>
 
@@ -1737,6 +1848,14 @@ export default function Home() {
               <strong>{selectedItem.workload}</strong>
               <span>Pods</span>
               <strong>{selectedItem.pods}</strong>
+              <span>Last deployed</span>
+              <time
+                dateTime={selectedItem.lastDeployedAt}
+                className="font-medium tabular-nums"
+                title={selectedItem.lastDeployedAt}
+              >
+                {formatUtcTimestamp(selectedItem.lastDeployedAt)}
+              </time>
               <span>Discovered from</span>
               <strong>{selectedItem.source}</strong>
               <span>Captured</span>

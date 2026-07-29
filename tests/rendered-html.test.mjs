@@ -41,6 +41,10 @@ test("server-renders the KubeDeck cluster catalog", async () => {
   assert.match(html, /kube-dns\.kube-system\.svc\.cluster\.local/);
   assert.match(html, /10\.43\.0\.10/);
   assert.match(html, /Current run/);
+  assert.match(html, /Node resources/);
+  assert.match(html, /52\.3 \/ 97\.9 GiB/);
+  assert.match(html, /Last deploy/);
+  assert.match(html, /Jul 24, 2026 · 19:07 UTC/);
   assert.match(html, /rancher-desktop · v1\.36\.1\+k3s1/);
   assert.match(
     html,
@@ -61,6 +65,8 @@ test("ships the finished product assets without starter preview code", async () 
   assert.match(page, /const services:/);
   assert.match(page, /const operationalMeta:/);
   assert.match(page, /const categoryConfig:/);
+  assert.match(page, /lastDeployedAt: "2026-07-24T19:07:45Z"/);
+  assert.match(page, /metrics-server \+ kubelet summary/);
   assert.match(page, /Ingress \+ Service/);
   assert.match(layout, /summary_large_image/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
