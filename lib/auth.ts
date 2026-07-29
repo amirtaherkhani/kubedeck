@@ -1,3 +1,4 @@
+import { env as cloudflareEnv } from "cloudflare:workers"
 import { cookies } from "next/headers"
 
 import { getD1 } from "@/db"
@@ -5,10 +6,18 @@ import { getD1 } from "@/db"
 export const ADMIN_SESSION_COOKIE = "__Host-kubedeck_admin"
 export const ADMIN_SESSION_MAX_AGE = 12 * 60 * 60
 export const PASSWORD_MIN_LENGTH = 12
+export const ADMIN_ENV_KEYS = {
+  firstName: "KUBEDECK_ADMIN_FIRST_NAME",
+  lastName: "KUBEDECK_ADMIN_LAST_NAME",
+  email: "KUBEDECK_ADMIN_EMAIL",
+  password: "KUBEDECK_ADMIN_PASSWORD",
+} as const
 
 const ADMIN_ID = 1
 const PASSWORD_ITERATIONS = 210_000
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u
 const encoder = new TextEncoder()
+const reportedBootstrapWarnings = new Set<string>()
 
 export type AdminUser = {
   id: number
@@ -28,6 +37,13 @@ export type PublicAdmin = Pick<
   "id" | "firstName" | "lastName" | "email"
 >
 
+export type AdminInput = {
+  firstName: string
+  lastName: string
+  email: string
+  password: string
+}
+
 type SessionPayload = {
   adminId: number
   email: string
@@ -37,6 +53,48 @@ type SessionPayload = {
 
 export function normalizeEmail(value: string) {
   return value.trim().toLowerCase()
+}
+
+export function validateAdminInput(payload: unknown):
+  | { ok: true; data: AdminInput }
+  | { ok: false; error: string } {
+  if (!payload || typeof payload !== "object") {
+    return { ok: false, error: "Enter all required admin details." }
+  }
+
+  const record = payload as Record<string, unknown>
+  const firstName =
+    typeof record.firstName === "string" ? record.firstName.trim() : ""
+  const lastName =
+    typeof record.lastName === "string" ? record.lastName.trim() : ""
+  const email =
+    typeof record.email === "string" ? normalizeEmail(record.email) : ""
+  const password =
+    typeof record.password === "string" ? record.password : ""
+
+  if (!firstName || !lastName) {
+    return { ok: false, error: "First name and last name are required." }
+  }
+  if (firstName.length > 80 || lastName.length > 80) {
+    return { ok: false, error: "Names must be 80 characters or fewer." }
+  }
+  if (!EMAIL_PATTERN.test(email) || email.length > 254) {
+    return { ok: false, error: "Enter a valid admin email address." }
+  }
+  if (password.length < PASSWORD_MIN_LENGTH || password.length > 128) {
+    return {
+      ok: false,
+      error: `Password must be between ${PASSWORD_MIN_LENGTH} and 128 characters.`,
+    }
+  }
+  if (password.trim().toLowerCase() === email) {
+    return { ok: false, error: "Password cannot match the admin email." }
+  }
+
+  return {
+    ok: true,
+    data: { firstName, lastName, email, password },
+  }
 }
 
 export function toPublicAdmin(admin: AdminUser): PublicAdmin {
@@ -70,12 +128,20 @@ export async function getAdmin(): Promise<AdminUser | null> {
     .first<AdminUser>()
 }
 
-export async function createAdmin(input: {
-  firstName: string
-  lastName: string
-  email: string
-  password: string
-}): Promise<AdminUser | null> {
+export async function getConfiguredAdmin(): Promise<AdminUser | null> {
+  const existingAdmin = await getAdmin()
+  if (existingAdmin) return existingAdmin
+
+  const environmentInput = getEnvironmentAdminInput()
+  if (!environmentInput) return null
+
+  const createdAdmin = await createAdmin(environmentInput)
+  return createdAdmin ?? getAdmin()
+}
+
+export async function createAdmin(
+  input: AdminInput
+): Promise<AdminUser | null> {
   const salt = randomBytes(16)
   const passwordHash = await derivePasswordHash(
     input.password,
@@ -128,7 +194,7 @@ export async function authenticateAdmin(
   email: string,
   password: string
 ): Promise<AdminUser | null> {
-  const admin = await getAdmin()
+  const admin = await getConfiguredAdmin()
   if (!admin) return null
 
   const emailMatches = constantTimeTextEqual(
@@ -211,6 +277,52 @@ export function sessionCookieOptions() {
     path: "/",
     maxAge: ADMIN_SESSION_MAX_AGE,
   }
+}
+
+function getEnvironmentAdminInput(): AdminInput | null {
+  const runtimeEnvironment = cloudflareEnv as unknown as Record<
+    string,
+    unknown
+  >
+  const values = Object.fromEntries(
+    Object.entries(ADMIN_ENV_KEYS).map(([field, key]) => [
+      field,
+      typeof runtimeEnvironment[key] === "string"
+        ? runtimeEnvironment[key]
+        : "",
+    ])
+  ) as AdminInput
+  const configuredFields = Object.entries(values).filter(
+    ([, value]) => value.length > 0
+  )
+
+  if (configuredFields.length === 0) return null
+
+  if (configuredFields.length !== Object.keys(ADMIN_ENV_KEYS).length) {
+    const missingKeys = Object.entries(ADMIN_ENV_KEYS)
+      .filter(([field]) => !values[field as keyof AdminInput])
+      .map(([, key]) => key)
+    reportBootstrapWarning(
+      `Admin environment bootstrap is incomplete. Missing: ${missingKeys.join(", ")}.`
+    )
+    return null
+  }
+
+  const validated = validateAdminInput(values)
+  if (!validated.ok) {
+    reportBootstrapWarning(
+      `Admin environment bootstrap was skipped: ${validated.error}`
+    )
+    return null
+  }
+
+  return validated.data
+}
+
+function reportBootstrapWarning(message: string) {
+  if (reportedBootstrapWarnings.has(message)) return
+  reportedBootstrapWarnings.add(message)
+  console.warn(`[KubeDeck] ${message}`)
 }
 
 async function verifyPassword(password: string, admin: AdminUser) {

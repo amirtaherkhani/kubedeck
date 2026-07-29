@@ -4,8 +4,9 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { Miniflare } from "miniflare";
 
-async function createRuntime() {
+async function createRuntime(bindings = {}) {
   const runtime = new Miniflare({
+    bindings,
     compatibilityDate: "2026-05-22",
     compatibilityFlags: ["nodejs_compat"],
     d1Databases: { DB: "kubedeck-test-db" },
@@ -47,6 +48,8 @@ async function createRuntime() {
       db
         .prepare(
           `SELECT
+            first_name AS firstName,
+            last_name AS lastName,
             email,
             password_hash AS passwordHash,
             password_salt AS passwordSalt,
@@ -204,6 +207,51 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(logout.headers.get("set-cookie") ?? "", /Max-Age=0/i);
 });
 
+test("bootstraps the first admin from complete backend environment values", async (t) => {
+  const runtime = await createRuntime({
+    KUBEDECK_ADMIN_FIRST_NAME: "Environment",
+    KUBEDECK_ADMIN_LAST_NAME: "Admin",
+    KUBEDECK_ADMIN_EMAIL: "env-admin@example.com",
+    KUBEDECK_ADMIN_PASSWORD: "Environment-Password-2026",
+  });
+  t.after(() => runtime.dispose());
+
+  const response = await runtime.request("/");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Sign in to KubeDeck/);
+  assert.doesNotMatch(html, /Create the admin account/);
+
+  const storedAdmin = await runtime.getAdminRecord();
+  assert.equal(storedAdmin.firstName, "Environment");
+  assert.equal(storedAdmin.lastName, "Admin");
+  assert.equal(storedAdmin.email, "env-admin@example.com");
+  assert.notEqual(storedAdmin.passwordHash, "Environment-Password-2026");
+
+  const login = await runtime.request("/api/auth/login", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      email: "env-admin@example.com",
+      password: "Environment-Password-2026",
+    }),
+  });
+  assert.equal(login.status, 200);
+  assert.match(login.headers.get("set-cookie") ?? "", /HttpOnly/i);
+});
+
+test("keeps browser setup available for incomplete backend environment values", async (t) => {
+  const runtime = await createRuntime({
+    KUBEDECK_ADMIN_EMAIL: "incomplete@example.com",
+  });
+  t.after(() => runtime.dispose());
+
+  const response = await runtime.request("/");
+  assert.equal(response.status, 200);
+  assert.match(await response.text(), /Create the admin account/);
+  assert.equal(await runtime.getAdminRecord(), null);
+});
+
 test("ships the admin schema, migration, and finished product assets", async () => {
   const [
     loginPage,
@@ -217,6 +265,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
     hosting,
     packageJson,
     socialImage,
+    environmentExample,
   ] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(
@@ -238,6 +287,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../public/og.png", import.meta.url)),
+    readFile(new URL("../.env.example", import.meta.url), "utf8"),
   ]);
 
   assert.match(loginPage, /<AdminAuthForm mode=\{isSetup/);
@@ -249,6 +299,8 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(dashboardClient, /const operationalMeta:/);
   assert.doesNotMatch(dashboardClient, /rancher[- ]desktop/i);
   assert.match(authSource, /PBKDF2/);
+  assert.match(authSource, /KUBEDECK_ADMIN_FIRST_NAME/);
+  assert.match(authSource, /KUBEDECK_ADMIN_PASSWORD/);
   assert.match(authSource, /httpOnly: true/);
   assert.match(authSource, /sameSite: "strict"/);
   assert.match(schema, /adminUsers/);
@@ -258,6 +310,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(layout, /Manrope/);
   assert.doesNotMatch(layout, /\bGeist\b/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
+  assert.match(environmentExample, /KUBEDECK_ADMIN_EMAIL=/);
   assert.deepEqual(
     [...socialImage.subarray(0, 8)],
     [137, 80, 78, 71, 13, 10, 26, 10],

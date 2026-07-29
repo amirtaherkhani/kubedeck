@@ -40,6 +40,32 @@ password confirmation directly in the browser.
 The admin record is durable in D1. Redeploying the application does not replace
 the configured account.
 
+### Optional backend environment setup
+
+The first administrator can also be created from server-side environment
+variables:
+
+```dotenv
+KUBEDECK_ADMIN_FIRST_NAME=Amir
+KUBEDECK_ADMIN_LAST_NAME=Taherkhani
+KUBEDECK_ADMIN_EMAIL=admin@example.com
+KUBEDECK_ADMIN_PASSWORD=use-a-unique-password-with-12-or-more-characters
+```
+
+Set all four values together and store `KUBEDECK_ADMIN_PASSWORD` as a secret in
+the hosting environment. KubeDeck validates the values, creates the account in
+D1 on the first request, and then shows **Sign in to KubeDeck**. The plaintext
+password is never written to D1 or returned to the browser.
+
+If all four values are unset, KubeDeck shows **Create the admin account** and
+keeps the private browser setup flow available. An incomplete or invalid
+environment configuration is ignored without creating a partial account.
+Environment values never overwrite an administrator already stored in D1.
+After the account has been created successfully, the password environment
+variable can be removed.
+
+Use `.env.example` as the local template. Never commit a populated `.env` file.
+
 ## Useful commands
 
 - `npm run dev`: start local development

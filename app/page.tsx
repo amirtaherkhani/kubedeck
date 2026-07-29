@@ -13,12 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { getAdmin, getCurrentAdmin } from "@/lib/auth"
+import { getConfiguredAdmin, getCurrentAdmin } from "@/lib/auth"
 
 export const dynamic = "force-dynamic"
 
 export default async function LoginPage() {
-  const admin = await getAdmin()
+  const admin = await getConfiguredAdmin()
   if (admin && (await getCurrentAdmin())) redirect("/dashboard")
 
   const isSetup = !admin

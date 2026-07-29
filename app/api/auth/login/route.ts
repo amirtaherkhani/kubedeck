@@ -4,13 +4,13 @@ import {
   ADMIN_SESSION_COOKIE,
   authenticateAdmin,
   createSessionToken,
-  getAdmin,
+  getConfiguredAdmin,
   sessionCookieOptions,
   toPublicAdmin,
 } from "@/lib/auth"
 
 export async function POST(request: Request) {
-  if (!(await getAdmin())) {
+  if (!(await getConfiguredAdmin())) {
     return NextResponse.json(
       { error: "Complete the private admin setup first." },
       { status: 409 }
