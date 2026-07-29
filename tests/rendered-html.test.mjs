@@ -232,6 +232,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
   ]);
 
   assert.match(loginPage, /<AdminAuthForm mode=\{isSetup/);
+  assert.match(loginPage, /unoptimized/);
   assert.match(dashboardPage, /getCurrentAdmin/);
   assert.match(dashboardClient, /const webApps:/);
   assert.match(dashboardClient, /const operationalMeta:/);

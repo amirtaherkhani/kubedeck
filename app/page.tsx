@@ -36,6 +36,7 @@ export default async function LoginPage() {
             height={909}
             alt="KubeDeck Kubernetes ecosystem banner showing connected web apps and services"
             priority
+            unoptimized
             sizes="(max-width: 900px) calc(100vw - 32px), 62vw"
           />
         </section>
