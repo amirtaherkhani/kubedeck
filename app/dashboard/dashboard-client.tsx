@@ -99,6 +99,11 @@ type CatalogKind = "app" | "service"
 type KindFilter = CatalogKind | "all"
 type StatusFilter = CatalogStatus | "all"
 type SortMode = "recommended" | "name" | "namespace"
+type DashboardAdmin = {
+  firstName: string
+  lastName: string
+  email: string
+}
 type CategoryId =
   | "observability"
   | "data"
@@ -1373,7 +1378,11 @@ function ResourceCard({
   )
 }
 
-export default function DashboardClient() {
+export default function DashboardClient({
+  admin,
+}: {
+  admin: DashboardAdmin
+}) {
   const searchRef = React.useRef<HTMLInputElement>(null)
   const [search, setSearch] = React.useState("")
   const [kindFilter, setKindFilter] = React.useState<KindFilter>("all")
@@ -1432,38 +1441,99 @@ export default function DashboardClient() {
     setSortMode("recommended")
   }
 
+  const adminInitials =
+    `${admin.firstName.at(0) ?? ""}${admin.lastName.at(0) ?? ""}`.toUpperCase()
+
   return (
-    <main id="main-content" className="min-h-screen">
+    <main id="main-content" className="dashboard-shell liquid-stage">
       <a className="skip-link" href="#catalog">
         Skip to catalog
       </a>
 
-      <div className="mx-auto flex w-full max-w-[1480px] flex-col px-4 pb-16 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-5 py-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="brand-mark" aria-hidden="true">
-              <BoxesIcon />
+      <div className="liquid-grid" aria-hidden="true" />
+      <div
+        className="liquid-orbit liquid-orbit--dashboard"
+        aria-hidden="true"
+      />
+
+      <aside className="dashboard-sidebar" aria-label="Primary navigation">
+        <a className="sidebar-brand" href="#overview" aria-label="KubeDeck home">
+          <span className="brand-mark" aria-hidden="true">
+            <BoxesIcon />
+          </span>
+          <span className="sr-only">KubeDeck</span>
+        </a>
+        <nav className="dashboard-nav">
+          <a
+            className="is-active"
+            href="#overview"
+            aria-current="page"
+            aria-label="Overview"
+            data-label="Overview"
+          >
+            <CircleGaugeIcon />
+          </a>
+          <a
+            href="#fleet-resources"
+            aria-label="Fleet resources"
+            data-label="Fleet"
+          >
+            <ServerCogIcon />
+          </a>
+          <a href="#dns-title" aria-label="Cluster DNS" data-label="DNS">
+            <NetworkIcon />
+          </a>
+          <a
+            href="#category-data"
+            aria-label="Data services"
+            data-label="Data"
+          >
+            <DatabaseIcon />
+          </a>
+          <a href="#catalog" aria-label="Service catalog" data-label="Catalog">
+            <Settings2Icon />
+          </a>
+          <form action="/api/auth/logout" method="post">
+            <button
+              className="dashboard-nav-button"
+              type="submit"
+              aria-label="Sign out"
+              data-label="Sign out"
+            >
+              <LogOutIcon />
+            </button>
+          </form>
+        </nav>
+      </aside>
+
+      <div className="dashboard-canvas">
+        <header className="dashboard-header">
+          <div className="admin-identity">
+            <span className="admin-avatar" aria-hidden="true">
+              {adminInitials || "AD"}
             </span>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="truncate text-base font-semibold tracking-tight">
-                  KubeDeck
+                <span className="truncate text-sm font-semibold tracking-tight">
+                  {admin.firstName} {admin.lastName}
                 </span>
-                <Badge variant="outline">Private</Badge>
+                <Badge variant="outline">Admin</Badge>
               </div>
               <p className="truncate text-xs text-muted-foreground">
-                Multi-cluster · all Kubernetes nodes
+                {admin.email} · global Kubernetes scope
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <form action="/api/auth/logout" method="post">
-              <Button type="submit" variant="ghost" size="sm">
-                <LogOutIcon data-icon="inline-start" />
-                Sign out
-              </Button>
-            </form>
+            <div className="dashboard-wordmark" aria-label="KubeDeck">
+              <span className="brand-mark" aria-hidden="true">
+                <BoxesIcon />
+              </span>
+              <span>
+                Kube<span>Deck</span>
+              </span>
+            </div>
             <Dialog>
               <DialogTrigger render={<Button variant="outline" size="sm" />}>
                 <span className="connection-dot" aria-hidden="true" />
@@ -1505,14 +1575,22 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        <section className="dashboard-hero" aria-label="KubeDeck overview">
+        <section
+          id="overview"
+          className="dashboard-hero"
+          aria-label="KubeDeck overview"
+        >
           <KubeDeckBanner
             className="dashboard-banner"
             headingId="page-title"
             priority
           />
 
-          <div className="resource-meter" aria-labelledby="resources-title">
+          <div
+            id="fleet-resources"
+            className="resource-meter"
+            aria-labelledby="resources-title"
+          >
             <div className="flex items-start justify-between gap-6">
               <div>
                 <p

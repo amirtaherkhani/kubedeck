@@ -102,6 +102,7 @@ test("renders one-time admin setup and creates a hashed admin account", async (t
   assert.match(html, /stores only a salted hash/);
   assert.match(html, /Your Kubernetes ecosystem/);
   assert.match(html, /Multi-cluster access across all Kubernetes nodes/);
+  assert.match(html, /aria-label="KubeDeck scope"/);
   assert.match(html, /kubedeck-banner\.png/);
   assert.doesNotMatch(html, /Rancher Desktop/i);
 
@@ -196,6 +197,7 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(html, /10\.43\.0\.10/);
   assert.match(html, /Fleet resources/);
   assert.match(html, /Global discovery connected/);
+  assert.match(html, /aria-label="Primary navigation"/);
   assert.match(html, /data-slot="animated-radio-group"/);
   assert.match(html, /role="radiogroup"/);
   assert.match(html, /role="radio"/);
@@ -275,6 +277,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
     bannerImage,
     liquidGlassPage,
     environmentExample,
+    globalStyles,
   ] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(
@@ -302,6 +305,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
       "utf8",
     ),
     readFile(new URL("../.env.example", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
   ]);
 
   assert.match(loginPage, /<AdminAuthForm mode=\{isSetup/);
@@ -309,6 +313,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(bannerComponent, /src="\/kubedeck-banner\.png"/);
   assert.match(bannerComponent, /Your Kubernetes ecosystem/);
   assert.match(dashboardPage, /getCurrentAdmin/);
+  assert.match(dashboardPage, /<DashboardClient admin=\{admin\}/);
   assert.match(dashboardClient, /KubeDeckBanner/);
   assert.match(dashboardClient, /const webApps:/);
   assert.match(dashboardClient, /const operationalMeta:/);
@@ -324,6 +329,9 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(layout, /summary_large_image/);
   assert.match(layout, /Manrope/);
   assert.doesNotMatch(layout, /\bGeist\b/);
+  assert.match(globalStyles, /font-family: var\(--font-manrope\)/);
+  assert.match(globalStyles, /\.dashboard-sidebar/);
+  assert.match(globalStyles, /\.liquid-orbit/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.match(environmentExample, /KUBEDECK_ADMIN_EMAIL=/);
   assert.match(liquidGlassPage, /<html lang="en">/);

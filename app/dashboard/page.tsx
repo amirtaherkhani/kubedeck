@@ -10,5 +10,5 @@ export default async function DashboardPage() {
   const admin = await getCurrentAdmin()
   if (!admin) redirect("/")
 
-  return <DashboardClient />
+  return <DashboardClient admin={admin} />
 }

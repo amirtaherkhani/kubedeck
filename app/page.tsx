@@ -1,4 +1,11 @@
-import { LockKeyholeIcon, ShieldCheckIcon } from "lucide-react"
+import {
+  BoxesIcon,
+  Globe2Icon,
+  LockKeyholeIcon,
+  NetworkIcon,
+  ServerCogIcon,
+  ShieldCheckIcon,
+} from "lucide-react"
 import { redirect } from "next/navigation"
 
 import { AdminAuthForm } from "@/components/admin-auth-form"
@@ -24,15 +31,58 @@ export default async function LoginPage() {
   const isSetup = !admin
 
   return (
-    <main className="login-shell">
-      <div className="login-frame">
-        <KubeDeckBanner
-          className="login-banner"
-          headingId="login-heading"
-          priority
-        />
+    <main className="login-shell liquid-stage">
+      <div className="liquid-grid" aria-hidden="true" />
+      <div className="liquid-orbit liquid-orbit--login" aria-hidden="true" />
 
-        <Card className="login-card [--card-spacing:--spacing(6)]">
+      <div className="login-frame">
+        <section className="login-showcase" aria-labelledby="login-heading">
+          <div className="login-brand-row">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="brand-mark" aria-hidden="true">
+                <BoxesIcon />
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-base font-semibold tracking-tight">
+                    KubeDeck
+                  </span>
+                  <Badge variant="outline">Private</Badge>
+                </div>
+                <p className="truncate text-xs text-muted-foreground">
+                  Kubernetes services, one click away
+                </p>
+              </div>
+            </div>
+            <span className="login-connection">
+              <span className="connection-dot" aria-hidden="true" />
+              Discovery ready
+            </span>
+          </div>
+
+          <KubeDeckBanner
+            className="login-banner"
+            headingId="login-heading"
+            priority
+          />
+
+          <div className="login-scope-strip" aria-label="KubeDeck scope">
+            <span>
+              <Globe2Icon aria-hidden="true" />
+              Multi-cluster
+            </span>
+            <span>
+              <ServerCogIcon aria-hidden="true" />
+              All nodes
+            </span>
+            <span>
+              <NetworkIcon aria-hidden="true" />
+              Global services
+            </span>
+          </div>
+        </section>
+
+        <Card className="login-card liquid-glass-card [--card-spacing:--spacing(6)]">
           <CardHeader>
             <CardTitle>
               {isSetup ? "Create the admin account" : "Sign in to KubeDeck"}

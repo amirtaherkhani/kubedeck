@@ -101,28 +101,28 @@
   --measure-narrow: 45ch;
   --measure-base: 65ch;
   --measure-wide: 75ch;
-  --background: oklch(0.135 0.024 249);
-  --foreground: oklch(0.94 0.013 246);
-  --card: oklch(0.178 0.025 249);
-  --card-foreground: oklch(0.94 0.013 246);
-  --popover: oklch(0.195 0.027 249);
+  --background: oklch(0.095 0.029 249);
+  --foreground: oklch(0.965 0.012 234);
+  --card: oklch(0.16 0.032 249 / 0.78);
+  --card-foreground: oklch(0.965 0.012 234);
+  --popover: oklch(0.155 0.032 249 / 0.94);
   --popover-foreground: oklch(0.94 0.013 246);
-  --primary: oklch(0.68 0.165 252);
-  --primary-foreground: oklch(0.985 0.006 245);
-  --secondary: oklch(0.225 0.031 249);
+  --primary: oklch(0.78 0.143 202);
+  --primary-foreground: oklch(0.105 0.034 246);
+  --secondary: oklch(0.205 0.04 246 / 0.82);
   --secondary-foreground: oklch(0.91 0.015 247);
-  --muted: oklch(0.218 0.025 249);
-  --muted-foreground: oklch(0.68 0.027 248);
-  --accent: oklch(0.258 0.044 250);
+  --muted: oklch(0.19 0.031 249 / 0.84);
+  --muted-foreground: oklch(0.72 0.027 239);
+  --accent: oklch(0.245 0.055 242 / 0.88);
   --accent-foreground: oklch(0.95 0.012 246);
   --destructive: oklch(0.67 0.19 25);
   --success: oklch(0.76 0.16 153);
   --success-soft: oklch(0.76 0.16 153 / 0.12);
-  --border: oklch(0.29 0.027 248);
-  --input: oklch(0.295 0.029 248);
-  --ring: oklch(0.68 0.165 252);
-  --chart-1: oklch(0.68 0.165 252);
-  --chart-2: oklch(0.74 0.13 183);
+  --border: oklch(0.39 0.054 237 / 0.52);
+  --input: oklch(0.41 0.052 237 / 0.62);
+  --ring: oklch(0.78 0.143 202);
+  --chart-1: oklch(0.68 0.19 255);
+  --chart-2: oklch(0.82 0.148 196);
   --chart-3: oklch(0.78 0.14 89);
   --chart-4: oklch(0.66 0.18 303);
   --chart-5: oklch(0.69 0.18 35);
@@ -153,13 +153,21 @@
     @apply bg-background text-foreground;
     min-width: 320px;
     overflow-x: hidden;
+    font-family: var(--font-manrope);
     font-synthesis: none;
     text-rendering: optimizeLegibility;
-    background-image:
-      linear-gradient(to right, color-mix(in oklch, var(--border), transparent 72%) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklch, var(--border), transparent 72%) 1px, transparent 1px);
-    background-size: 32px 32px;
-    background-position: center top;
+    background:
+      radial-gradient(
+        circle at 82% 8%,
+        color-mix(in oklch, var(--chart-1), transparent 88%),
+        transparent 30rem
+      ),
+      radial-gradient(
+        circle at 12% 42%,
+        color-mix(in oklch, var(--primary), transparent 93%),
+        transparent 34rem
+      ),
+      var(--background);
   }
 
   button,
@@ -177,6 +185,7 @@
   position: fixed;
   left: 1rem;
   top: 1rem;
+  z-index: 100;
   transform: translateY(-150%);
   border-radius: var(--radius);
   background: var(--primary);
@@ -239,6 +248,97 @@
   animation: connection-breathe 2.4s ease-in-out infinite;
 }
 
+.liquid-stage {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+}
+
+.liquid-grid {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  opacity: 0.74;
+  background-image:
+    linear-gradient(
+      color-mix(in oklch, var(--chart-2), transparent 93%) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--chart-2), transparent 93%) 1px,
+      transparent 1px
+    );
+  background-size: 4rem 4rem;
+  mask-image: linear-gradient(to bottom, black, transparent 84%);
+  pointer-events: none;
+}
+
+.liquid-grid::after {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--primary), transparent 40%) 0 1.5px,
+    transparent 1.8px
+  );
+  background-position: 0 0;
+  background-size: 4rem 4rem;
+  content: "";
+  animation: grid-drift 28s linear infinite;
+}
+
+.liquid-orbit {
+  position: absolute;
+  z-index: -2;
+  width: 38rem;
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 82%);
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 18%,
+    color-mix(in oklch, var(--primary), transparent 82%) 25%,
+    transparent 32% 66%,
+    color-mix(in oklch, var(--chart-1), transparent 84%) 74%,
+    transparent 82%
+  );
+  filter: blur(1px);
+  opacity: 0.72;
+  pointer-events: none;
+  animation: liquid-orbit-spin 34s linear infinite;
+}
+
+.liquid-orbit::before,
+.liquid-orbit::after {
+  position: absolute;
+  border: 1px dashed color-mix(in oklch, var(--primary), transparent 79%);
+  border-radius: inherit;
+  content: "";
+}
+
+.liquid-orbit::before {
+  inset: 12%;
+}
+
+.liquid-orbit::after {
+  inset: 29%;
+  border-style: solid;
+  opacity: 0.62;
+}
+
+.liquid-orbit--login {
+  right: -9rem;
+  top: -13rem;
+}
+
+.liquid-orbit--dashboard {
+  right: -16rem;
+  top: 16rem;
+  width: 48rem;
+  position: fixed;
+}
+
 .login-shell {
   display: grid;
   min-height: 100svh;
@@ -246,24 +346,106 @@
   padding: clamp(1rem, 3vw, 2.5rem);
   background:
     radial-gradient(
-      circle at 14% 18%,
-      color-mix(in oklch, var(--primary), transparent 88%),
-      transparent 34%
+      circle at 18% 20%,
+      color-mix(in oklch, var(--chart-1), transparent 83%),
+      transparent 33rem
     ),
-    linear-gradient(
-      125deg,
-      color-mix(in oklch, var(--card), transparent 28%),
-      color-mix(in oklch, var(--background), transparent 2%)
+    radial-gradient(
+      circle at 76% 72%,
+      color-mix(in oklch, var(--primary), transparent 89%),
+      transparent 28rem
     );
 }
 
 .login-frame {
   display: grid;
   width: 100%;
-  max-width: 86rem;
-  grid-template-columns: minmax(0, 1.75fr) minmax(360px, 0.8fr);
+  max-width: 92rem;
+  grid-template-columns: minmax(0, 1.65fr) minmax(360px, 0.76fr);
   gap: clamp(1.25rem, 3vw, 2.5rem);
   align-items: center;
+}
+
+.login-showcase {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.login-brand-row,
+.login-scope-strip,
+.dashboard-sidebar,
+.dashboard-header,
+.liquid-glass-card,
+.resource-meter,
+.stat-strip,
+.dns-panel,
+.sticky-toolbar,
+.resource-card,
+[data-slot="dialog-content"],
+[data-slot="dropdown-menu-content"] {
+  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 76%);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, white, transparent 96%),
+      transparent 38%
+    ),
+    color-mix(in oklch, var(--card), transparent 8%);
+  box-shadow:
+    0 24px 70px color-mix(in oklch, black, transparent 63%),
+    inset 0 1px 0 color-mix(in oklch, white, transparent 90%),
+    inset 0 -1px 0 color-mix(in oklch, var(--primary), transparent 95%);
+  backdrop-filter: blur(24px) saturate(132%);
+}
+
+.login-brand-row {
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 1rem;
+  padding: 0.8rem 1rem;
+}
+
+.login-connection {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.login-scope-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+
+.login-scope-strip span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.85rem 0.75rem;
+  background: color-mix(in oklch, var(--background), transparent 24%);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.login-scope-strip svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex: none;
+  color: var(--primary);
 }
 
 .login-topology {
@@ -714,11 +896,266 @@
   width: 100%;
   max-width: 29rem;
   justify-self: end;
-  border-color: color-mix(in oklch, var(--primary), transparent 68%);
+  overflow: hidden;
+  border-color: color-mix(in oklch, var(--primary), transparent 62%);
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      color-mix(in oklch, var(--chart-1), transparent 84%),
+      transparent 18rem
+    ),
+    linear-gradient(
+      155deg,
+      color-mix(in oklch, white, transparent 95%),
+      color-mix(in oklch, var(--card), transparent 2%)
+    );
   box-shadow:
     0 28px 80px color-mix(in oklch, black, transparent 58%),
+    0 0 54px color-mix(in oklch, var(--primary), transparent 92%),
     inset 0 1px 0 color-mix(in oklch, white, transparent 92%);
   animation: surface-reveal 720ms 90ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.login-card::before {
+  position: absolute;
+  inset: 0 auto auto 10%;
+  width: 55%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--primary), transparent 24%),
+    transparent
+  );
+  content: "";
+}
+
+.login-card [data-slot="input"] {
+  min-height: 2.75rem;
+  border-color: color-mix(in oklch, var(--chart-2), transparent 78%);
+  background: color-mix(in oklch, var(--background), transparent 32%);
+  box-shadow: inset 0 1px 0 color-mix(in oklch, white, transparent 96%);
+}
+
+.login-card [data-slot="input"]:focus-visible {
+  border-color: color-mix(in oklch, var(--primary), transparent 34%);
+  box-shadow:
+    0 0 0 3px color-mix(in oklch, var(--primary), transparent 85%),
+    0 0 24px color-mix(in oklch, var(--primary), transparent 91%);
+}
+
+.dashboard-shell {
+  min-height: 100svh;
+  padding: 1.25rem;
+  background:
+    radial-gradient(
+      circle at 74% 8%,
+      color-mix(in oklch, var(--chart-1), transparent 88%),
+      transparent 35rem
+    ),
+    radial-gradient(
+      circle at 18% 54%,
+      color-mix(in oklch, var(--primary), transparent 94%),
+      transparent 32rem
+    );
+}
+
+.dashboard-sidebar {
+  position: fixed;
+  left: 1.25rem;
+  top: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 40;
+  display: flex;
+  width: 4.75rem;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 1.25rem;
+  padding: 0.8rem 0.7rem;
+}
+
+.sidebar-brand {
+  display: inline-flex;
+  border-radius: 0.9rem;
+}
+
+.sidebar-brand:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.dashboard-nav {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 2.25rem;
+}
+
+.dashboard-nav form {
+  width: 100%;
+  margin-top: auto;
+}
+
+.dashboard-nav a,
+.dashboard-nav-button {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  aspect-ratio: 1;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 0.9rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  transition:
+    color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    transform var(--motion-standard) cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow var(--motion-standard) ease;
+}
+
+.dashboard-nav a::before,
+.dashboard-nav-button::before {
+  position: absolute;
+  left: calc(100% + 0.75rem);
+  z-index: 5;
+  width: max-content;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  padding: 0.4rem 0.55rem;
+  background: var(--popover);
+  color: var(--foreground);
+  box-shadow: 0 10px 30px color-mix(in oklch, black, transparent 55%);
+  content: attr(data-label);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-0.25rem);
+  transition:
+    opacity var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+}
+
+.dashboard-nav a:hover::before,
+.dashboard-nav-button:hover::before {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.dashboard-nav a:hover,
+.dashboard-nav-button:hover,
+.dashboard-nav a.is-active {
+  border-color: color-mix(in oklch, var(--primary), transparent 68%);
+  background: color-mix(in oklch, var(--primary), transparent 87%);
+  color: var(--primary);
+  box-shadow:
+    0 8px 24px color-mix(in oklch, var(--primary), transparent 88%),
+    inset 0 1px 0 color-mix(in oklch, white, transparent 91%);
+  transform: translateY(-1px);
+}
+
+.dashboard-nav a.is-active::after {
+  position: absolute;
+  left: -0.73rem;
+  width: 2px;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 12px var(--primary);
+  content: "";
+}
+
+.dashboard-nav a:focus-visible,
+.dashboard-nav-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.dashboard-nav svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.dashboard-canvas {
+  display: flex;
+  width: min(calc(100% - 6rem), 92rem);
+  min-width: 0;
+  flex-direction: column;
+  margin-left: 6rem;
+  margin-right: auto;
+  padding: 0 0.25rem 3rem 1rem;
+}
+
+.dashboard-header {
+  position: sticky;
+  top: 1.25rem;
+  z-index: 30;
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 1.15rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.admin-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-avatar {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in oklch, var(--primary), transparent 58%);
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in oklch, var(--chart-1), transparent 56%),
+      color-mix(in oklch, var(--primary), transparent 76%)
+    );
+  color: var(--foreground);
+  box-shadow:
+    0 0 24px color-mix(in oklch, var(--primary), transparent 82%),
+    inset 0 1px 0 color-mix(in oklch, white, transparent 80%);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.dashboard-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-right: 0.15rem;
+  color: var(--foreground);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.dashboard-wordmark .brand-mark {
+  display: none;
+}
+
+.dashboard-wordmark > span > span {
+  color: var(--primary);
 }
 
 .dashboard-hero {
@@ -726,24 +1163,30 @@
   grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
   gap: clamp(1rem, 2vw, 1.5rem);
   align-items: stretch;
+  scroll-margin-top: 7rem;
 }
 
 .resource-meter {
-  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  scroll-margin-top: 7rem;
   border-radius: 1rem;
   padding: 1.25rem;
-  background: color-mix(in oklch, var(--background), transparent 18%);
 }
 
 .resource-meter-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: 1;
   gap: 0.65rem;
   margin-top: 1rem;
 }
 
 .resource-metric {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+  justify-content: center;
   border: 1px solid color-mix(in oklch, var(--border), transparent 12%);
   border-radius: 0.75rem;
   padding: 0.75rem;
@@ -784,13 +1227,12 @@
   gap: 1px;
   margin-top: 1rem;
   overflow: hidden;
-  border: 1px solid var(--border);
   border-radius: 1rem;
-  background: var(--border);
+  background: color-mix(in oklch, var(--border), transparent 18%);
 }
 
 .stat-strip > div {
-  background: color-mix(in oklch, var(--card), transparent 4%);
+  background: color-mix(in oklch, var(--background), transparent 28%);
   padding: 1.1rem 1.25rem;
 }
 
@@ -800,16 +1242,9 @@
   gap: 1.5rem;
   align-items: start;
   margin-top: 1rem;
-  border: 1px solid var(--border);
   border-radius: 1rem;
   padding: 1.25rem;
-  background:
-    linear-gradient(
-      120deg,
-      color-mix(in oklch, var(--primary), transparent 91%),
-      color-mix(in oklch, var(--card), transparent 4%)
-    );
-  box-shadow: inset 0 1px 0 color-mix(in oklch, white, transparent 95%);
+  scroll-margin-top: 7rem;
 }
 
 .dns-intro {
@@ -938,11 +1373,7 @@
   align-items: center;
   margin-top: 1.5rem;
   padding: 0.75rem;
-  border: 1px solid var(--border);
   border-radius: 1rem;
-  background: color-mix(in oklch, var(--background), transparent 7%);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 14px 36px color-mix(in oklch, black, transparent 78%);
 }
 
 .toolbar-filters {
@@ -1055,11 +1486,29 @@
 }
 
 .resource-card {
+  position: relative;
+  overflow: hidden;
   border: 1px solid transparent;
   box-shadow: inset 0 1px 0 color-mix(in oklch, white, transparent 96%);
   transition:
     border-color var(--motion-standard) ease,
     box-shadow var(--motion-standard) ease;
+}
+
+.resource-card::after {
+  position: absolute;
+  inset: -45% auto -45% -34%;
+  width: 18%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--chart-2), transparent 82%),
+    transparent
+  );
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transform: skewX(-14deg) translateX(-220%);
 }
 
 .resource-card-motion {
@@ -1072,6 +1521,11 @@
     0 22px 52px color-mix(in oklch, black, transparent 70%),
     0 0 28px color-mix(in oklch, var(--primary), transparent 91%),
     inset 0 1px 0 color-mix(in oklch, white, transparent 94%);
+}
+
+.resource-card-motion:hover .resource-card::after {
+  opacity: 1;
+  animation: card-glint 880ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .resource-card .resource-icon {
@@ -1226,6 +1680,46 @@
   text-align: right;
 }
 
+[data-slot="dialog-content"],
+[data-slot="dropdown-menu-content"] {
+  border-color: color-mix(in oklch, var(--chart-2), transparent 70%);
+}
+
+[data-slot="dialog-overlay"] {
+  background: color-mix(in oklch, var(--background), transparent 20%);
+  backdrop-filter: blur(9px);
+}
+
+@keyframes grid-drift {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 4rem 4rem;
+  }
+}
+
+@keyframes liquid-orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes card-glint {
+  from {
+    transform: skewX(-14deg) translateX(-220%);
+  }
+
+  to {
+    transform: skewX(-14deg) translateX(760%);
+  }
+}
+
 @media (max-width: 1180px) {
   .catalog-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1259,9 +1753,77 @@
   .dns-panel {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .dashboard-wordmark {
+    display: none;
+  }
 }
 
 @media (max-width: 720px) {
+  .dashboard-shell {
+    padding: 0.75rem 0.75rem 6.5rem;
+  }
+
+  .dashboard-sidebar {
+    left: 0.75rem;
+    right: 0.75rem;
+    top: auto;
+    bottom: 0.75rem;
+    width: auto;
+    height: 4.75rem;
+    flex-direction: row;
+    border-radius: 1.2rem;
+    padding: 0.65rem;
+  }
+
+  .sidebar-brand {
+    display: none;
+  }
+
+  .dashboard-nav {
+    flex: 1;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 0.3rem;
+    margin-top: 0;
+  }
+
+  .dashboard-nav form {
+    width: auto;
+    margin-top: 0;
+  }
+
+  .dashboard-nav a,
+  .dashboard-nav-button {
+    width: 3rem;
+    height: 3rem;
+    aspect-ratio: auto;
+    flex: 0 1 3rem;
+  }
+
+  .dashboard-nav a::before,
+  .dashboard-nav-button::before {
+    display: none;
+  }
+
+  .dashboard-nav a.is-active::after {
+    left: 50%;
+    top: -0.66rem;
+    width: 1.25rem;
+    height: 2px;
+    transform: translateX(-50%);
+  }
+
+  .dashboard-canvas {
+    width: 100%;
+    margin-left: 0;
+    padding: 0 0 1rem;
+  }
+
+  .dashboard-header {
+    top: 0.75rem;
+  }
+
   .login-topology {
     min-height: auto;
     grid-template-columns: minmax(0, 1fr);
@@ -1317,6 +1879,44 @@
     padding: 1rem;
   }
 
+  .login-brand-row {
+    min-height: 4rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .login-connection {
+    display: none;
+  }
+
+  .login-scope-strip span {
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.7rem 0.35rem;
+    font-size: 0.6875rem;
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  .dashboard-header {
+    min-height: 4rem;
+    padding: 0.65rem;
+  }
+
+  .admin-avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .admin-identity p {
+    max-width: 9rem;
+  }
+
+  .dashboard-header [data-slot="dialog-trigger"] {
+    width: 2.5rem;
+    padding-inline: 0;
+    font-size: 0;
+  }
+
   .topology-wordmark {
     font-size: clamp(3rem, 18vw, 4.5rem);
   }
@@ -1340,11 +1940,11 @@
   }
 
   .kubedeck-banner {
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1731 / 909;
   }
 
   .kubedeck-banner-image {
-    object-position: 36% center;
+    object-position: center;
   }
 
   .catalog-grid {
