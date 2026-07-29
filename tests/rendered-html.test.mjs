@@ -273,6 +273,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
     packageJson,
     socialImage,
     bannerImage,
+    liquidGlassPage,
     environmentExample,
   ] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
@@ -296,6 +297,10 @@ test("ships the admin schema, migration, and finished product assets", async () 
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../public/og.png", import.meta.url)),
     readFile(new URL("../public/kubedeck-banner.png", import.meta.url)),
+    readFile(
+      new URL("../public/kubedeck-liquid-glass.html", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../.env.example", import.meta.url), "utf8"),
   ]);
 
@@ -321,6 +326,16 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.doesNotMatch(layout, /\bGeist\b/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.match(environmentExample, /KUBEDECK_ADMIN_EMAIL=/);
+  assert.match(liquidGlassPage, /<html lang="en">/);
+  assert.match(
+    liquidGlassPage,
+    /<title>KubeDeck — Kubernetes Ecosystem<\/title>/,
+  );
+  assert.match(liquidGlassPage, /--u: min\(100vw \/ 1357, 100dvh \/ 871\)/);
+  assert.match(liquidGlassPage, /id="i-grid"/);
+  assert.match(liquidGlassPage, /id="i-network"/);
+  assert.match(liquidGlassPage, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.doesNotMatch(liquidGlassPage, /<script\b/i);
   assert.deepEqual(
     [...socialImage.subarray(0, 8)],
     [137, 80, 78, 71, 13, 10, 26, 10],

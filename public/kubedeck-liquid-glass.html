@@ -1,0 +1,1943 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="KubeDeck liquid-glass Kubernetes ecosystem dashboard and service launchpad."
+    />
+    <meta name="theme-color" content="#020813" />
+    <title>KubeDeck — Kubernetes Ecosystem</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Inter+Tight:wght@500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --u: min(100vw / 1357, 100dvh / 871);
+        --ink: #ffffff;
+        --ink-soft: rgba(226, 240, 255, 0.72);
+        --ink-faint: rgba(185, 210, 234, 0.5);
+        --accent: #00d2ff;
+        --accent-blue: #287cff;
+        --healthy: #45f0b5;
+        --warning: #ffbd59;
+        --navy: #020813;
+        --glass: rgba(10, 25, 47, 0.45);
+        --glass-line: rgba(0, 210, 255, 0.2);
+        --line-soft: rgba(255, 255, 255, 0.08);
+        --e-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --e-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+        --e-pen: cubic-bezier(0.37, 0.01, 0.2, 1);
+      }
+
+      @supports not (height: 100dvh) {
+        :root {
+          --u: min(100vw / 1357, 100vh / 871);
+        }
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: var(--navy);
+        color: var(--ink);
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        font-feature-settings: "kern" 1;
+        font-synthesis: none;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      button,
+      input,
+      a {
+        font: inherit;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      button,
+      a {
+        color: inherit;
+      }
+
+      a {
+        text-decoration: none;
+      }
+
+      button {
+        border: 0;
+      }
+
+      .sr-only,
+      .sprite {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .stage {
+        position: fixed;
+        inset: 0;
+        isolation: isolate;
+        overflow: hidden;
+        background:
+          radial-gradient(
+            circle at 9% 3%,
+            rgba(26, 109, 255, 0.28),
+            transparent 29%
+          ),
+          radial-gradient(
+            circle at 73% 42%,
+            rgba(0, 210, 255, 0.09),
+            transparent 28%
+          ),
+          linear-gradient(132deg, #071a35 0%, #041126 35%, #020813 76%);
+      }
+
+      .stage::before,
+      .stage::after {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        content: "";
+        pointer-events: none;
+      }
+
+      .stage::before {
+        opacity: 0.55;
+        background-image:
+          linear-gradient(rgba(64, 151, 255, 0.055) 1px, transparent 1px),
+          linear-gradient(
+            90deg,
+            rgba(64, 151, 255, 0.055) 1px,
+            transparent 1px
+          );
+        background-size: calc(42 * var(--u)) calc(42 * var(--u));
+        mask-image: radial-gradient(
+          ellipse 68% 66% at 54% 38%,
+          #000 18%,
+          transparent 78%
+        );
+      }
+
+      .stage::after {
+        background:
+          linear-gradient(
+            90deg,
+            rgba(2, 8, 19, 0.42),
+            transparent 14% 78%,
+            rgba(2, 8, 19, 0.48)
+          ),
+          linear-gradient(
+            180deg,
+            rgba(2, 8, 19, 0.16),
+            transparent 18% 72%,
+            rgba(2, 8, 19, 0.82)
+          );
+      }
+
+      .ambient-orbit {
+        position: absolute;
+        left: calc(592 * var(--u));
+        top: calc(120 * var(--u));
+        z-index: -1;
+        width: calc(470 * var(--u));
+        aspect-ratio: 1;
+        border: 1px solid rgba(0, 210, 255, 0.08);
+        border-radius: 50%;
+        box-shadow:
+          0 0 calc(90 * var(--u)) rgba(0, 210, 255, 0.05),
+          inset 0 0 calc(65 * var(--u)) rgba(40, 124, 255, 0.04);
+      }
+
+      .ambient-orbit::before,
+      .ambient-orbit::after {
+        position: absolute;
+        border: 1px dashed rgba(0, 210, 255, 0.075);
+        border-radius: inherit;
+        content: "";
+      }
+
+      .ambient-orbit::before {
+        inset: 18%;
+      }
+
+      .ambient-orbit::after {
+        inset: 36%;
+      }
+
+      .glass {
+        border: 1px solid var(--line-soft);
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.05) 0%,
+          rgba(255, 255, 255, 0.02) 100%
+        );
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.05),
+          0 calc(22 * var(--u)) calc(50 * var(--u))
+            rgba(0, 3, 12, 0.2);
+        -webkit-backdrop-filter: blur(calc(26 * var(--u))) saturate(118%);
+        backdrop-filter: blur(calc(26 * var(--u))) saturate(118%);
+      }
+
+      .sidebar {
+        position: absolute;
+        left: calc(16 * var(--u));
+        top: calc(14 * var(--u));
+        bottom: calc(7 * var(--u));
+        z-index: 20;
+        display: flex;
+        width: calc(72 * var(--u));
+        flex-direction: column;
+        align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-right-color: var(--glass-line);
+        border-radius: calc(22 * var(--u));
+        padding: calc(14 * var(--u)) calc(10 * var(--u));
+        background: linear-gradient(
+          180deg,
+          rgba(10, 25, 47, 0.25) 0%,
+          rgba(10, 25, 47, 0.15) 100%
+        );
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        -webkit-backdrop-filter: blur(calc(18 * var(--u))) saturate(115%);
+        backdrop-filter: blur(calc(18 * var(--u))) saturate(115%);
+        animation: slideL 0.92s var(--e-out) both;
+      }
+
+      .brand {
+        position: relative;
+        display: grid;
+        width: calc(46 * var(--u));
+        height: calc(46 * var(--u));
+        place-items: center;
+        border: 1px solid rgba(0, 210, 255, 0.32);
+        border-radius: calc(15 * var(--u));
+        background:
+          radial-gradient(
+            circle at 30% 24%,
+            rgba(255, 255, 255, 0.18),
+            transparent 32%
+          ),
+          linear-gradient(
+            145deg,
+            rgba(0, 210, 255, 0.22),
+            rgba(40, 124, 255, 0.12)
+          );
+        color: var(--accent);
+        box-shadow:
+          0 0 calc(28 * var(--u)) rgba(0, 210, 255, 0.12),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        animation: popIn 0.66s 0.18s var(--e-out) both;
+      }
+
+      .brand svg {
+        width: calc(25 * var(--u));
+        height: calc(25 * var(--u));
+      }
+
+      .brand::after {
+        position: absolute;
+        right: calc(-4 * var(--u));
+        top: calc(-3 * var(--u));
+        width: calc(9 * var(--u));
+        height: calc(9 * var(--u));
+        border: calc(2 * var(--u)) solid #07152a;
+        border-radius: 50%;
+        background: var(--healthy);
+        box-shadow: 0 0 calc(12 * var(--u)) rgba(69, 240, 181, 0.7);
+        content: "";
+      }
+
+      .nav {
+        display: flex;
+        width: 100%;
+        flex: 1;
+        flex-direction: column;
+        align-items: center;
+        gap: calc(9 * var(--u));
+        margin-top: calc(40 * var(--u));
+      }
+
+      .nav a {
+        position: relative;
+        display: grid;
+        width: calc(42 * var(--u));
+        height: calc(42 * var(--u));
+        place-items: center;
+        border: 1px solid transparent;
+        border-radius: calc(13 * var(--u));
+        color: var(--ink-faint);
+        opacity: 0;
+        transition:
+          color 180ms ease,
+          border-color 180ms ease,
+          background-color 180ms ease,
+          transform 240ms var(--e-out);
+        animation: riseIn 0.58s var(--e-out) forwards;
+      }
+
+      .nav a:nth-child(1) {
+        animation-delay: 0.28s;
+      }
+
+      .nav a:nth-child(2) {
+        animation-delay: 0.34s;
+      }
+
+      .nav a:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      .nav a:nth-child(4) {
+        animation-delay: 0.46s;
+      }
+
+      .nav a:nth-child(5) {
+        margin-top: auto;
+        animation-delay: 0.52s;
+      }
+
+      .nav a:nth-child(6) {
+        animation-delay: 0.58s;
+      }
+
+      .nav a:hover {
+        color: var(--ink);
+        transform: translateY(calc(-1 * var(--u)));
+      }
+
+      .nav a[aria-current="page"] {
+        border-color: rgba(0, 210, 255, 0.2);
+        background: rgba(0, 210, 255, 0.1);
+        color: var(--accent);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      }
+
+      .nav a[aria-current="page"]::before {
+        position: absolute;
+        left: calc(-17 * var(--u));
+        width: calc(4 * var(--u));
+        height: calc(20 * var(--u));
+        border-radius: 0 calc(4 * var(--u)) calc(4 * var(--u)) 0;
+        background: var(--accent);
+        box-shadow: 0 0 calc(14 * var(--u)) rgba(0, 210, 255, 0.75);
+        content: "";
+      }
+
+      .nav svg {
+        width: calc(19 * var(--u));
+        height: calc(19 * var(--u));
+      }
+
+      .nav a::after {
+        position: absolute;
+        left: calc(51 * var(--u));
+        z-index: 40;
+        width: max-content;
+        border: 1px solid var(--glass-line);
+        border-radius: calc(7 * var(--u));
+        padding: calc(5 * var(--u)) calc(8 * var(--u));
+        background: rgba(3, 13, 29, 0.92);
+        color: var(--ink-soft);
+        content: attr(data-label);
+        font-size: calc(10 * var(--u));
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(calc(-5 * var(--u)));
+        transition:
+          opacity 160ms ease,
+          transform 160ms ease;
+      }
+
+      .nav a:hover::after,
+      .nav a:focus-visible::after {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .header {
+        position: absolute;
+        left: calc(126 * var(--u));
+        right: calc(37 * var(--u));
+        top: calc(22 * var(--u));
+        z-index: 12;
+        display: flex;
+        height: calc(52 * var(--u));
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .admin-block {
+        display: flex;
+        align-items: center;
+        gap: calc(12 * var(--u));
+        animation: riseIn 0.68s 0.18s var(--e-out) both;
+      }
+
+      .admin-avatar,
+      .tool,
+      .add-cluster {
+        border: 1px solid var(--line-soft);
+        background: rgba(255, 255, 255, 0.035);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        -webkit-backdrop-filter: blur(calc(16 * var(--u)));
+        backdrop-filter: blur(calc(16 * var(--u)));
+      }
+
+      .admin-avatar {
+        display: grid;
+        width: calc(38 * var(--u));
+        height: calc(38 * var(--u));
+        place-items: center;
+        overflow: hidden;
+        border-radius: calc(13 * var(--u));
+        color: var(--accent);
+      }
+
+      .admin-avatar svg {
+        width: calc(18 * var(--u));
+        height: calc(18 * var(--u));
+      }
+
+      .admin-copy strong,
+      .admin-copy span {
+        display: block;
+      }
+
+      .admin-copy strong {
+        font-size: calc(13 * var(--u));
+        font-weight: 700;
+        letter-spacing: -0.015em;
+      }
+
+      .admin-copy span {
+        margin-top: calc(3 * var(--u));
+        color: var(--ink-faint);
+        font-size: calc(9 * var(--u));
+        font-weight: 500;
+      }
+
+      .header-tools {
+        display: flex;
+        align-items: center;
+        gap: calc(10 * var(--u));
+      }
+
+      .tool,
+      .add-cluster {
+        display: inline-flex;
+        height: calc(38 * var(--u));
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
+        border-radius: calc(12 * var(--u));
+        opacity: 0;
+        transition:
+          border-color 180ms ease,
+          background-color 180ms ease,
+          transform 220ms var(--e-out);
+        animation: popIn 0.52s var(--e-out) forwards;
+      }
+
+      .tool:nth-child(1) {
+        animation-delay: 0.28s;
+      }
+
+      .tool:nth-child(2) {
+        animation-delay: 0.34s;
+      }
+
+      .tool:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      .add-cluster {
+        gap: calc(7 * var(--u));
+        padding: 0 calc(13 * var(--u));
+        border-color: rgba(0, 210, 255, 0.22);
+        background: rgba(0, 210, 255, 0.09);
+        color: var(--ink);
+        font-size: calc(10 * var(--u));
+        font-weight: 600;
+      }
+
+      .tool {
+        position: relative;
+        width: calc(38 * var(--u));
+        color: var(--ink-soft);
+      }
+
+      .tool svg,
+      .add-cluster svg {
+        width: calc(16 * var(--u));
+        height: calc(16 * var(--u));
+      }
+
+      .tool:hover,
+      .add-cluster:hover {
+        border-color: rgba(0, 210, 255, 0.36);
+        background: rgba(0, 210, 255, 0.12);
+        transform: translateY(calc(-1 * var(--u)));
+      }
+
+      .notification-pip {
+        position: absolute;
+        right: calc(8 * var(--u));
+        top: calc(7 * var(--u));
+        width: calc(6 * var(--u));
+        height: calc(6 * var(--u));
+        border: calc(1.5 * var(--u)) solid #071326;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 calc(8 * var(--u)) rgba(0, 210, 255, 0.7);
+      }
+
+      .hero {
+        position: absolute;
+        left: calc(126 * var(--u));
+        top: calc(136 * var(--u));
+        z-index: 5;
+        width: calc(600 * var(--u));
+      }
+
+      .status-chip {
+        display: inline-flex;
+        min-height: calc(28 * var(--u));
+        align-items: center;
+        gap: calc(8 * var(--u));
+        overflow: hidden;
+        border: 1px solid rgba(69, 240, 181, 0.18);
+        border-radius: calc(99 * var(--u));
+        padding: 0 calc(11 * var(--u));
+        background: rgba(69, 240, 181, 0.055);
+        color: rgba(189, 255, 230, 0.88);
+        font-size: calc(9 * var(--u));
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        animation: wipeRight 0.7s 0.34s var(--e-soft) both;
+      }
+
+      .live-dot {
+        width: calc(7 * var(--u));
+        height: calc(7 * var(--u));
+        border-radius: 50%;
+        background: var(--healthy);
+        box-shadow: 0 0 0 calc(3 * var(--u)) rgba(69, 240, 181, 0.09);
+        animation: pulse 2.2s ease-in-out infinite;
+      }
+
+      .hero h1 {
+        margin: calc(24 * var(--u)) 0 0;
+        overflow: hidden;
+        font-family: "Inter Tight", "Inter", sans-serif;
+        font-size: clamp(calc(54 * var(--u)), 6.6vw, calc(88 * var(--u)));
+        font-weight: 500;
+        line-height: 0.88;
+        letter-spacing: -0.065em;
+        animation: lineUp 0.82s 0.43s var(--e-out) both;
+      }
+
+      .hero h1 span {
+        background: linear-gradient(
+          96deg,
+          #ffffff 14%,
+          #d8f7ff 46%,
+          var(--accent) 96%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .subheadline {
+        max-width: calc(530 * var(--u));
+        margin: calc(18 * var(--u)) 0 0;
+        color: rgba(231, 242, 255, 0.9);
+        font-family: "Inter Tight", "Inter", sans-serif;
+        font-size: calc(27 * var(--u));
+        font-weight: 500;
+        line-height: 1.14;
+        letter-spacing: -0.035em;
+        animation: lineUp 0.82s 0.52s var(--e-out) both;
+      }
+
+      .hero-blurb {
+        max-width: calc(512 * var(--u));
+        margin: calc(15 * var(--u)) 0 0;
+        color: var(--ink-soft);
+        font-size: calc(12 * var(--u));
+        line-height: 1.72;
+        animation: wipeDown 0.78s 0.6s var(--e-soft) both;
+      }
+
+      .quick-filters {
+        display: inline-flex;
+        gap: calc(3 * var(--u));
+        margin-top: calc(22 * var(--u));
+        border: 1px solid var(--line-soft);
+        border-radius: calc(12 * var(--u));
+        padding: calc(3 * var(--u));
+        background: rgba(255, 255, 255, 0.025);
+        animation: riseIn 0.7s 0.68s var(--e-out) both;
+      }
+
+      .quick-filters input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .quick-filters label {
+        position: relative;
+        display: inline-flex;
+        min-height: calc(30 * var(--u));
+        cursor: pointer;
+        align-items: center;
+        gap: calc(6 * var(--u));
+        border: 1px solid transparent;
+        border-radius: calc(9 * var(--u));
+        padding: 0 calc(10 * var(--u));
+        color: var(--ink-faint);
+        font-size: calc(9 * var(--u));
+        font-weight: 600;
+        transition:
+          background-color 180ms ease,
+          border-color 180ms ease,
+          color 180ms ease,
+          transform 220ms var(--e-out);
+      }
+
+      .quick-filters label::before {
+        width: calc(5 * var(--u));
+        height: calc(5 * var(--u));
+        border-radius: 50%;
+        background: currentColor;
+        content: "";
+        opacity: 0.45;
+        transition:
+          opacity 180ms ease,
+          box-shadow 180ms ease;
+      }
+
+      .quick-filters input:checked + label {
+        border-color: rgba(0, 210, 255, 0.2);
+        background: rgba(0, 210, 255, 0.1);
+        color: var(--accent);
+        transform: translateY(calc(-1 * var(--u)));
+      }
+
+      .quick-filters input:checked + label::before {
+        opacity: 1;
+        box-shadow: 0 0 calc(9 * var(--u)) rgba(0, 210, 255, 0.7);
+      }
+
+      .metrics-strip {
+        position: absolute;
+        left: calc(126 * var(--u));
+        right: calc(396 * var(--u));
+        bottom: calc(99 * var(--u));
+        z-index: 6;
+        height: calc(228 * var(--u));
+        overflow: hidden;
+        border-radius: calc(18 * var(--u));
+        padding: calc(18 * var(--u)) calc(20 * var(--u));
+        animation: riseIn 0.82s 0.76s var(--e-out) both;
+      }
+
+      .metrics-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .eyebrow {
+        color: var(--ink-faint);
+        font-size: calc(8 * var(--u));
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .capture {
+        display: inline-flex;
+        align-items: center;
+        gap: calc(6 * var(--u));
+        color: var(--ink-faint);
+        font-size: calc(8 * var(--u));
+      }
+
+      .capture::before {
+        width: calc(5 * var(--u));
+        height: calc(5 * var(--u));
+        border-radius: 50%;
+        background: var(--healthy);
+        content: "";
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: calc(16 * var(--u));
+        margin-top: calc(12 * var(--u));
+      }
+
+      .metric {
+        min-width: 0;
+      }
+
+      .metric-top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: calc(8 * var(--u));
+      }
+
+      .metric strong {
+        font-family: "Inter Tight", "Inter", sans-serif;
+        font-size: calc(19 * var(--u));
+        font-weight: 500;
+        letter-spacing: -0.035em;
+      }
+
+      .metric span {
+        color: var(--ink-faint);
+        font-size: calc(8 * var(--u));
+        font-weight: 600;
+      }
+
+      .meter {
+        height: calc(3 * var(--u));
+        margin-top: calc(8 * var(--u));
+        overflow: hidden;
+        border-radius: calc(99 * var(--u));
+        background: rgba(255, 255, 255, 0.065);
+      }
+
+      .meter i {
+        display: block;
+        width: var(--value);
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--accent-blue), var(--accent));
+        box-shadow: 0 0 calc(9 * var(--u)) rgba(0, 210, 255, 0.45);
+        transform-origin: left;
+        animation: wipeX 0.9s 1.08s var(--e-out) both;
+      }
+
+      .load-chart {
+        display: block;
+        width: 100%;
+        height: calc(58 * var(--u));
+        margin-top: calc(11 * var(--u));
+        overflow: visible;
+      }
+
+      .load-chart .grid-line {
+        stroke: rgba(255, 255, 255, 0.055);
+        stroke-width: 1;
+      }
+
+      .load-chart .fill {
+        transform-origin: left;
+        animation: wipeX 1.05s 1.12s var(--e-soft) both;
+      }
+
+      .load-chart .line {
+        fill: none;
+        stroke: url(#chart-stroke);
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 1;
+        stroke-dashoffset: 1;
+        vector-effect: non-scaling-stroke;
+        animation: drawLine 1.35s 0.98s var(--e-pen) forwards;
+      }
+
+      .dns-profile {
+        display: grid;
+        grid-template-columns: 1.35fr 0.72fr 0.72fr;
+        gap: calc(10 * var(--u));
+        align-items: center;
+        border-top: 1px solid rgba(255, 255, 255, 0.065);
+        padding-top: calc(10 * var(--u));
+      }
+
+      .dns-item {
+        min-width: 0;
+      }
+
+      .dns-item span,
+      .dns-item strong {
+        display: block;
+      }
+
+      .dns-item span {
+        color: var(--ink-faint);
+        font-size: calc(7 * var(--u));
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      .dns-item strong {
+        margin-top: calc(3 * var(--u));
+        overflow: hidden;
+        color: var(--ink-soft);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          monospace;
+        font-size: calc(8 * var(--u));
+        font-weight: 500;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .rail {
+        position: absolute;
+        right: calc(38 * var(--u));
+        top: calc(134 * var(--u));
+        bottom: calc(95 * var(--u));
+        z-index: 8;
+        display: flex;
+        width: calc(310 * var(--u));
+        flex-direction: column;
+        gap: calc(11 * var(--u));
+      }
+
+      .rail-heading {
+        display: flex;
+        height: calc(32 * var(--u));
+        align-items: center;
+        justify-content: space-between;
+        animation: slideR 0.72s 0.42s var(--e-out) both;
+      }
+
+      .rail-heading h2 {
+        margin: 0;
+        font-family: "Inter Tight", "Inter", sans-serif;
+        font-size: calc(15 * var(--u));
+        font-weight: 500;
+        letter-spacing: -0.02em;
+      }
+
+      .resource-count {
+        display: inline-flex;
+        align-items: center;
+        gap: calc(5 * var(--u));
+        color: var(--ink-faint);
+        font-size: calc(8 * var(--u));
+      }
+
+      .resource-count::before {
+        width: calc(5 * var(--u));
+        height: calc(5 * var(--u));
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 calc(8 * var(--u)) rgba(0, 210, 255, 0.65);
+        content: "";
+      }
+
+      .service-card {
+        position: relative;
+        display: flex;
+        min-height: 0;
+        overflow: hidden;
+        border-radius: calc(16 * var(--u));
+        opacity: 0;
+        transition:
+          border-color 220ms ease,
+          box-shadow 280ms ease,
+          transform 320ms var(--e-out);
+        animation: slideR 0.72s var(--e-out) forwards;
+      }
+
+      .service-card:nth-of-type(2) {
+        animation-delay: 0.52s;
+      }
+
+      .service-card:nth-of-type(3) {
+        animation-delay: 0.6s;
+      }
+
+      .service-card:nth-of-type(4) {
+        animation-delay: 0.68s;
+      }
+
+      .service-card:nth-of-type(5) {
+        animation-delay: 0.76s;
+      }
+
+      .service-card::after {
+        position: absolute;
+        inset: -45% auto -45% -55%;
+        width: 24%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(191, 246, 255, 0.12),
+          transparent
+        );
+        content: "";
+        pointer-events: none;
+        transform: skewX(-18deg) translateX(-300%);
+        animation: sheen 5.8s 2.55s ease-in-out infinite;
+      }
+
+      .service-card:hover {
+        border-color: rgba(0, 210, 255, 0.3);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.08),
+          0 calc(28 * var(--u)) calc(60 * var(--u))
+            rgba(0, 3, 12, 0.34),
+          0 0 calc(28 * var(--u)) rgba(0, 210, 255, 0.07);
+        transform: translateY(calc(-3 * var(--u))) scale(1.008);
+      }
+
+      .service-primary {
+        height: calc(183 * var(--u));
+        flex-direction: column;
+        justify-content: space-between;
+        padding: calc(17 * var(--u));
+      }
+
+      .service-row {
+        flex: 1;
+        align-items: center;
+        gap: calc(12 * var(--u));
+        padding: calc(13 * var(--u));
+      }
+
+      .service-top,
+      .service-foot,
+      .service-main {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+      }
+
+      .service-top,
+      .service-foot {
+        justify-content: space-between;
+        gap: calc(10 * var(--u));
+      }
+
+      .service-main {
+        gap: calc(11 * var(--u));
+      }
+
+      .service-icon {
+        display: grid;
+        width: calc(37 * var(--u));
+        height: calc(37 * var(--u));
+        flex: none;
+        place-items: center;
+        border: 1px solid rgba(0, 210, 255, 0.2);
+        border-radius: calc(12 * var(--u));
+        background: rgba(0, 210, 255, 0.075);
+        color: var(--accent);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      }
+
+      .service-icon svg {
+        width: calc(18 * var(--u));
+        height: calc(18 * var(--u));
+      }
+
+      .service-title {
+        min-width: 0;
+      }
+
+      .service-title strong,
+      .service-title span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .service-title strong {
+        font-size: calc(11 * var(--u));
+        font-weight: 600;
+      }
+
+      .service-title span {
+        margin-top: calc(4 * var(--u));
+        color: var(--ink-faint);
+        font-size: calc(8 * var(--u));
+      }
+
+      .health {
+        display: inline-flex;
+        flex: none;
+        align-items: center;
+        gap: calc(5 * var(--u));
+        border: 1px solid rgba(69, 240, 181, 0.14);
+        border-radius: calc(99 * var(--u));
+        padding: calc(4 * var(--u)) calc(7 * var(--u));
+        background: rgba(69, 240, 181, 0.05);
+        color: rgba(177, 255, 224, 0.78);
+        font-size: calc(7 * var(--u));
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .health i {
+        width: calc(5 * var(--u));
+        height: calc(5 * var(--u));
+        border-radius: 50%;
+        background: var(--healthy);
+        box-shadow: 0 0 calc(8 * var(--u)) rgba(69, 240, 181, 0.58);
+      }
+
+      .primary-name {
+        margin-top: calc(18 * var(--u));
+      }
+
+      .primary-name h3 {
+        margin: 0;
+        font-family: "Inter Tight", "Inter", sans-serif;
+        font-size: calc(24 * var(--u));
+        font-weight: 500;
+        letter-spacing: -0.035em;
+      }
+
+      .primary-name p {
+        margin: calc(7 * var(--u)) 0 0;
+        color: var(--ink-faint);
+        font-size: calc(9 * var(--u));
+      }
+
+      .primary-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: calc(8 * var(--u));
+        margin-top: calc(13 * var(--u));
+      }
+
+      .primary-stats div {
+        min-width: 0;
+        border-left: 1px solid rgba(255, 255, 255, 0.07);
+        padding-left: calc(8 * var(--u));
+      }
+
+      .primary-stats div:first-child {
+        border-left: 0;
+        padding-left: 0;
+      }
+
+      .primary-stats span,
+      .primary-stats strong {
+        display: block;
+      }
+
+      .primary-stats span {
+        color: var(--ink-faint);
+        font-size: calc(7 * var(--u));
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .primary-stats strong {
+        margin-top: calc(3 * var(--u));
+        overflow: hidden;
+        color: var(--ink-soft);
+        font-size: calc(8 * var(--u));
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .endpoint-meta {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .endpoint-meta p {
+        margin: 0;
+        overflow: hidden;
+        color: var(--ink-faint);
+        font-size: calc(7 * var(--u));
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .endpoint-meta p + p {
+        margin-top: calc(4 * var(--u));
+      }
+
+      .launch {
+        display: inline-flex;
+        height: calc(29 * var(--u));
+        flex: none;
+        align-items: center;
+        gap: calc(5 * var(--u));
+        border: 1px solid rgba(0, 210, 255, 0.2);
+        border-radius: calc(9 * var(--u));
+        padding: 0 calc(9 * var(--u));
+        background: rgba(0, 210, 255, 0.08);
+        color: var(--accent);
+        font-size: calc(8 * var(--u));
+        font-weight: 700;
+        transition:
+          background-color 180ms ease,
+          border-color 180ms ease,
+          color 180ms ease,
+          transform 220ms var(--e-out);
+      }
+
+      .launch:hover {
+        border-color: rgba(0, 210, 255, 0.44);
+        background: var(--accent);
+        color: #03101d;
+        transform: translateY(calc(-1 * var(--u)));
+      }
+
+      .launch svg {
+        width: calc(11 * var(--u));
+        height: calc(11 * var(--u));
+      }
+
+      .row-copy {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .row-copy .endpoint-meta {
+        margin-top: calc(7 * var(--u));
+      }
+
+      .row-action {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: calc(9 * var(--u));
+      }
+
+      .mini-endpoint {
+        color: rgba(192, 218, 241, 0.58);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          monospace;
+        font-size: calc(7 * var(--u));
+      }
+
+      .page-note {
+        position: absolute;
+        left: calc(126 * var(--u));
+        right: calc(38 * var(--u));
+        bottom: calc(35 * var(--u));
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: rgba(162, 192, 221, 0.4);
+        font-size: calc(8 * var(--u));
+        letter-spacing: 0.02em;
+        animation: riseIn 0.7s 1.05s var(--e-out) both;
+      }
+
+      :focus-visible {
+        outline: calc(2 * var(--u)) solid var(--accent);
+        outline-offset: calc(3 * var(--u));
+      }
+
+      @keyframes riseIn {
+        from {
+          opacity: 0;
+          transform: translateY(calc(14 * var(--u)));
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes slideL {
+        from {
+          opacity: 0;
+          transform: translateX(calc(-28 * var(--u)));
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes slideR {
+        from {
+          opacity: 0;
+          transform: translateX(calc(28 * var(--u)));
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes popIn {
+        from {
+          opacity: 0;
+          transform: scale(0.82);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes drawLine {
+        to {
+          stroke-dashoffset: 0;
+        }
+      }
+
+      @keyframes sheen {
+        0%,
+        18% {
+          opacity: 0;
+          transform: skewX(-18deg) translateX(-300%);
+        }
+        25% {
+          opacity: 1;
+        }
+        52%,
+        100% {
+          opacity: 0;
+          transform: skewX(-18deg) translateX(950%);
+        }
+      }
+
+      @keyframes wipeRight {
+        from {
+          opacity: 0;
+          clip-path: inset(0 100% 0 0);
+          transform: translateX(calc(-8 * var(--u)));
+        }
+        to {
+          opacity: 1;
+          clip-path: inset(0);
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes wipeDown {
+        from {
+          opacity: 0;
+          clip-path: inset(0 0 100% 0);
+          transform: translateY(calc(-8 * var(--u)));
+        }
+        to {
+          opacity: 1;
+          clip-path: inset(0);
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes lineUp {
+        from {
+          opacity: 0;
+          clip-path: inset(100% 0 0 0);
+          transform: translateY(calc(22 * var(--u)));
+        }
+        to {
+          opacity: 1;
+          clip-path: inset(0);
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes wipeX {
+        from {
+          opacity: 0;
+          transform: scaleX(0);
+        }
+        to {
+          opacity: 1;
+          transform: scaleX(1);
+        }
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 calc(3 * var(--u))
+            rgba(69, 240, 181, 0.09);
+        }
+        50% {
+          box-shadow:
+            0 0 0 calc(5 * var(--u)) rgba(69, 240, 181, 0.035),
+            0 0 calc(14 * var(--u)) rgba(69, 240, 181, 0.6);
+        }
+      }
+
+      @media (max-width: 900px), (max-aspect-ratio: 10 / 9) {
+        :root {
+          --u: max(0.82px, calc(100vw / 430));
+        }
+
+        html,
+        body {
+          height: auto;
+          min-height: 100%;
+          overflow: auto;
+        }
+
+        .stage {
+          position: relative;
+          display: flex;
+          min-height: 100svh;
+          flex-direction: column;
+          gap: calc(18 * var(--u));
+          overflow: hidden;
+          padding: calc(18 * var(--u)) calc(16 * var(--u))
+            calc(100 * var(--u));
+        }
+
+        .ambient-orbit {
+          left: 42%;
+          top: calc(120 * var(--u));
+          width: calc(390 * var(--u));
+        }
+
+        .sidebar {
+          position: fixed;
+          left: calc(12 * var(--u));
+          right: calc(12 * var(--u));
+          top: auto;
+          bottom: calc(12 * var(--u));
+          z-index: 50;
+          width: auto;
+          height: calc(64 * var(--u));
+          flex-direction: row;
+          border-right-color: rgba(255, 255, 255, 0.06);
+          border-top-color: var(--glass-line);
+          border-radius: calc(20 * var(--u));
+          padding: calc(8 * var(--u));
+        }
+
+        .brand {
+          width: calc(44 * var(--u));
+          height: calc(44 * var(--u));
+          flex: none;
+        }
+
+        .nav {
+          flex-direction: row;
+          justify-content: space-around;
+          gap: calc(3 * var(--u));
+          margin: 0 0 0 calc(8 * var(--u));
+        }
+
+        .nav a {
+          width: calc(40 * var(--u));
+          height: calc(40 * var(--u));
+        }
+
+        .nav a:nth-child(5) {
+          margin-top: 0;
+        }
+
+        .nav a[aria-current="page"]::before {
+          left: 50%;
+          top: calc(-13 * var(--u));
+          width: calc(18 * var(--u));
+          height: calc(3 * var(--u));
+          border-radius: 0 0 calc(4 * var(--u)) calc(4 * var(--u));
+          transform: translateX(-50%);
+        }
+
+        .nav a::after {
+          display: none;
+        }
+
+        .header,
+        .hero,
+        .metrics-strip,
+        .rail,
+        .page-note {
+          position: relative;
+          inset: auto;
+          width: 100%;
+        }
+
+        .header {
+          order: 1;
+          height: calc(52 * var(--u));
+        }
+
+        main {
+          display: flex;
+          width: 100%;
+          flex-direction: column;
+          gap: calc(18 * var(--u));
+          order: 2;
+        }
+
+        .header-tools {
+          gap: calc(7 * var(--u));
+        }
+
+        .add-cluster span {
+          display: none;
+        }
+
+        .add-cluster {
+          width: calc(38 * var(--u));
+          padding: 0;
+        }
+
+        .hero {
+          order: 1;
+          padding: calc(34 * var(--u)) 0 calc(18 * var(--u));
+        }
+
+        .hero h1 {
+          font-size: calc(70 * var(--u));
+        }
+
+        .subheadline {
+          max-width: calc(380 * var(--u));
+          font-size: calc(27 * var(--u));
+        }
+
+        .hero-blurb {
+          max-width: calc(382 * var(--u));
+          font-size: calc(12 * var(--u));
+        }
+
+        .metrics-strip {
+          order: 2;
+          height: auto;
+          min-height: calc(282 * var(--u));
+          border-radius: calc(18 * var(--u));
+        }
+
+        .metrics-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: calc(16 * var(--u)) calc(22 * var(--u));
+        }
+
+        .load-chart {
+          height: calc(68 * var(--u));
+        }
+
+        .dns-profile {
+          grid-template-columns: 1fr;
+          gap: calc(8 * var(--u));
+        }
+
+        .rail {
+          order: 3;
+          gap: calc(12 * var(--u));
+        }
+
+        .rail-heading {
+          margin-top: calc(8 * var(--u));
+        }
+
+        .service-primary {
+          height: calc(196 * var(--u));
+        }
+
+        .service-row {
+          min-height: calc(108 * var(--u));
+          flex: none;
+        }
+
+        .page-note {
+          order: 3;
+          padding: calc(12 * var(--u)) 0;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .admin-copy span,
+        .tool:nth-child(2),
+        .nav a:nth-child(5) {
+          display: none;
+        }
+
+        .quick-filters {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          width: 100%;
+        }
+
+        .quick-filters label {
+          justify-content: center;
+        }
+
+        .service-row {
+          align-items: flex-start;
+        }
+
+        .row-action {
+          height: 100%;
+          justify-content: space-between;
+        }
+
+        .page-note {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: calc(5 * var(--u));
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-delay: 0ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <svg class="sprite" aria-hidden="true">
+      <symbol id="i-grid" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="2"></rect>
+      </symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24">
+        <path d="M4 19V9m6 10V5m6 14v-7m4 7H2"></path>
+      </symbol>
+      <symbol id="i-server" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="7" rx="2"></rect>
+        <rect x="3" y="14" width="18" height="7" rx="2"></rect>
+        <path d="M7 6.5h.01M7 17.5h.01M11 6.5h6M11 17.5h6"></path>
+      </symbol>
+      <symbol id="i-database" viewBox="0 0 24 24">
+        <ellipse cx="12" cy="5" rx="8" ry="3"></ellipse>
+        <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path>
+      </symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24">
+        <path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z"></path>
+        <path d="m9 12 2 2 4-5"></path>
+      </symbol>
+      <symbol id="i-network" viewBox="0 0 24 24">
+        <circle cx="12" cy="5" r="2.5"></circle>
+        <circle cx="5" cy="18" r="2.5"></circle>
+        <circle cx="19" cy="18" r="2.5"></circle>
+        <path d="m10.8 7.2-4.4 8.6m6.8-8.6 4.4 8.6M7.5 18h9"></path>
+      </symbol>
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="m16 16 5 5"></path>
+      </symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+        <path d="M10 21h4"></path>
+      </symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"></path>
+      </symbol>
+      <symbol id="i-out" viewBox="0 0 24 24">
+        <path d="M10 5H5v14h5M14 8l4 4-4 4m4-4H9"></path>
+      </symbol>
+      <symbol id="i-user" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 21a8 8 0 0 1 16 0"></path>
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14"></path>
+      </symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24">
+        <path d="M5 12h13m-5-5 5 5-5 5"></path>
+      </symbol>
+      <symbol id="i-workflow" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="6" height="6" rx="2"></rect>
+        <rect x="15" y="15" width="6" height="6" rx="2"></rect>
+        <path d="M9 6h3a4 4 0 0 1 4 4v5M15 18h-3a4 4 0 0 1-4-4V9"></path>
+      </symbol>
+      <symbol id="i-kube" viewBox="0 0 24 24">
+        <path d="m12 2.5 8.2 4.8v9.4L12 21.5l-8.2-4.8V7.3L12 2.5Z"></path>
+        <path d="m12 7 4.3 2.5v5L12 17l-4.3-2.5v-5L12 7Z"></path>
+        <path d="M12 2.5V7m8.2.3-3.9 2.2m3.9 7.2-3.9-2.2M12 21.5V17m-8.2-.3 3.9-2.2M3.8 7.3l3.9 2.2"></path>
+      </symbol>
+    </svg>
+
+    <div class="stage">
+      <div class="ambient-orbit" aria-hidden="true"></div>
+
+      <aside class="sidebar" aria-label="Primary navigation">
+        <a class="brand" href="#dashboard" aria-label="KubeDeck home">
+          <svg fill="none" stroke="currentColor" stroke-width="1.6">
+            <use href="#i-kube"></use>
+          </svg>
+        </a>
+
+        <nav class="nav">
+          <a
+            href="#dashboard"
+            aria-current="page"
+            aria-label="Dashboard"
+            data-label="Dashboard"
+          >
+            <svg fill="none" stroke="currentColor" stroke-width="1.7">
+              <use href="#i-grid"></use>
+            </svg>
+          </a>
+          <a href="#nodes" aria-label="Nodes" data-label="Nodes">
+            <svg fill="none" stroke="currentColor" stroke-width="1.7">
+              <use href="#i-server"></use>
+            </svg>
+          </a>
+          <a href="#networking" aria-label="Networking" data-label="Networking">
+            <svg fill="none" stroke="currentColor" stroke-width="1.7">
+              <use href="#i-network"></use>
+            </svg>
+          </a>
+          <a href="#storage" aria-label="Storage" data-label="Storage">
+            <svg fill="none" stroke="currentColor" stroke-width="1.7">
+              <use href="#i-database"></use>
+            </svg>
+          </a>
+          <a href="#settings" aria-label="Settings" data-label="Settings">
+            <svg fill="none" stroke="currentColor" stroke-width="1.7">
+              <use href="#i-gear"></use>
+            </svg>
+          </a>
+          <a href="#sign-out" aria-label="Sign out" data-label="Sign out">
+            <svg fill="none" stroke="currentColor" stroke-width="1.7">
+              <use href="#i-out"></use>
+            </svg>
+          </a>
+        </nav>
+      </aside>
+
+      <header class="header">
+        <div class="admin-block">
+          <span class="admin-avatar" aria-hidden="true">
+            <svg fill="none" stroke="currentColor" stroke-width="1.7">
+              <use href="#i-user"></use>
+            </svg>
+          </span>
+          <div class="admin-copy">
+            <strong>Admin User</strong>
+            <span>Platform administrator · secure session</span>
+          </div>
+        </div>
+
+        <div class="header-tools">
+          <a class="add-cluster" href="#add-cluster">
+            <svg fill="none" stroke="currentColor" stroke-width="1.8">
+              <use href="#i-plus"></use>
+            </svg>
+            <span>Add cluster</span>
+          </a>
+          <button class="tool" type="button" aria-label="Global search">
+            <svg fill="none" stroke="currentColor" stroke-width="1.7">
+              <use href="#i-search"></use>
+            </svg>
+          </button>
+          <button class="tool" type="button" aria-label="Notifications">
+            <svg fill="none" stroke="currentColor" stroke-width="1.7">
+              <use href="#i-bell"></use>
+            </svg>
+            <span class="notification-pip" aria-hidden="true"></span>
+          </button>
+        </div>
+      </header>
+
+      <main id="dashboard">
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="status-chip">
+            <span class="live-dot" aria-hidden="true"></span>
+            Cluster Status: Healthy
+          </div>
+          <h1 id="hero-title"><span>KubeDeck</span></h1>
+          <p class="subheadline">
+            Your Kubernetes ecosystem, one click away.
+          </p>
+          <p class="hero-blurb">
+            Multi-cluster · All nodes · Global services. KubeDeck automatically
+            discovers and organizes Kubernetes resources across your connected
+            environments.
+          </p>
+
+          <div class="quick-filters" role="radiogroup" aria-label="Resource view">
+            <input id="filter-all" name="resource-view" type="radio" checked />
+            <label for="filter-all">All resources</label>
+            <input id="filter-apps" name="resource-view" type="radio" />
+            <label for="filter-apps">Web apps</label>
+            <input id="filter-services" name="resource-view" type="radio" />
+            <label for="filter-services">Services</label>
+          </div>
+        </section>
+
+        <section class="metrics-strip glass" aria-labelledby="fleet-title">
+          <div class="metrics-head">
+            <span id="fleet-title" class="eyebrow">Global cluster overview</span>
+            <span class="capture">Discovery snapshot · Jul 29, 05:21 UTC</span>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric">
+              <div class="metric-top">
+                <strong>38%</strong><span>CPU</span>
+              </div>
+              <div class="meter"><i style="--value: 38%"></i></div>
+            </div>
+            <div class="metric">
+              <div class="metric-top">
+                <strong>61%</strong><span>Memory</span>
+              </div>
+              <div class="meter"><i style="--value: 61%"></i></div>
+            </div>
+            <div class="metric">
+              <div class="metric-top">
+                <strong>47%</strong><span>Storage</span>
+              </div>
+              <div class="meter"><i style="--value: 47%"></i></div>
+            </div>
+            <div class="metric">
+              <div class="metric-top">
+                <strong>94%</strong><span>Pods ready</span>
+              </div>
+              <div class="meter"><i style="--value: 94%"></i></div>
+            </div>
+          </div>
+
+          <svg
+            class="load-chart"
+            viewBox="0 0 760 64"
+            preserveAspectRatio="none"
+            role="img"
+            aria-label="Live cluster load over the recent capture window"
+          >
+            <defs>
+              <linearGradient id="chart-stroke" x1="0" x2="1">
+                <stop offset="0" stop-color="#287cff"></stop>
+                <stop offset=".56" stop-color="#00d2ff"></stop>
+                <stop offset="1" stop-color="#45f0b5"></stop>
+              </linearGradient>
+              <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#00d2ff" stop-opacity=".18"></stop>
+                <stop offset="1" stop-color="#00d2ff" stop-opacity="0"></stop>
+              </linearGradient>
+              <linearGradient id="chart-fade" x1="0" x2="1">
+                <stop offset="0" stop-color="white" stop-opacity=".1"></stop>
+                <stop offset=".16" stop-color="white"></stop>
+                <stop offset=".86" stop-color="white"></stop>
+                <stop offset="1" stop-color="white" stop-opacity=".15"></stop>
+              </linearGradient>
+              <mask id="chart-mask">
+                <rect width="760" height="64" fill="url(#chart-fade)"></rect>
+              </mask>
+            </defs>
+            <path class="grid-line" d="M0 16H760M0 32H760M0 48H760"></path>
+            <path
+              class="fill"
+              mask="url(#chart-mask)"
+              fill="url(#chart-fill)"
+              d="M0 51 C34 47 54 31 87 35 S138 54 178 39 S232 18 267 28 S319 51 356 42 S403 19 445 25 S506 52 545 38 S596 22 631 30 S690 48 760 21 V64 H0Z"
+            ></path>
+            <path
+              class="line"
+              pathLength="1"
+              mask="url(#chart-mask)"
+              d="M0 51 C34 47 54 31 87 35 S138 54 178 39 S232 18 267 28 S319 51 356 42 S403 19 445 25 S506 52 545 38 S596 22 631 30 S690 48 760 21"
+            ></path>
+          </svg>
+
+          <div class="dns-profile">
+            <div class="dns-item">
+              <span>CoreDNS service</span>
+              <strong>kube-dns.kube-system.svc.cluster.local</strong>
+            </div>
+            <div class="dns-item">
+              <span>System DNS IP</span>
+              <strong>10.43.0.10</strong>
+            </div>
+            <div class="dns-item">
+              <span>Base domain</span>
+              <strong>cluster.local</strong>
+            </div>
+          </div>
+        </section>
+
+        <aside class="rail" aria-labelledby="catalog-title">
+          <div class="rail-heading">
+            <h2 id="catalog-title">Service catalog</h2>
+            <span class="resource-count">32 discovered</span>
+          </div>
+
+          <article class="service-card service-primary glass">
+            <div>
+              <div class="service-top">
+                <div class="service-main">
+                  <span class="service-icon" aria-hidden="true">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.7">
+                      <use href="#i-grid"></use>
+                    </svg>
+                  </span>
+                  <div class="service-title">
+                    <strong>Web Applications</strong>
+                    <span>9 launchable interfaces</span>
+                  </div>
+                </div>
+                <span class="health"><i></i>Healthy</span>
+              </div>
+
+              <div class="primary-name">
+                <h3>Grafana</h3>
+                <p>Dashboards for metrics, logs, traces, and alerts.</p>
+              </div>
+
+              <div class="primary-stats">
+                <div>
+                  <span>Namespace</span>
+                  <strong>monitoring</strong>
+                </div>
+                <div>
+                  <span>Endpoints</span>
+                  <strong>1 / 1 ready</strong>
+                </div>
+                <div>
+                  <span>Uptime</span>
+                  <strong>100% · 4d 9h</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="service-foot">
+              <div class="endpoint-meta">
+                <p>grafana.dev.local</p>
+                <p>Deployed Jul 24 · 19:07 UTC</p>
+              </div>
+              <a
+                class="launch"
+                href="https://grafana.dev.local"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Launch
+                <svg fill="none" stroke="currentColor" stroke-width="1.8">
+                  <use href="#i-arrow"></use>
+                </svg>
+              </a>
+            </div>
+          </article>
+
+          <article class="service-card service-row glass">
+            <span class="service-icon" aria-hidden="true">
+              <svg fill="none" stroke="currentColor" stroke-width="1.7">
+                <use href="#i-database"></use>
+              </svg>
+            </span>
+            <div class="row-copy">
+              <div class="service-title">
+                <strong>Databases &amp; Storage</strong>
+                <span>PostgreSQL · storage</span>
+              </div>
+              <div class="endpoint-meta">
+                <p>1 / 1 ready · 4d 17h uptime</p>
+                <p>Deployed Jul 24 · 11:24 UTC</p>
+              </div>
+            </div>
+            <div class="row-action">
+              <span class="health"><i></i>Ready</span>
+              <a class="launch" href="#postgresql">
+                Launch
+                <svg fill="none" stroke="currentColor" stroke-width="1.8">
+                  <use href="#i-arrow"></use>
+                </svg>
+              </a>
+            </div>
+          </article>
+
+          <article class="service-card service-row glass">
+            <span class="service-icon" aria-hidden="true">
+              <svg fill="none" stroke="currentColor" stroke-width="1.7">
+                <use href="#i-chart"></use>
+              </svg>
+            </span>
+            <div class="row-copy">
+              <div class="service-title">
+                <strong>Observability &amp; Metrics</strong>
+                <span>Prometheus · monitoring</span>
+              </div>
+              <div class="endpoint-meta">
+                <p>1 / 1 ready · 4d 9h uptime</p>
+                <p>Deployed Jul 24 · 19:07 UTC</p>
+              </div>
+            </div>
+            <div class="row-action">
+              <span class="health"><i></i>Ready</span>
+              <span class="mini-endpoint">10.43.216.124</span>
+            </div>
+          </article>
+
+          <article class="service-card service-row glass">
+            <span class="service-icon" aria-hidden="true">
+              <svg fill="none" stroke="currentColor" stroke-width="1.7">
+                <use href="#i-workflow"></use>
+              </svg>
+            </span>
+            <div class="row-copy">
+              <div class="service-title">
+                <strong>Automation &amp; Workflows</strong>
+                <span>n8n · automation</span>
+              </div>
+              <div class="endpoint-meta">
+                <p>1 / 1 ready · 10d 12h uptime</p>
+                <p>Deployed Jul 18 · 16:10 UTC</p>
+              </div>
+            </div>
+            <div class="row-action">
+              <span class="health"><i></i>Ready</span>
+              <a
+                class="launch"
+                href="https://n8n.dev.local"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Launch
+                <svg fill="none" stroke="currentColor" stroke-width="1.8">
+                  <use href="#i-arrow"></use>
+                </svg>
+              </a>
+            </div>
+          </article>
+        </aside>
+      </main>
+
+      <footer class="page-note">
+        <span>KubeDeck · Private multi-cluster Kubernetes launchpad</span>
+        <span>Ingress + Service + EndpointSlice · read-only discovery</span>
+      </footer>
+    </div>
+  </body>
+</html>
