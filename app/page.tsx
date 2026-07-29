@@ -29,7 +29,6 @@ import {
   MailIcon,
   MessageSquareIcon,
   NetworkIcon,
-  RefreshCwIcon,
   SearchIcon,
   ServerCogIcon,
   Settings2Icon,
@@ -77,23 +76,30 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
+import {
+  Progress,
+  ProgressLabel,
+  ProgressValue,
+} from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 type CatalogStatus = "ready" | "attention"
 type CatalogKind = "app" | "service"
 type SortMode = "recommended" | "name" | "namespace"
+type CategoryId =
+  | "observability"
+  | "data"
+  | "messaging"
+  | "automation"
+  | "developer"
+  | "platform"
 
-type CatalogItem = {
+type CatalogBase = {
   id: string
   name: string
   kind: CatalogKind
@@ -110,7 +116,25 @@ type CatalogItem = {
   icon: LucideIcon
 }
 
-const webApps: CatalogItem[] = [
+type OperationalMeta = {
+  category: CategoryId
+  serviceName: string
+  clusterIP: string
+  readyEndpoints: number
+  totalEndpoints: number
+  uptime: string
+  uptimeHours: number
+  startedAt?: string
+}
+
+type CatalogItem = CatalogBase &
+  OperationalMeta & {
+    externalDomain?: string
+    internalDns: string
+    readiness: number
+  }
+
+const webApps: CatalogBase[] = [
   {
     id: "grafana",
     name: "Grafana",
@@ -385,7 +409,7 @@ const webApps: CatalogItem[] = [
   },
 ]
 
-const services: CatalogItem[] = [
+const services: CatalogBase[] = [
   {
     id: "finance-api",
     name: "VeroVault Finance",
@@ -616,12 +640,402 @@ const services: CatalogItem[] = [
   },
 ]
 
+const clusterDomain = "cluster.local"
+const capturedAt = "Jul 29, 2026 · 05:05 UTC"
+
+const operationalMeta: Record<string, OperationalMeta> = {
+  grafana: {
+    category: "observability",
+    serviceName: "grafana",
+    clusterIP: "10.43.1.72",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "4d 9h",
+    uptimeHours: 105.97,
+    startedAt: "Jul 24 · 19:07 UTC",
+  },
+  radar: {
+    category: "observability",
+    serviceName: "radar",
+    clusterIP: "10.43.24.183",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "1h 2m",
+    uptimeHours: 1.04,
+    startedAt: "Jul 29 · 04:03 UTC",
+  },
+  infisical: {
+    category: "platform",
+    serviceName: "infisical-backend",
+    clusterIP: "10.43.11.43",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "58m",
+    uptimeHours: 0.98,
+    startedAt: "Jul 29 · 04:07 UTC",
+  },
+  n8n: {
+    category: "automation",
+    serviceName: "n8n",
+    clusterIP: "10.43.56.192",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 12h",
+    uptimeHours: 252.93,
+    startedAt: "Jul 18 · 16:10 UTC",
+  },
+  temporal: {
+    category: "automation",
+    serviceName: "temporal-web",
+    clusterIP: "10.43.151.67",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.4,
+    startedAt: "Jul 18 · 08:41 UTC",
+  },
+  "nats-ui": {
+    category: "messaging",
+    serviceName: "nats-ui",
+    clusterIP: "10.43.71.175",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.51,
+    startedAt: "Jul 18 · 08:35 UTC",
+  },
+  "kafka-ui": {
+    category: "messaging",
+    serviceName: "kafka-ui",
+    clusterIP: "10.43.47.96",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.68,
+    startedAt: "Jul 18 · 08:25 UTC",
+  },
+  "minio-console": {
+    category: "data",
+    serviceName: "minio",
+    clusterIP: "10.43.121.253",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.7,
+    startedAt: "Jul 18 · 08:24 UTC",
+  },
+  pgadmin: {
+    category: "data",
+    serviceName: "pgadmin",
+    clusterIP: "10.43.143.243",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.49,
+    startedAt: "Jul 18 · 08:36 UTC",
+  },
+  "redis-commander": {
+    category: "data",
+    serviceName: "redis-commander",
+    clusterIP: "10.43.27.142",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.49,
+    startedAt: "Jul 18 · 08:36 UTC",
+  },
+  rabbitmq: {
+    category: "messaging",
+    serviceName: "rabbitmq",
+    clusterIP: "10.43.66.194",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.72,
+    startedAt: "Jul 18 · 08:22 UTC",
+  },
+  mailpit: {
+    category: "developer",
+    serviceName: "mailpit-ui",
+    clusterIP: "10.43.202.31",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.5,
+    startedAt: "Jul 18 · 08:36 UTC",
+  },
+  "mongo-ui": {
+    category: "data",
+    serviceName: "mongoku",
+    clusterIP: "10.43.35.66",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.67,
+    startedAt: "Jul 18 · 08:25 UTC",
+  },
+  "schema-registry-ui": {
+    category: "messaging",
+    serviceName: "schema-registry-ui",
+    clusterIP: "10.43.233.88",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.47,
+    startedAt: "Jul 18 · 08:37 UTC",
+  },
+  "jaeger-ui": {
+    category: "observability",
+    serviceName: "jaeger-ui",
+    clusterIP: "10.43.95.112",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.68,
+    startedAt: "Jul 18 · 08:24 UTC",
+  },
+  grpcui: {
+    category: "developer",
+    serviceName: "grpcui",
+    clusterIP: "10.43.19.161",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.69,
+    startedAt: "Jul 18 · 08:24 UTC",
+  },
+  "k6-dashboard": {
+    category: "automation",
+    serviceName: "k6-web-dashboard",
+    clusterIP: "10.43.4.252",
+    readyEndpoints: 0,
+    totalEndpoints: 0,
+    uptime: "Not running",
+    uptimeHours: 0,
+  },
+  "finance-api": {
+    category: "platform",
+    serviceName: "vero-vault-finance",
+    clusterIP: "10.43.99.211",
+    readyEndpoints: 2,
+    totalEndpoints: 2,
+    uptime: "7h 48m",
+    uptimeHours: 7.82,
+    startedAt: "Jul 28 · 21:17 UTC",
+  },
+  "dev-io-mcp": {
+    category: "developer",
+    serviceName: "dev-io-mcp",
+    clusterIP: "10.43.188.213",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "4d 22h",
+    uptimeHours: 118.24,
+    startedAt: "Jul 24 · 06:51 UTC",
+  },
+  diago: {
+    category: "developer",
+    serviceName: "diago",
+    clusterIP: "10.43.200.69",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "1d 9h",
+    uptimeHours: 33.94,
+    startedAt: "Jul 27 · 19:09 UTC",
+  },
+  postgresql: {
+    category: "data",
+    serviceName: "postgresql",
+    clusterIP: "10.43.19.66",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "4d 17h",
+    uptimeHours: 113.69,
+    startedAt: "Jul 24 · 11:24 UTC",
+  },
+  redis: {
+    category: "data",
+    serviceName: "redis",
+    clusterIP: "10.43.251.8",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.73,
+    startedAt: "Jul 18 · 08:22 UTC",
+  },
+  mongodb: {
+    category: "data",
+    serviceName: "mongodb",
+    clusterIP: "10.43.255.200",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.71,
+    startedAt: "Jul 18 · 08:23 UTC",
+  },
+  nats: {
+    category: "messaging",
+    serviceName: "nats",
+    clusterIP: "10.43.233.25",
+    readyEndpoints: 3,
+    totalEndpoints: 3,
+    uptime: "1d 19h",
+    uptimeHours: 43.28,
+    startedAt: "Jul 27 · 09:49 UTC",
+  },
+  kafka: {
+    category: "messaging",
+    serviceName: "kafka",
+    clusterIP: "10.43.114.51",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.72,
+    startedAt: "Jul 18 · 08:23 UTC",
+  },
+  prometheus: {
+    category: "observability",
+    serviceName: "monitoring-kube-prometheus-prometheus",
+    clusterIP: "10.43.216.124",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "4d 9h",
+    uptimeHours: 105.97,
+    startedAt: "Jul 24 · 19:07 UTC",
+  },
+  loki: {
+    category: "observability",
+    serviceName: "loki",
+    clusterIP: "10.43.140.26",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "9h 57m",
+    uptimeHours: 9.95,
+    startedAt: "Jul 28 · 19:08 UTC",
+  },
+  tempo: {
+    category: "observability",
+    serviceName: "tempo",
+    clusterIP: "10.43.236.243",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "4d 9h",
+    uptimeHours: 105.96,
+    startedAt: "Jul 24 · 19:08 UTC",
+  },
+  alloy: {
+    category: "observability",
+    serviceName: "alloy",
+    clusterIP: "10.43.123.64",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "9h 57m",
+    uptimeHours: 9.96,
+    startedAt: "Jul 28 · 19:08 UTC",
+  },
+  "temporal-frontend": {
+    category: "automation",
+    serviceName: "temporal-frontend",
+    clusterIP: "10.43.73.124",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.41,
+    startedAt: "Jul 18 · 08:41 UTC",
+  },
+  "minio-api": {
+    category: "data",
+    serviceName: "minio",
+    clusterIP: "10.43.121.253",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.7,
+    startedAt: "Jul 18 · 08:24 UTC",
+  },
+  "schema-registry": {
+    category: "messaging",
+    serviceName: "schema-registry",
+    clusterIP: "10.43.207.216",
+    readyEndpoints: 1,
+    totalEndpoints: 1,
+    uptime: "10d 20h",
+    uptimeHours: 260.48,
+    startedAt: "Jul 18 · 08:37 UTC",
+  },
+}
+
+const categoryConfig: {
+  id: CategoryId
+  label: string
+  description: string
+  icon: LucideIcon
+}[] = [
+  {
+    id: "observability",
+    label: "Observability",
+    description: "Metrics, logs, traces, topology, and telemetry transport.",
+    icon: ActivityIcon,
+  },
+  {
+    id: "data",
+    label: "Databases & Storage",
+    description: "Persistent data, caches, object storage, and admin tools.",
+    icon: DatabaseIcon,
+  },
+  {
+    id: "messaging",
+    label: "Messaging & Events",
+    description: "Brokers, streams, schemas, and event administration.",
+    icon: MessageSquareIcon,
+  },
+  {
+    id: "automation",
+    label: "Automation & Testing",
+    description: "Workflow engines, orchestration, and load-test surfaces.",
+    icon: WorkflowIcon,
+  },
+  {
+    id: "developer",
+    label: "MCP & Developer Tools",
+    description: "MCP endpoints, engineering utilities, email, and gRPC tools.",
+    icon: CloudCogIcon,
+  },
+  {
+    id: "platform",
+    label: "Platform & Security",
+    description: "Application APIs, secrets, and core platform capabilities.",
+    icon: SparklesIcon,
+  },
+]
+
+const catalogItems: CatalogItem[] = [...webApps, ...services].map((item) => {
+  const meta = operationalMeta[item.id]
+  const internalDns = `${meta.serviceName}.${item.namespace}.svc.${clusterDomain}`
+  const readiness =
+    meta.totalEndpoints > 0
+      ? Math.round((meta.readyEndpoints / meta.totalEndpoints) * 100)
+      : 0
+
+  return {
+    ...item,
+    ...meta,
+    externalDomain: item.href ? item.endpoint : undefined,
+    internalDns,
+    readiness,
+  }
+})
+
 const clusterStats = [
   { label: "Node", value: "1 ready", detail: "lima-rancher-desktop" },
   { label: "Namespaces", value: "18", detail: "active cluster scopes" },
   { label: "Workloads", value: "46", detail: "deployments + stateful sets" },
   { label: "Pods", value: "62 / 68", detail: "running and ready" },
 ] as const
+
+function getCategory(category: CategoryId) {
+  return categoryConfig.find((item) => item.id === category)!
+}
 
 function matchesSearch(item: CatalogItem, search: string) {
   const needle = search.trim().toLowerCase()
@@ -631,10 +1045,15 @@ function matchesSearch(item: CatalogItem, search: string) {
     item.name,
     item.namespace,
     item.summary,
-    item.endpoint,
+    item.externalDomain,
+    item.internalDns,
+    item.clusterIP,
+    item.serviceName,
     item.protocol,
     item.ports.join(" "),
+    getCategory(item.category).label,
   ]
+    .filter(Boolean)
     .join(" ")
     .toLowerCase()
     .includes(needle)
@@ -668,6 +1087,46 @@ function StatusBadge({ status }: { status: CatalogStatus }) {
   )
 }
 
+function AvailabilityGraphic({ item }: { item: CatalogItem }) {
+  const endpointLabel =
+    item.totalEndpoints > 0
+      ? `${item.readyEndpoints}/${item.totalEndpoints}`
+      : "0"
+
+  return (
+    <div className="availability-panel">
+      <div
+        className={cn(
+          "status-ring",
+          item.status === "attention" && "is-attention"
+        )}
+        role="img"
+        aria-label={`${item.name}: ${endpointLabel} endpoints ready`}
+      >
+        <span>{endpointLabel}</span>
+        <small>ready</small>
+      </div>
+      <div className="min-w-0 flex-1">
+        <Progress
+          value={Math.min((item.uptimeHours / 168) * 100, 100)}
+          aria-label={`${item.name} current run age: ${item.uptime}`}
+          className="gap-2"
+        >
+          <ProgressLabel>
+            {item.status === "attention" ? "Run state" : "Current run"}
+          </ProgressLabel>
+          <ProgressValue>{() => item.uptime}</ProgressValue>
+        </Progress>
+        <p className="mt-2 truncate text-[11px] text-muted-foreground">
+          {item.startedAt
+            ? `Started ${item.startedAt} · 7d scale`
+            : "No active endpoint at capture"}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function ResourceCard({
   item,
   onDetails,
@@ -695,38 +1154,56 @@ function ResourceCard({
             <span className="truncate">{item.name}</span>
           </span>
         </CardTitle>
-        <CardDescription className="truncate">
-          {item.namespace}
+        <CardDescription className="flex min-w-0 items-center gap-2">
+          <span className="truncate">{item.namespace}</span>
+          <span aria-hidden="true">·</span>
+          <span className="shrink-0">
+            {item.kind === "app" ? "Web app" : "Service"}
+          </span>
         </CardDescription>
         <CardAction>
           <StatusBadge status={item.status} />
         </CardAction>
       </CardHeader>
 
-      <CardContent className="flex min-h-24 flex-col gap-4">
+      <CardContent className="flex min-h-64 flex-col gap-4">
         <p className="line-clamp-2 leading-5 text-muted-foreground">
           {item.summary}
         </p>
-        <div className="mt-auto flex min-w-0 flex-col gap-2">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Globe2Icon className="size-3.5 shrink-0" aria-hidden="true" />
-            <span className="truncate font-mono">{item.endpoint}</span>
+
+        <AvailabilityGraphic item={item} />
+
+        <div className="mt-auto flex min-w-0 flex-col gap-2.5">
+          {item.externalDomain && (
+            <div className="address-line">
+              <Globe2Icon aria-hidden="true" />
+              <span>
+                <small>Ingress</small>
+                <strong>{item.externalDomain}</strong>
+              </span>
+            </div>
+          )}
+          <div className="address-line">
+            <NetworkIcon aria-hidden="true" />
+            <span>
+              <small>Cluster DNS</small>
+              <strong>{item.internalDns}</strong>
+            </span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <CableIcon className="size-3.5 shrink-0" aria-hidden="true" />
-            <span className="truncate font-mono">
-              {item.protocol} · {item.ports.join(", ")}
+          <div className="address-line">
+            <CableIcon aria-hidden="true" />
+            <span>
+              <small>Ports</small>
+              <strong>
+                {item.protocol} · {item.ports.join(", ")}
+              </strong>
             </span>
           </div>
         </div>
       </CardContent>
 
       <CardFooter className="justify-between gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onDetails(item)}
-        >
+        <Button variant="ghost" size="sm" onClick={() => onDetails(item)}>
           <Settings2Icon data-icon="inline-start" />
           Details
         </Button>
@@ -752,7 +1229,7 @@ function ResourceCard({
             ) : (
               <CopyIcon data-icon="inline-start" />
             )}
-            {copied ? "Copied" : "Copy address"}
+            {copied ? "Copied" : "Copy DNS"}
           </Button>
         )}
       </CardFooter>
@@ -763,16 +1240,11 @@ function ResourceCard({
 export default function Home() {
   const searchRef = React.useRef<HTMLInputElement>(null)
   const [search, setSearch] = React.useState("")
+  const [kindFilter, setKindFilter] = React.useState("all")
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [sortMode, setSortMode] = React.useState<SortMode>("recommended")
-  const [showAllApps, setShowAllApps] = React.useState(false)
-  const [showAllServices, setShowAllServices] = React.useState(false)
   const [selectedItem, setSelectedItem] = React.useState<CatalogItem | null>(null)
   const [copiedId, setCopiedId] = React.useState<string | null>(null)
-  const [isRefreshing, setIsRefreshing] = React.useState(false)
-  const [syncLabel, setSyncLabel] = React.useState(
-    "Live snapshot · Jul 29, 2026"
-  )
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -791,54 +1263,35 @@ export default function Home() {
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
 
-  const filterCatalog = React.useCallback(
-    (items: CatalogItem[]) => {
-      const filtered = items.filter((item) => {
-        const statusMatch =
-          statusFilter === "all" || item.status === statusFilter
-        return statusMatch && matchesSearch(item, search)
-      })
-      return sortItems(filtered, sortMode)
-    },
-    [search, sortMode, statusFilter]
-  )
+  const filteredItems = React.useMemo(() => {
+    const filtered = catalogItems.filter((item) => {
+      const kindMatch = kindFilter === "all" || item.kind === kindFilter
+      const statusMatch =
+        statusFilter === "all" || item.status === statusFilter
+      return kindMatch && statusMatch && matchesSearch(item, search)
+    })
 
-  const filteredApps = React.useMemo(
-    () => filterCatalog(webApps),
-    [filterCatalog]
-  )
-  const filteredServices = React.useMemo(
-    () => filterCatalog(services),
-    [filterCatalog]
-  )
+    return sortItems(filtered, sortMode)
+  }, [kindFilter, search, sortMode, statusFilter])
 
-  const shouldShowAllApps = showAllApps || Boolean(search) || statusFilter !== "all"
-  const shouldShowAllServices =
-    showAllServices || Boolean(search) || statusFilter !== "all"
-  const visibleApps = shouldShowAllApps ? filteredApps : filteredApps.slice(0, 8)
-  const visibleServices = shouldShowAllServices
-    ? filteredServices
-    : filteredServices.slice(0, 8)
-  const totalResults = filteredApps.length + filteredServices.length
+  const groupedCategories = categoryConfig
+    .map((category) => ({
+      ...category,
+      items: filteredItems.filter((item) => item.category === category.id),
+    }))
+    .filter((category) => category.items.length > 0)
 
-  async function copyEndpoint(item: CatalogItem) {
+  async function copyClusterDns(item: CatalogItem) {
     await navigator.clipboard.writeText(
-      `${item.endpoint}:${item.ports[0]?.split(" ")[0]}`
+      `${item.internalDns}:${item.ports[0]?.split(" ")[0]}`
     )
     setCopiedId(item.id)
     window.setTimeout(() => setCopiedId(null), 1600)
   }
 
-  function refreshCatalog() {
-    setIsRefreshing(true)
-    window.setTimeout(() => {
-      setIsRefreshing(false)
-      setSyncLabel("Snapshot refreshed just now")
-    }, 650)
-  }
-
   function resetFilters() {
     setSearch("")
+    setKindFilter("all")
     setStatusFilter("all")
     setSortMode("recommended")
   }
@@ -868,66 +1321,43 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Dialog>
-              <DialogTrigger
-                render={<Button variant="outline" size="sm" />}
-              >
-                <span className="connection-dot" aria-hidden="true" />
-                Cluster connected
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Cluster connection</DialogTitle>
-                  <DialogDescription>
-                    The catalog captured from your Rancher Desktop Kubernetes
-                    context.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="flex flex-col gap-4">
-                  <div className="detail-grid">
-                    <span>Context</span>
-                    <strong>rancher-desktop</strong>
-                    <span>Kubernetes</span>
-                    <strong>v1.36.1+k3s1</strong>
-                    <span>Runtime</span>
-                    <strong>containerd 2.3.2</strong>
-                    <span>Discovery</span>
-                    <strong>Ingress + Service</strong>
-                    <span>Access mode</span>
-                    <strong>Read-only catalog</strong>
-                    <span>Snapshot</span>
-                    <strong>Jul 29, 2026</strong>
-                  </div>
-                  <Separator />
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    This private prototype uses a captured local catalog. A
-                    lightweight in-cluster discovery agent is required for
-                    continuous refresh without exposing your Kubernetes API.
-                  </p>
+          <Dialog>
+            <DialogTrigger render={<Button variant="outline" size="sm" />}>
+              <span className="connection-dot" aria-hidden="true" />
+              Cluster connected
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Cluster connection</DialogTitle>
+                <DialogDescription>
+                  A read-only capture from the Rancher Desktop Kubernetes
+                  context.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col gap-4">
+                <div className="detail-grid">
+                  <span>Context</span>
+                  <strong>rancher-desktop</strong>
+                  <span>Kubernetes</span>
+                  <strong>v1.36.1+k3s1</strong>
+                  <span>Runtime</span>
+                  <strong>containerd 2.3.2</strong>
+                  <span>Discovery</span>
+                  <strong>Ingress + Service + EndpointSlice</strong>
+                  <span>DNS policy</span>
+                  <strong>ClusterFirst</strong>
+                  <span>Captured</span>
+                  <strong>{capturedAt}</strong>
                 </div>
-                <DialogFooter showCloseButton />
-              </DialogContent>
-            </Dialog>
-
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={refreshCatalog}
-                    aria-label="Refresh catalog snapshot"
-                  />
-                }
-              >
-                <RefreshCwIcon
-                  className={cn(isRefreshing && "animate-spin")}
-                />
-              </TooltipTrigger>
-              <TooltipContent>Refresh catalog snapshot</TooltipContent>
-            </Tooltip>
-          </div>
+                <Separator />
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Status and run age reflect this capture. Continuous uptime
+                  needs an in-cluster discovery agent or Prometheus history.
+                </p>
+              </div>
+              <DialogFooter showCloseButton />
+            </DialogContent>
+          </Dialog>
         </header>
 
         <section className="hero-panel" aria-labelledby="page-title">
@@ -937,19 +1367,21 @@ export default function Home() {
                 <CircleCheckIcon data-icon="inline-start" />
                 1 node ready
               </Badge>
-              <span className="text-xs text-muted-foreground">{syncLabel}</span>
+              <span className="text-xs text-muted-foreground">
+                Snapshot · {capturedAt}
+              </span>
             </div>
             <div>
               <h1
                 id="page-title"
                 className="max-w-2xl text-3xl font-semibold tracking-[-0.04em] text-balance sm:text-4xl"
               >
-                Your Kubernetes ecosystem,
-                <span className="text-primary"> one click away.</span>
+                Every cluster route,
+                <span className="text-primary"> mapped and ready.</span>
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                A focused launchpad for every web UI and core service in your
-                local cluster—discovered by namespace, route, and port.
+                Open web apps, copy internal service DNS, inspect ports, and
+                scan workload health by operational category.
               </p>
             </div>
           </div>
@@ -965,24 +1397,14 @@ export default function Home() {
               <ActivityIcon className="size-7 text-primary" aria-hidden="true" />
             </div>
             <div className="mt-5 flex flex-col gap-4">
-              <div>
-                <div className="mb-2 flex justify-between text-xs">
-                  <span className="text-muted-foreground">CPU</span>
-                  <span className="font-mono">588m · 5%</span>
-                </div>
-                <div className="meter-track">
-                  <span className="meter-fill w-[5%]" />
-                </div>
-              </div>
-              <div>
-                <div className="mb-2 flex justify-between text-xs">
-                  <span className="text-muted-foreground">Memory</span>
-                  <span className="font-mono">12.0 GiB · 38%</span>
-                </div>
-                <div className="meter-track">
-                  <span className="meter-fill w-[38%]" />
-                </div>
-              </div>
+              <Progress value={5}>
+                <ProgressLabel>CPU</ProgressLabel>
+                <ProgressValue>{() => "598m · 5%"}</ProgressValue>
+              </Progress>
+              <Progress value={38}>
+                <ProgressLabel>Memory</ProgressLabel>
+                <ProgressValue>{() => "12.0 GiB · 38%"}</ProgressValue>
+              </Progress>
             </div>
           </div>
         </section>
@@ -1003,6 +1425,68 @@ export default function Home() {
           ))}
         </section>
 
+        <section className="dns-panel" aria-labelledby="dns-title">
+          <div className="dns-intro">
+            <span className="resource-icon" aria-hidden="true">
+              <ServerCogIcon />
+            </span>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 id="dns-title" className="text-lg font-semibold">
+                  Cluster DNS
+                </h2>
+                <Badge variant="secondary">CoreDNS ready</Badge>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Base resolver and search domains used by ClusterFirst pods.
+              </p>
+            </div>
+          </div>
+          <div className="dns-facts">
+            <div>
+              <span>DNS service</span>
+              <strong className="font-mono">
+                kube-dns.kube-system.svc.cluster.local
+              </strong>
+              <small>CoreDNS · 1/1 available</small>
+            </div>
+            <div>
+              <span>DNS Service IP</span>
+              <strong className="font-mono">10.43.0.10</strong>
+              <small>53 UDP/TCP · metrics 9153</small>
+            </div>
+            <div>
+              <span>Base domain</span>
+              <strong className="font-mono">cluster.local</strong>
+              <small>Cache 30s · ndots:5</small>
+            </div>
+            <div className="dns-search-path">
+              <span>Pod search path</span>
+              <strong className="font-mono">
+                &lt;namespace&gt;.svc.cluster.local → svc.cluster.local →
+                cluster.local
+              </strong>
+              <small>Verified from a monitoring pod</small>
+            </div>
+          </div>
+        </section>
+
+        <nav className="category-index" aria-label="Service categories">
+          {categoryConfig.map((category) => {
+            const Icon = category.icon
+            const count = catalogItems.filter(
+              (item) => item.category === category.id
+            ).length
+            return (
+              <a key={category.id} href={`#category-${category.id}`}>
+                <Icon aria-hidden="true" />
+                <span>{category.label}</span>
+                <small>{count}</small>
+              </a>
+            )
+          })}
+        </nav>
+
         <section
           className="sticky-toolbar"
           aria-label="Catalog search and filters"
@@ -1016,7 +1500,7 @@ export default function Home() {
               ref={searchRef}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search apps, namespaces, URLs, or ports…"
+              placeholder="Search name, category, DNS, IP, namespace, or port…"
               aria-label="Search Kubernetes catalog"
               className="h-10 pl-9 pr-14"
             />
@@ -1037,7 +1521,20 @@ export default function Home() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <div className="toolbar-filters">
+            <ToggleGroup
+              value={[kindFilter]}
+              onValueChange={(value) => setKindFilter(value[0] ?? "all")}
+              variant="outline"
+              size="sm"
+              spacing={1}
+              aria-label="Filter by resource kind"
+            >
+              <ToggleGroupItem value="all">All</ToggleGroupItem>
+              <ToggleGroupItem value="app">Web apps</ToggleGroupItem>
+              <ToggleGroupItem value="service">Services</ToggleGroupItem>
+            </ToggleGroup>
+
             <ToggleGroup
               value={[statusFilter]}
               onValueChange={(value) => setStatusFilter(value[0] ?? "all")}
@@ -1046,7 +1543,7 @@ export default function Home() {
               spacing={1}
               aria-label="Filter catalog by status"
             >
-              <ToggleGroupItem value="all">All</ToggleGroupItem>
+              <ToggleGroupItem value="all">Any status</ToggleGroupItem>
               <ToggleGroupItem value="ready">Ready</ToggleGroupItem>
               <ToggleGroupItem value="attention">Attention</ToggleGroupItem>
             </ToggleGroup>
@@ -1065,13 +1562,15 @@ export default function Home() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel>Sort catalog</DropdownMenuLabel>
+                  <DropdownMenuLabel>Sort inside categories</DropdownMenuLabel>
                   <DropdownMenuItem
                     onClick={() => setSortMode("recommended")}
                   >
                     <SlidersHorizontalIcon />
                     Recommended
-                    {sortMode === "recommended" && <CheckIcon className="ml-auto" />}
+                    {sortMode === "recommended" && (
+                      <CheckIcon className="ml-auto" />
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSortMode("name")}>
                     <ArrowDownAZIcon />
@@ -1081,7 +1580,9 @@ export default function Home() {
                   <DropdownMenuItem onClick={() => setSortMode("namespace")}>
                     <BoxesIcon />
                     Namespace
-                    {sortMode === "namespace" && <CheckIcon className="ml-auto" />}
+                    {sortMode === "namespace" && (
+                      <CheckIcon className="ml-auto" />
+                    )}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
@@ -1090,7 +1591,7 @@ export default function Home() {
         </section>
 
         <div id="catalog" className="flex flex-col gap-14 pt-10">
-          {totalResults === 0 ? (
+          {filteredItems.length === 0 ? (
             <Empty>
               <EmptyHeader>
                 <EmptyMedia variant="icon">
@@ -1098,7 +1599,8 @@ export default function Home() {
                 </EmptyMedia>
                 <EmptyTitle>No cluster resources found</EmptyTitle>
                 <EmptyDescription>
-                  Try another name, namespace, URL, port, or status.
+                  Try another category, DNS name, IP, namespace, port, or
+                  status.
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
@@ -1108,137 +1610,66 @@ export default function Home() {
               </EmptyContent>
             </Empty>
           ) : (
-            <>
-              <section aria-labelledby="web-apps-title">
-                <div className="section-heading">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Globe2Icon
-                        className="size-4 text-primary"
-                        aria-hidden="true"
-                      />
-                      <h2
-                        id="web-apps-title"
-                        className="text-lg font-semibold tracking-tight"
-                      >
-                        Web Apps
-                      </h2>
-                      <Badge variant="secondary">{filteredApps.length}</Badge>
+            groupedCategories.map((category) => {
+              const CategoryIcon = category.icon
+              const appCount = category.items.filter(
+                (item) => item.kind === "app"
+              ).length
+              const serviceCount = category.items.length - appCount
+
+              return (
+                <section
+                  key={category.id}
+                  id={`category-${category.id}`}
+                  aria-labelledby={`category-${category.id}-title`}
+                  className="scroll-mt-28"
+                >
+                  <div className="section-heading">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="category-icon" aria-hidden="true">
+                          <CategoryIcon />
+                        </span>
+                        <h2
+                          id={`category-${category.id}-title`}
+                          className="text-lg font-semibold tracking-tight"
+                        >
+                          {category.label}
+                        </h2>
+                        <Badge variant="secondary">
+                          {category.items.length}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {category.description}
+                      </p>
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Browser-ready interfaces discovered from cluster ingresses.
+                    <p className="text-xs text-muted-foreground">
+                      {appCount} web {appCount === 1 ? "app" : "apps"} ·{" "}
+                      {serviceCount} {serviceCount === 1 ? "service" : "services"}
                     </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    23 routes discovered
-                  </p>
-                </div>
 
-                {filteredApps.length ? (
-                  <>
-                    <div className="catalog-grid">
-                      {visibleApps.map((item) => (
-                        <ResourceCard
-                          key={item.id}
-                          item={item}
-                          onDetails={setSelectedItem}
-                          onCopy={copyEndpoint}
-                          copied={copiedId === item.id}
-                        />
-                      ))}
-                    </div>
-                    {!search &&
-                      statusFilter === "all" &&
-                      filteredApps.length > 8 && (
-                        <div className="mt-5 flex justify-center">
-                          <Button
-                            variant="outline"
-                            onClick={() => setShowAllApps((value) => !value)}
-                          >
-                            {showAllApps
-                              ? "Show fewer apps"
-                              : `Show all ${filteredApps.length} apps`}
-                          </Button>
-                        </div>
-                      )}
-                  </>
-                ) : (
-                  <p className="py-8 text-sm text-muted-foreground">
-                    No web apps match this filter.
-                  </p>
-                )}
-              </section>
-
-              <section aria-labelledby="services-title">
-                <div className="section-heading">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <CableIcon
-                        className="size-4 text-primary"
-                        aria-hidden="true"
+                  <div className="catalog-grid">
+                    {category.items.map((item) => (
+                      <ResourceCard
+                        key={item.id}
+                        item={item}
+                        onDetails={setSelectedItem}
+                        onCopy={copyClusterDns}
+                        copied={copiedId === item.id}
                       />
-                      <h2
-                        id="services-title"
-                        className="text-lg font-semibold tracking-tight"
-                      >
-                        Services
-                      </h2>
-                      <Badge variant="secondary">
-                        {filteredServices.length}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Core APIs, data stores, brokers, and telemetry endpoints.
-                    </p>
+                    ))}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    66 services discovered
-                  </p>
-                </div>
-
-                {filteredServices.length ? (
-                  <>
-                    <div className="catalog-grid">
-                      {visibleServices.map((item) => (
-                        <ResourceCard
-                          key={item.id}
-                          item={item}
-                          onDetails={setSelectedItem}
-                          onCopy={copyEndpoint}
-                          copied={copiedId === item.id}
-                        />
-                      ))}
-                    </div>
-                    {!search &&
-                      statusFilter === "all" &&
-                      filteredServices.length > 8 && (
-                        <div className="mt-5 flex justify-center">
-                          <Button
-                            variant="outline"
-                            onClick={() =>
-                              setShowAllServices((value) => !value)
-                            }
-                          >
-                            {showAllServices
-                              ? "Show fewer services"
-                              : `Show all ${filteredServices.length} services`}
-                          </Button>
-                        </div>
-                      )}
-                  </>
-                ) : (
-                  <p className="py-8 text-sm text-muted-foreground">
-                    No services match this filter.
-                  </p>
-                )}
-              </section>
-            </>
+                </section>
+              )
+            })
           )}
         </div>
 
         <footer className="mt-16 flex flex-col gap-3 border-t border-border py-7 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>KubeDeck · Read-only Kubernetes launchpad</p>
-          <p>Ingress + Service discovery · Rancher Desktop</p>
+          <p>Ingress + Service + EndpointSlice · {capturedAt}</p>
         </footer>
       </div>
 
@@ -1249,52 +1680,82 @@ export default function Home() {
         }}
       >
         {selectedItem && (
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-xl">
             <DialogHeader>
               <div className="mb-1 flex items-center gap-3">
                 <span className="resource-icon" aria-hidden="true">
                   <selectedItem.icon />
                 </span>
                 <StatusBadge status={selectedItem.status} />
+                <Badge variant="outline">
+                  {getCategory(selectedItem.category).label}
+                </Badge>
               </div>
               <DialogTitle>{selectedItem.name}</DialogTitle>
               <DialogDescription>{selectedItem.summary}</DialogDescription>
             </DialogHeader>
 
-            <div className="flex flex-col gap-4">
-              <div className="detail-grid">
-                <span>Namespace</span>
-                <strong>{selectedItem.namespace}</strong>
-                <span>Endpoint</span>
-                <strong className="truncate font-mono">
-                  {selectedItem.endpoint}
-                </strong>
-                <span>Protocol</span>
-                <strong>{selectedItem.protocol}</strong>
-                <span>Ports</span>
-                <strong className="font-mono">
-                  {selectedItem.ports.join(", ")}
-                </strong>
-                <span>Workload</span>
-                <strong>{selectedItem.workload}</strong>
-                <span>Pods</span>
-                <strong>{selectedItem.pods}</strong>
-                <span>Discovered from</span>
-                <strong>{selectedItem.source}</strong>
-              </div>
+            <AvailabilityGraphic item={selectedItem} />
+            <Separator />
+
+            <div className="detail-grid">
+              <span>Surface</span>
+              <strong>
+                {selectedItem.kind === "app" ? "Web app" : "Internal service"}
+              </strong>
+              <span>Namespace</span>
+              <strong>{selectedItem.namespace}</strong>
+              {selectedItem.externalDomain && (
+                <>
+                  <span>Ingress domain</span>
+                  <strong className="truncate font-mono">
+                    {selectedItem.externalDomain}
+                  </strong>
+                </>
+              )}
+              <span>Cluster DNS</span>
+              <strong className="truncate font-mono">
+                {selectedItem.internalDns}
+              </strong>
+              <span>Service name</span>
+              <strong className="font-mono">{selectedItem.serviceName}</strong>
+              <span>Service ClusterIP</span>
+              <strong className="font-mono">{selectedItem.clusterIP}</strong>
+              <span>Cluster domain</span>
+              <strong className="font-mono">{clusterDomain}</strong>
+              <span>Protocol</span>
+              <strong>{selectedItem.protocol}</strong>
+              <span>Ports</span>
+              <strong className="font-mono">
+                {selectedItem.ports.join(", ")}
+              </strong>
+              <span>Ready endpoints</span>
+              <strong>
+                {selectedItem.readyEndpoints} / {selectedItem.totalEndpoints}
+              </strong>
+              <span>Workload</span>
+              <strong>{selectedItem.workload}</strong>
+              <span>Pods</span>
+              <strong>{selectedItem.pods}</strong>
+              <span>Discovered from</span>
+              <strong>{selectedItem.source}</strong>
+              <span>Captured</span>
+              <strong>{capturedAt}</strong>
             </div>
 
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => copyEndpoint(selectedItem)}
+                onClick={() => copyClusterDns(selectedItem)}
               >
                 {copiedId === selectedItem.id ? (
                   <CheckIcon data-icon="inline-start" />
                 ) : (
                   <CopyIcon data-icon="inline-start" />
                 )}
-                {copiedId === selectedItem.id ? "Copied" : "Copy address"}
+                {copiedId === selectedItem.id
+                  ? "Copied"
+                  : "Copy cluster DNS"}
               </Button>
               {selectedItem.href && (
                 <Button

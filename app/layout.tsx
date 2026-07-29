@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 const title = "KubeDeck — Kubernetes Launchpad"
 const description =
-  "A private, read-only launchpad for the web apps and services in your Kubernetes cluster."
+  "A private Kubernetes launchpad for web apps, service DNS, ports, status, and current workload run age."
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers()

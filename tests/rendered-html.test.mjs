@@ -30,11 +30,17 @@ test("server-renders the KubeDeck cluster catalog", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>KubeDeck — Kubernetes Launchpad<\/title>/i);
-  assert.match(html, /Your Kubernetes ecosystem,/);
-  assert.match(html, /Web Apps/);
-  assert.match(html, /Services/);
+  assert.match(html, /Every cluster route,/);
+  assert.match(html, /Cluster DNS/);
+  assert.match(html, /Observability/);
+  assert.match(html, /Databases &amp; Storage/);
+  assert.match(html, /MCP &amp; Developer Tools/);
   assert.match(html, /grafana\.dev\.local/);
+  assert.match(html, /grafana\.monitoring\.svc\.cluster\.local/);
   assert.match(html, /postgresql\.storage\.svc\.cluster\.local/);
+  assert.match(html, /kube-dns\.kube-system\.svc\.cluster\.local/);
+  assert.match(html, /10\.43\.0\.10/);
+  assert.match(html, /Current run/);
   assert.match(html, /rancher-desktop · v1\.36\.1\+k3s1/);
   assert.match(
     html,
@@ -53,6 +59,8 @@ test("ships the finished product assets without starter preview code", async () 
 
   assert.match(page, /const webApps:/);
   assert.match(page, /const services:/);
+  assert.match(page, /const operationalMeta:/);
+  assert.match(page, /const categoryConfig:/);
   assert.match(page, /Ingress \+ Service/);
   assert.match(layout, /summary_large_image/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
