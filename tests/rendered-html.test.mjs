@@ -196,6 +196,11 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(html, /10\.43\.0\.10/);
   assert.match(html, /Fleet resources/);
   assert.match(html, /Global discovery connected/);
+  assert.match(html, /data-slot="animated-radio-group"/);
+  assert.match(html, /role="radiogroup"/);
+  assert.match(html, /role="radio"/);
+  assert.match(html, /aria-label="Filter by resource kind"/);
+  assert.match(html, /aria-label="Filter catalog by status"/);
   assert.match(html, /Last deploy/);
   assert.match(html, /Sign out/);
   assert.doesNotMatch(html, /rancher[- ]desktop/i);

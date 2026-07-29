@@ -1,9 +1,11 @@
 "use client"
 
 import * as React from "react"
+import { AnimatePresence, motion } from "motion/react"
 import {
   AlertCircleIcon,
   ArrowRightIcon,
+  LoaderCircleIcon,
   ShieldCheckIcon,
 } from "lucide-react"
 
@@ -168,13 +170,21 @@ export function AdminAuthForm({ mode }: AdminAuthFormProps) {
             </Field>
           )}
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircleIcon />
-              <AlertTitle>Unable to continue</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          <AnimatePresence initial={false}>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, y: -6 }}
+                animate={{ opacity: 1, height: "auto", y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -6 }}
+              >
+                <Alert variant="destructive">
+                  <AlertCircleIcon />
+                  <AlertTitle>Unable to continue</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <Button
             type="submit"
@@ -182,19 +192,35 @@ export function AdminAuthForm({ mode }: AdminAuthFormProps) {
             className="w-full"
             disabled={pending}
           >
-            {pending ? (
-              "Securing account..."
-            ) : isSetup ? (
-              <>
-                <ShieldCheckIcon data-icon="inline-start" />
-                Create admin account
-              </>
-            ) : (
-              <>
-                Sign in
-                <ArrowRightIcon data-icon="inline-end" />
-              </>
-            )}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={pending ? "pending" : mode}
+                className="inline-flex items-center gap-2"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+              >
+                {pending ? (
+                  <>
+                    <LoaderCircleIcon
+                      className="animate-spin"
+                      data-icon="inline-start"
+                    />
+                    Securing account...
+                  </>
+                ) : isSetup ? (
+                  <>
+                    <ShieldCheckIcon data-icon="inline-start" />
+                    Create admin account
+                  </>
+                ) : (
+                  <>
+                    Sign in
+                    <ArrowRightIcon data-icon="inline-end" />
+                  </>
+                )}
+              </motion.span>
+            </AnimatePresence>
           </Button>
         </FieldGroup>
       </FieldSet>

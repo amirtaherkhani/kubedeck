@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Geist_Mono, Manrope } from "next/font/google"
 import { headers } from "next/headers"
 
+import { KubeDeckMotionProvider } from "@/components/kubedeck-motion-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 import "./globals.css"
@@ -65,7 +66,9 @@ export default function RootLayout({
       <body
         className={`${manrope.variable} ${geistMono.variable} antialiased`}
       >
-        <TooltipProvider>{children}</TooltipProvider>
+        <KubeDeckMotionProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </KubeDeckMotionProvider>
       </body>
     </html>
   )

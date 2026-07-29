@@ -127,6 +127,9 @@
   --chart-4: oklch(0.66 0.18 303);
   --chart-5: oklch(0.69 0.18 35);
   --radius: 0.75rem;
+  --motion-fast: 160ms;
+  --motion-standard: 260ms;
+  --motion-slow: 520ms;
   --sidebar: oklch(0.16 0.025 249);
   --sidebar-foreground: oklch(0.94 0.013 246);
   --sidebar-primary: oklch(0.68 0.165 252);
@@ -233,6 +236,7 @@
   border-radius: 999px;
   background: var(--success);
   box-shadow: 0 0 0 3px var(--success-soft);
+  animation: connection-breathe 2.4s ease-in-out infinite;
 }
 
 .login-shell {
@@ -640,10 +644,13 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transform-origin: 58% 48%;
+  animation: kubedeck-banner-drift 18s ease-in-out infinite alternate;
 }
 
 .login-banner {
   align-self: center;
+  animation: surface-reveal 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes kubedeck-banner-scan {
@@ -668,6 +675,41 @@
   }
 }
 
+@keyframes kubedeck-banner-drift {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.018);
+  }
+}
+
+@keyframes surface-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes connection-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--success-soft);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 5px color-mix(in oklch, var(--success), transparent 88%),
+      0 0 16px color-mix(in oklch, var(--success), transparent 52%);
+  }
+}
+
 .login-card {
   width: 100%;
   max-width: 29rem;
@@ -676,6 +718,7 @@
   box-shadow:
     0 28px 80px color-mix(in oklch, black, transparent 58%),
     inset 0 1px 0 color-mix(in oklch, white, transparent 92%);
+  animation: surface-reveal 720ms 90ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .dashboard-hero {
@@ -713,7 +756,26 @@
 }
 
 .resource-metric [data-slot="progress-indicator"] {
-  background: linear-gradient(90deg, var(--primary), var(--chart-2));
+  background: linear-gradient(
+    90deg,
+    var(--primary),
+    var(--chart-2),
+    color-mix(in oklch, white, var(--chart-2) 74%),
+    var(--primary)
+  );
+  background-size: 220% 100%;
+  animation: metric-flow 4.8s ease-in-out infinite;
+}
+
+@keyframes metric-flow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .stat-strip {
@@ -821,15 +883,19 @@
   color: var(--muted-foreground);
   font-size: 0.75rem;
   transition:
-    border-color 160ms ease,
-    background-color 160ms ease,
-    color 160ms ease;
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    transform var(--motion-standard) cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow var(--motion-standard) ease;
 }
 
 .category-index a:hover {
   border-color: color-mix(in oklch, var(--primary), transparent 45%);
   background: color-mix(in oklch, var(--primary), transparent 90%);
   color: var(--foreground);
+  box-shadow: 0 10px 24px color-mix(in oklch, black, transparent 82%);
+  transform: translateY(-2px);
 }
 
 .category-index a:focus-visible {
@@ -887,6 +953,76 @@
   padding-bottom: 0.1rem;
 }
 
+.animated-radio-group {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 2.5rem;
+  padding: 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, white, transparent 97%),
+      transparent
+    ),
+    color-mix(in oklch, var(--background), transparent 12%);
+  box-shadow: inset 0 1px 0 color-mix(in oklch, white, transparent 95%);
+}
+
+.animated-radio-option {
+  position: relative;
+  display: inline-flex;
+  min-height: 2rem;
+  cursor: pointer;
+  user-select: none;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  padding: 0.35rem 0.65rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-standard) ease;
+}
+
+.animated-radio-option:hover {
+  color: var(--foreground);
+}
+
+.animated-radio-option[data-checked] {
+  border-color: color-mix(in oklch, var(--primary), transparent 64%);
+  background: color-mix(in oklch, var(--primary), transparent 84%);
+  color: var(--foreground);
+  box-shadow:
+    0 6px 18px color-mix(in oklch, var(--primary), transparent 86%),
+    inset 0 1px 0 color-mix(in oklch, white, transparent 92%);
+}
+
+.animated-radio-option:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.animated-radio-indicator {
+  width: 0.42rem;
+  height: 0.42rem;
+  flex: none;
+  border-radius: 999px;
+  background: var(--chart-2);
+  box-shadow:
+    0 0 0 3px color-mix(in oklch, var(--chart-2), transparent 84%),
+    0 0 12px color-mix(in oklch, var(--chart-2), transparent 36%);
+}
+
 .section-heading {
   display: flex;
   align-items: end;
@@ -919,13 +1055,38 @@
 }
 
 .resource-card {
+  border: 1px solid transparent;
   box-shadow: inset 0 1px 0 color-mix(in oklch, white, transparent 96%);
+  transition:
+    border-color var(--motion-standard) ease,
+    box-shadow var(--motion-standard) ease;
 }
 
-.resource-card:hover {
+.resource-card-motion {
+  will-change: transform;
+}
+
+.resource-card-motion:hover .resource-card {
+  border-color: color-mix(in oklch, var(--primary), transparent 66%);
   box-shadow:
-    0 16px 36px color-mix(in oklch, black, transparent 78%),
+    0 22px 52px color-mix(in oklch, black, transparent 70%),
+    0 0 28px color-mix(in oklch, var(--primary), transparent 91%),
     inset 0 1px 0 color-mix(in oklch, white, transparent 94%);
+}
+
+.resource-card .resource-icon {
+  transition:
+    color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    transform var(--motion-standard) cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow var(--motion-standard) ease;
+}
+
+.resource-card-motion:hover .resource-icon {
+  border-color: color-mix(in oklch, var(--chart-2), transparent 46%);
+  color: var(--chart-2);
+  box-shadow: 0 0 22px color-mix(in oklch, var(--chart-2), transparent 82%);
+  transform: scale(1.06) rotate(-2deg);
 }
 
 .availability-panel {
@@ -952,6 +1113,15 @@
   background: conic-gradient(var(--success) 0 100%, var(--muted) 100% 100%);
   color: var(--foreground);
   box-shadow: 0 0 18px var(--success-soft);
+}
+
+.status-ring::after {
+  position: absolute;
+  inset: -0.02rem;
+  border: 1px solid color-mix(in oklch, var(--success), transparent 34%);
+  border-radius: inherit;
+  content: "";
+  animation: status-signal 2.8s ease-out infinite;
 }
 
 .status-ring::before {
@@ -984,6 +1154,24 @@
 .status-ring.is-attention {
   background: conic-gradient(var(--destructive) 0 3%, var(--muted) 3% 100%);
   box-shadow: 0 0 18px color-mix(in oklch, var(--destructive), transparent 82%);
+}
+
+.status-ring.is-attention::after {
+  border-color: color-mix(in oklch, var(--destructive), transparent 36%);
+  animation-duration: 1.8s;
+}
+
+@keyframes status-signal {
+  0% {
+    opacity: 0.72;
+    transform: scale(0.94);
+  }
+
+  72%,
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
 }
 
 .address-line {

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import type { LucideIcon } from "lucide-react"
+import { AnimatePresence, motion } from "motion/react"
 import {
   ActivityIcon,
   ArrowDownAZIcon,
@@ -86,14 +87,17 @@ import {
 } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/toggle-group"
+  Radio,
+  RadioGroup,
+  RadioIndicator,
+} from "@/components/animate-ui/primitives/base/radio"
 import { KubeDeckBanner } from "@/components/kubedeck-banner"
 import { cn } from "@/lib/utils"
 
 type CatalogStatus = "ready" | "attention"
 type CatalogKind = "app" | "service"
+type KindFilter = CatalogKind | "all"
+type StatusFilter = CatalogStatus | "all"
 type SortMode = "recommended" | "name" | "namespace"
 type CategoryId =
   | "observability"
@@ -1240,116 +1244,140 @@ function ResourceCard({
   onDetails,
   onCopy,
   copied,
+  index,
 }: {
   item: CatalogItem
   onDetails: (item: CatalogItem) => void
   onCopy: (item: CatalogItem) => void
   copied: boolean
+  index: number
 }) {
   const Icon = item.icon
 
   return (
-    <Card
-      size="sm"
-      className="resource-card h-full min-w-0 transition-transform duration-200 hover:-translate-y-0.5"
+    <motion.div
+      layout
+      className="resource-card-motion h-full min-w-0"
+      initial={{ opacity: 0, scale: 0.975, y: 18 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.975, y: -10 }}
+      whileHover={{ y: -4 }}
+      transition={{
+        type: "spring",
+        stiffness: 280,
+        damping: 26,
+        delay: Math.min(index * 0.025, 0.18),
+      }}
     >
-      <CardHeader>
-        <CardTitle>
-          <span className="flex min-w-0 items-center gap-3">
-            <span className="resource-icon" aria-hidden="true">
-              <Icon />
+      <Card size="sm" className="resource-card h-full min-w-0">
+        <CardHeader>
+          <CardTitle>
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="resource-icon" aria-hidden="true">
+                <Icon />
+              </span>
+              <span className="truncate">{item.name}</span>
             </span>
-            <span className="truncate">{item.name}</span>
-          </span>
-        </CardTitle>
-        <CardDescription className="flex min-w-0 items-center gap-2">
-          <span className="truncate">{item.namespace}</span>
-          <span aria-hidden="true">·</span>
-          <span className="shrink-0">
-            {item.kind === "app" ? "Web app" : "Service"}
-          </span>
-        </CardDescription>
-        <CardAction>
-          <StatusBadge status={item.status} />
-        </CardAction>
-      </CardHeader>
+          </CardTitle>
+          <CardDescription className="flex min-w-0 items-center gap-2">
+            <span className="truncate">{item.namespace}</span>
+            <span aria-hidden="true">·</span>
+            <span className="shrink-0">
+              {item.kind === "app" ? "Web app" : "Service"}
+            </span>
+          </CardDescription>
+          <CardAction>
+            <StatusBadge status={item.status} />
+          </CardAction>
+        </CardHeader>
 
-      <CardContent className="flex min-h-64 flex-col gap-4">
-        <p className="line-clamp-2 leading-5 text-muted-foreground">
-          {item.summary}
-        </p>
+        <CardContent className="flex min-h-64 flex-col gap-4">
+          <p className="line-clamp-2 leading-5 text-muted-foreground">
+            {item.summary}
+          </p>
 
-        <AvailabilityGraphic item={item} />
+          <AvailabilityGraphic item={item} />
 
-        <div className="mt-auto flex min-w-0 flex-col gap-2.5">
-          {item.externalDomain && (
+          <div className="mt-auto flex min-w-0 flex-col gap-2.5">
+            {item.externalDomain && (
+              <div className="address-line">
+                <Globe2Icon aria-hidden="true" />
+                <span>
+                  <small>Ingress</small>
+                  <strong>{item.externalDomain}</strong>
+                </span>
+              </div>
+            )}
             <div className="address-line">
-              <Globe2Icon aria-hidden="true" />
+              <NetworkIcon aria-hidden="true" />
               <span>
-                <small>Ingress</small>
-                <strong>{item.externalDomain}</strong>
+                <small>Cluster DNS</small>
+                <strong>{item.internalDns}</strong>
               </span>
             </div>
-          )}
-          <div className="address-line">
-            <NetworkIcon aria-hidden="true" />
-            <span>
-              <small>Cluster DNS</small>
-              <strong>{item.internalDns}</strong>
-            </span>
+            <div className="address-line">
+              <CableIcon aria-hidden="true" />
+              <span>
+                <small>Ports</small>
+                <strong>
+                  {item.protocol} · {item.ports.join(", ")}
+                </strong>
+              </span>
+            </div>
           </div>
-          <div className="address-line">
-            <CableIcon aria-hidden="true" />
-            <span>
-              <small>Ports</small>
-              <strong>
-                {item.protocol} · {item.ports.join(", ")}
-              </strong>
-            </span>
-          </div>
-        </div>
-      </CardContent>
+        </CardContent>
 
-      <CardFooter className="justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={() => onDetails(item)}>
-          <Settings2Icon data-icon="inline-start" />
-          Details
-        </Button>
-        {item.href ? (
-          <Button
-            size="sm"
-            render={
-              <a
-                href={item.href}
-                target="_blank"
-                rel="noopener noreferrer"
-              />
-            }
-            nativeButton={false}
-          >
-            Open
-            <ArrowUpRightIcon data-icon="inline-end" />
+        <CardFooter className="justify-between gap-2">
+          <Button variant="ghost" size="sm" onClick={() => onDetails(item)}>
+            <Settings2Icon data-icon="inline-start" />
+            Details
           </Button>
-        ) : (
-          <Button size="sm" variant="outline" onClick={() => onCopy(item)}>
-            {copied ? (
-              <CheckIcon data-icon="inline-start" />
-            ) : (
-              <CopyIcon data-icon="inline-start" />
-            )}
-            {copied ? "Copied" : "Copy DNS"}
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+          {item.href ? (
+            <Button
+              size="sm"
+              render={
+                <a
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+              nativeButton={false}
+            >
+              Open
+              <ArrowUpRightIcon data-icon="inline-end" />
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" onClick={() => onCopy(item)}>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={copied ? "copied" : "copy"}
+                  className="inline-flex items-center"
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.7 }}
+                >
+                  {copied ? (
+                    <CheckIcon data-icon="inline-start" />
+                  ) : (
+                    <CopyIcon data-icon="inline-start" />
+                  )}
+                </motion.span>
+              </AnimatePresence>
+              {copied ? "Copied" : "Copy DNS"}
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
+    </motion.div>
   )
 }
 
 export default function DashboardClient() {
   const searchRef = React.useRef<HTMLInputElement>(null)
   const [search, setSearch] = React.useState("")
-  const [kindFilter, setKindFilter] = React.useState("all")
-  const [statusFilter, setStatusFilter] = React.useState("all")
+  const [kindFilter, setKindFilter] = React.useState<KindFilter>("all")
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all")
   const [sortMode, setSortMode] = React.useState<SortMode>("recommended")
   const [selectedItem, setSelectedItem] = React.useState<CatalogItem | null>(null)
   const [copiedId, setCopiedId] = React.useState<string | null>(null)
@@ -1624,31 +1652,43 @@ export default function DashboardClient() {
           </div>
 
           <div className="toolbar-filters">
-            <ToggleGroup
-              value={[kindFilter]}
-              onValueChange={(value) => setKindFilter(value[0] ?? "all")}
-              variant="outline"
-              size="sm"
-              spacing={1}
+            <RadioGroup
+              value={kindFilter}
+              onValueChange={(value) => setKindFilter(value as KindFilter)}
               aria-label="Filter by resource kind"
             >
-              <ToggleGroupItem value="all">All</ToggleGroupItem>
-              <ToggleGroupItem value="app">Web apps</ToggleGroupItem>
-              <ToggleGroupItem value="service">Services</ToggleGroupItem>
-            </ToggleGroup>
+              <Radio value="all">
+                <RadioIndicator />
+                All
+              </Radio>
+              <Radio value="app">
+                <RadioIndicator />
+                Web apps
+              </Radio>
+              <Radio value="service">
+                <RadioIndicator />
+                Services
+              </Radio>
+            </RadioGroup>
 
-            <ToggleGroup
-              value={[statusFilter]}
-              onValueChange={(value) => setStatusFilter(value[0] ?? "all")}
-              variant="outline"
-              size="sm"
-              spacing={1}
+            <RadioGroup
+              value={statusFilter}
+              onValueChange={(value) => setStatusFilter(value as StatusFilter)}
               aria-label="Filter catalog by status"
             >
-              <ToggleGroupItem value="all">Any status</ToggleGroupItem>
-              <ToggleGroupItem value="ready">Ready</ToggleGroupItem>
-              <ToggleGroupItem value="attention">Attention</ToggleGroupItem>
-            </ToggleGroup>
+              <Radio value="all">
+                <RadioIndicator />
+                Any status
+              </Radio>
+              <Radio value="ready">
+                <RadioIndicator />
+                Ready
+              </Radio>
+              <Radio value="attention">
+                <RadioIndicator />
+                Attention
+              </Radio>
+            </RadioGroup>
 
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -1692,82 +1732,103 @@ export default function DashboardClient() {
           </div>
         </section>
 
-        <div id="catalog" className="flex flex-col gap-14 pt-10">
-          {filteredItems.length === 0 ? (
-            <Empty>
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <SearchIcon />
-                </EmptyMedia>
-                <EmptyTitle>No cluster resources found</EmptyTitle>
-                <EmptyDescription>
-                  Try another category, DNS name, IP, namespace, port, or
-                  status.
-                </EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button variant="outline" onClick={resetFilters}>
-                  Reset filters
-                </Button>
-              </EmptyContent>
-            </Empty>
-          ) : (
-            groupedCategories.map((category) => {
-              const CategoryIcon = category.icon
-              const appCount = category.items.filter(
-                (item) => item.kind === "app"
-              ).length
-              const serviceCount = category.items.length - appCount
+        <motion.div
+          id="catalog"
+          layout
+          className="flex flex-col gap-14 pt-10"
+        >
+          <AnimatePresence mode="popLayout" initial={false}>
+            {filteredItems.length === 0 ? (
+              <motion.div
+                key="empty-catalog"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+              >
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <SearchIcon />
+                    </EmptyMedia>
+                    <EmptyTitle>No cluster resources found</EmptyTitle>
+                    <EmptyDescription>
+                      Try another category, DNS name, IP, namespace, port, or
+                      status.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                  <EmptyContent>
+                    <Button variant="outline" onClick={resetFilters}>
+                      Reset filters
+                    </Button>
+                  </EmptyContent>
+                </Empty>
+              </motion.div>
+            ) : (
+              groupedCategories.map((category) => {
+                const CategoryIcon = category.icon
+                const appCount = category.items.filter(
+                  (item) => item.kind === "app"
+                ).length
+                const serviceCount = category.items.length - appCount
 
-              return (
-                <section
-                  key={category.id}
-                  id={`category-${category.id}`}
-                  aria-labelledby={`category-${category.id}-title`}
-                  className="scroll-mt-28"
-                >
-                  <div className="section-heading">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="category-icon" aria-hidden="true">
-                          <CategoryIcon />
-                        </span>
-                        <h2
-                          id={`category-${category.id}-title`}
-                          className="text-lg font-semibold tracking-tight"
-                        >
-                          {category.label}
-                        </h2>
-                        <Badge variant="secondary">
-                          {category.items.length}
-                        </Badge>
+                return (
+                  <motion.section
+                    layout
+                    key={category.id}
+                    id={`category-${category.id}`}
+                    aria-labelledby={`category-${category.id}-title`}
+                    className="scroll-mt-28"
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <div className="section-heading">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="category-icon" aria-hidden="true">
+                            <CategoryIcon />
+                          </span>
+                          <h2
+                            id={`category-${category.id}-title`}
+                            className="text-lg font-semibold tracking-tight"
+                          >
+                            {category.label}
+                          </h2>
+                          <Badge variant="secondary">
+                            {category.items.length}
+                          </Badge>
+                        </div>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {category.description}
+                        </p>
                       </div>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        {category.description}
+                      <p className="text-xs text-muted-foreground">
+                        {appCount} web {appCount === 1 ? "app" : "apps"} ·{" "}
+                        {serviceCount}{" "}
+                        {serviceCount === 1 ? "service" : "services"}
                       </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {appCount} web {appCount === 1 ? "app" : "apps"} ·{" "}
-                      {serviceCount} {serviceCount === 1 ? "service" : "services"}
-                    </p>
-                  </div>
 
-                  <div className="catalog-grid">
-                    {category.items.map((item) => (
-                      <ResourceCard
-                        key={item.id}
-                        item={item}
-                        onDetails={setSelectedItem}
-                        onCopy={copyClusterDns}
-                        copied={copiedId === item.id}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )
-            })
-          )}
-        </div>
+                    <motion.div layout className="catalog-grid">
+                      <AnimatePresence mode="popLayout">
+                        {category.items.map((item, index) => (
+                          <ResourceCard
+                            key={item.id}
+                            item={item}
+                            onDetails={setSelectedItem}
+                            onCopy={copyClusterDns}
+                            copied={copiedId === item.id}
+                            index={index}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    </motion.div>
+                  </motion.section>
+                )
+              })
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         <footer className="mt-16 flex flex-col gap-3 border-t border-border py-7 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>KubeDeck · Global multi-cluster Kubernetes launchpad</p>
