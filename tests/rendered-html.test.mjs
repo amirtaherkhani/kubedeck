@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
+async function render(pathname = "/dashboard", requestHeaders = {}) {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
+    new Request(`http://localhost${pathname}`, {
+      headers: { accept: "text/html", ...requestHeaders },
     }),
     {
       ASSETS: {
@@ -22,6 +22,24 @@ async function render() {
     },
   );
 }
+
+test("server-renders the private KubeDeck login page", async () => {
+  const response = await render("/", {
+    "oai-authenticated-user-email": "amir@example.com",
+    "oai-authenticated-user-full-name": "Amir%20Taherkhani",
+    "oai-authenticated-user-full-name-encoding": "percent-encoded-utf-8",
+  });
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /Sign in to KubeDeck/);
+  assert.match(html, /Owner-only workspace/);
+  assert.match(html, /Amir Taherkhani/);
+  assert.match(html, /amir@example\.com/);
+  assert.match(html, /Continue to dashboard/);
+  assert.match(html, /does not request or store Rancher tokens/);
+  assert.match(html, /href="\/dashboard"/);
+});
 
 test("server-renders the KubeDeck cluster catalog", async () => {
   const response = await render();
@@ -54,20 +72,25 @@ test("server-renders the KubeDeck cluster catalog", async () => {
 });
 
 test("ships the finished product assets without starter preview code", async () => {
-  const [page, layout, packageJson, socialImage] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-    readFile(new URL("../public/og.png", import.meta.url)),
-  ]);
+  const [loginPage, dashboardPage, layout, packageJson, socialImage] =
+    await Promise.all([
+      readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+      readFile(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8"),
+      readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+      readFile(new URL("../package.json", import.meta.url), "utf8"),
+      readFile(new URL("../public/og.png", import.meta.url)),
+    ]);
 
-  assert.match(page, /const webApps:/);
-  assert.match(page, /const services:/);
-  assert.match(page, /const operationalMeta:/);
-  assert.match(page, /const categoryConfig:/);
-  assert.match(page, /lastDeployedAt: "2026-07-24T19:07:45Z"/);
-  assert.match(page, /metrics-server \+ kubelet summary/);
-  assert.match(page, /Ingress \+ Service/);
+  assert.match(loginPage, /export const dynamic = "force-dynamic"/);
+  assert.match(loginPage, /oai-authenticated-user-email/);
+  assert.match(loginPage, /href="\/dashboard"/);
+  assert.match(dashboardPage, /const webApps:/);
+  assert.match(dashboardPage, /const services:/);
+  assert.match(dashboardPage, /const operationalMeta:/);
+  assert.match(dashboardPage, /const categoryConfig:/);
+  assert.match(dashboardPage, /lastDeployedAt: "2026-07-24T19:07:45Z"/);
+  assert.match(dashboardPage, /metrics-server \+ kubelet summary/);
+  assert.match(dashboardPage, /Ingress \+ Service/);
   assert.match(layout, /summary_large_image/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.deepEqual(
