@@ -154,6 +154,10 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.equal(denied.status, 307);
   assert.match(denied.headers.get("location") ?? "", /\/$/);
 
+  const deniedSettings = await runtime.request("/settings");
+  assert.equal(deniedSettings.status, 307);
+  assert.match(deniedSettings.headers.get("location") ?? "", /\/$/);
+
   const invalidLogin = await runtime.request("/api/auth/login", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -187,9 +191,13 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(html, /Your Kubernetes ecosystem/);
   assert.match(html, /kubedeck-banner\.png/);
   assert.match(html, /Cluster DNS/);
-  assert.match(html, /Observability/);
+  assert.match(html, /Observability &amp; Metrics/);
   assert.match(html, /Databases &amp; Storage/);
-  assert.match(html, /MCP &amp; Developer Tools/);
+  assert.match(html, /Web Applications/);
+  assert.match(html, /Automation &amp; Workflows/);
+  assert.match(html, /Deployments &amp; Testing/);
+  assert.match(html, /AI &amp; MCP Services/);
+  assert.match(html, /Developer Tools/);
   assert.match(html, /grafana\.dev\.local/);
   assert.match(html, /grafana\.monitoring\.svc\.cluster\.local/);
   assert.match(html, /postgresql\.storage\.svc\.cluster\.local/);
@@ -204,9 +212,25 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(html, /aria-label="Filter by resource kind"/);
   assert.match(html, /aria-label="Filter catalog by status"/);
   assert.match(html, /Last deploy/);
+  assert.match(html, /unread notifications/);
+  assert.match(html, /kubedeck-kb-logo\.png/);
+  assert.match(html, /href="\/settings"/);
   assert.match(html, /Sign out/);
   assert.doesNotMatch(html, /rancher[- ]desktop/i);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
+
+  const settings = await runtime.request("/settings", {
+    headers: { accept: "text/html", cookie: loginCookie },
+  });
+  assert.equal(settings.status, 200);
+  const settingsHtml = await settings.text();
+  assert.match(settingsHtml, /Settings and access/);
+  assert.match(settingsHtml, /Current user/);
+  assert.match(settingsHtml, /Kubernetes/);
+  assert.match(settingsHtml, />App</);
+  assert.match(settingsHtml, />Users</);
+  assert.match(settingsHtml, /Admin/);
+  assert.match(settingsHtml, /All registered clusters/);
 
   const logout = await runtime.request("/api/auth/logout", {
     method: "POST",
@@ -265,8 +289,12 @@ test("ships the admin schema, migration, and finished product assets", async () 
   const [
     loginPage,
     bannerComponent,
+    logoComponent,
+    notificationsComponent,
     dashboardPage,
     dashboardClient,
+    settingsPage,
+    settingsClient,
     authSource,
     schema,
     migration,
@@ -275,6 +303,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
     packageJson,
     socialImage,
     bannerImage,
+    logoImage,
     liquidGlassPage,
     environmentExample,
     globalStyles,
@@ -284,9 +313,22 @@ test("ships the admin schema, migration, and finished product assets", async () 
       new URL("../components/kubedeck-banner.tsx", import.meta.url),
       "utf8",
     ),
+    readFile(
+      new URL("../components/kubedeck-logo.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/notifications-menu.tsx", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8"),
     readFile(
       new URL("../app/dashboard/dashboard-client.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../app/settings/page.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/settings/settings-client.tsx", import.meta.url),
       "utf8",
     ),
     readFile(new URL("../lib/auth.ts", import.meta.url), "utf8"),
@@ -300,6 +342,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../public/og.png", import.meta.url)),
     readFile(new URL("../public/kubedeck-banner.png", import.meta.url)),
+    readFile(new URL("../public/kubedeck-kb-logo.png", import.meta.url)),
     readFile(
       new URL("../public/kubedeck-liquid-glass.html", import.meta.url),
       "utf8",
@@ -312,11 +355,17 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(loginPage, /KubeDeckBanner/);
   assert.match(bannerComponent, /src="\/kubedeck-banner\.png"/);
   assert.match(bannerComponent, /Your Kubernetes ecosystem/);
+  assert.match(logoComponent, /src="\/kubedeck-kb-logo\.png"/);
+  assert.match(notificationsComponent, /Kubernetes discovery events/);
   assert.match(dashboardPage, /getCurrentAdmin/);
   assert.match(dashboardPage, /<DashboardClient admin=\{admin\}/);
   assert.match(dashboardClient, /KubeDeckBanner/);
   assert.match(dashboardClient, /const webApps:/);
   assert.match(dashboardClient, /const operationalMeta:/);
+  assert.match(dashboardClient, /AI & MCP Services/);
+  assert.match(settingsPage, /getCurrentAdmin/);
+  assert.match(settingsClient, /Single-admin authentication is active/);
+  assert.match(settingsClient, /kubedeck-compact-catalog/);
   assert.doesNotMatch(dashboardClient, /rancher[- ]desktop/i);
   assert.match(authSource, /PBKDF2/);
   assert.match(authSource, /KUBEDECK_ADMIN_FIRST_NAME/);
@@ -356,6 +405,12 @@ test("ships the admin schema, migration, and finished product assets", async () 
   );
   assert.equal(bannerImage.readUInt32BE(16), 1731);
   assert.equal(bannerImage.readUInt32BE(20), 909);
+  assert.deepEqual(
+    [...logoImage.subarray(0, 8)],
+    [137, 80, 78, 71, 13, 10, 26, 10],
+  );
+  assert.equal(logoImage.readUInt32BE(16), 512);
+  assert.equal(logoImage.readUInt32BE(20), 512);
 
   await assert.rejects(
     access(new URL("../app/_sites-preview", import.meta.url)),

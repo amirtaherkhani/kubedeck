@@ -33,6 +33,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description,
+    icons: {
+      icon: "/kubedeck-kb-logo.png",
+      apple: "/kubedeck-kb-logo.png",
+    },
     openGraph: {
       title,
       description,

@@ -5,9 +5,11 @@ import type { LucideIcon } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
 import {
   ActivityIcon,
+  AppWindowIcon,
   ArrowDownAZIcon,
   ArrowUpRightIcon,
   BarChart3Icon,
+  BotIcon,
   BoxesIcon,
   BracesIcon,
   CableIcon,
@@ -33,9 +35,11 @@ import {
   MemoryStickIcon,
   MessageSquareIcon,
   NetworkIcon,
+  RocketIcon,
   SearchIcon,
   ServerCogIcon,
   Settings2Icon,
+  ShieldCheckIcon,
   SlidersHorizontalIcon,
   SparklesIcon,
   WorkflowIcon,
@@ -92,6 +96,8 @@ import {
   RadioIndicator,
 } from "@/components/animate-ui/primitives/base/radio"
 import { KubeDeckBanner } from "@/components/kubedeck-banner"
+import { KubeDeckLogo } from "@/components/kubedeck-logo"
+import { NotificationsMenu } from "@/components/notifications-menu"
 import { cn } from "@/lib/utils"
 
 type CatalogStatus = "ready" | "attention"
@@ -103,14 +109,18 @@ type DashboardAdmin = {
   firstName: string
   lastName: string
   email: string
+  role: "admin"
 }
 type CategoryId =
-  | "observability"
-  | "data"
-  | "messaging"
-  | "automation"
-  | "developer"
-  | "platform"
+  | "web-applications"
+  | "databases-storage"
+  | "observability-metrics"
+  | "automation-workflows"
+  | "deployments"
+  | "ai-services"
+  | "messaging-events"
+  | "developer-tools"
+  | "platform-security"
 
 type CatalogBase = {
   id: string
@@ -658,7 +668,7 @@ const capturedAt = "Jul 29, 2026 · 05:21 UTC"
 
 const operationalMeta: Record<string, OperationalMeta> = {
   grafana: {
-    category: "observability",
+    category: "observability-metrics",
     serviceName: "grafana",
     clusterIP: "10.43.1.72",
     readyEndpoints: 1,
@@ -668,7 +678,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-24T19:07:45Z",
   },
   radar: {
-    category: "observability",
+    category: "observability-metrics",
     serviceName: "radar",
     clusterIP: "10.43.24.183",
     readyEndpoints: 1,
@@ -678,7 +688,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-29T04:03:48Z",
   },
   infisical: {
-    category: "platform",
+    category: "platform-security",
     serviceName: "infisical-backend",
     clusterIP: "10.43.11.43",
     readyEndpoints: 1,
@@ -688,7 +698,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-29T04:07:02Z",
   },
   n8n: {
-    category: "automation",
+    category: "automation-workflows",
     serviceName: "n8n",
     clusterIP: "10.43.56.192",
     readyEndpoints: 1,
@@ -698,7 +708,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T16:10:06Z",
   },
   temporal: {
-    category: "automation",
+    category: "automation-workflows",
     serviceName: "temporal-web",
     clusterIP: "10.43.151.67",
     readyEndpoints: 1,
@@ -708,7 +718,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:41:41Z",
   },
   "nats-ui": {
-    category: "messaging",
+    category: "messaging-events",
     serviceName: "nats-ui",
     clusterIP: "10.43.71.175",
     readyEndpoints: 1,
@@ -718,7 +728,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:35:14Z",
   },
   "kafka-ui": {
-    category: "messaging",
+    category: "messaging-events",
     serviceName: "kafka-ui",
     clusterIP: "10.43.47.96",
     readyEndpoints: 1,
@@ -728,7 +738,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:25:06Z",
   },
   "minio-console": {
-    category: "data",
+    category: "databases-storage",
     serviceName: "minio",
     clusterIP: "10.43.121.253",
     readyEndpoints: 1,
@@ -738,7 +748,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:24:10Z",
   },
   pgadmin: {
-    category: "data",
+    category: "databases-storage",
     serviceName: "pgadmin",
     clusterIP: "10.43.143.243",
     readyEndpoints: 1,
@@ -748,7 +758,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:36:18Z",
   },
   "redis-commander": {
-    category: "data",
+    category: "databases-storage",
     serviceName: "redis-commander",
     clusterIP: "10.43.27.142",
     readyEndpoints: 1,
@@ -758,7 +768,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:36:50Z",
   },
   rabbitmq: {
-    category: "messaging",
+    category: "messaging-events",
     serviceName: "rabbitmq",
     clusterIP: "10.43.66.194",
     readyEndpoints: 1,
@@ -768,7 +778,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:22:36Z",
   },
   mailpit: {
-    category: "developer",
+    category: "developer-tools",
     serviceName: "mailpit-ui",
     clusterIP: "10.43.202.31",
     readyEndpoints: 1,
@@ -778,7 +788,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:36:06Z",
   },
   "mongo-ui": {
-    category: "data",
+    category: "databases-storage",
     serviceName: "mongoku",
     clusterIP: "10.43.35.66",
     readyEndpoints: 1,
@@ -788,7 +798,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:25:49Z",
   },
   "schema-registry-ui": {
-    category: "messaging",
+    category: "messaging-events",
     serviceName: "schema-registry-ui",
     clusterIP: "10.43.233.88",
     readyEndpoints: 1,
@@ -798,7 +808,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:37:41Z",
   },
   "jaeger-ui": {
-    category: "observability",
+    category: "observability-metrics",
     serviceName: "jaeger-ui",
     clusterIP: "10.43.95.112",
     readyEndpoints: 1,
@@ -808,7 +818,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:24:55Z",
   },
   grpcui: {
-    category: "developer",
+    category: "web-applications",
     serviceName: "grpcui",
     clusterIP: "10.43.19.161",
     readyEndpoints: 1,
@@ -818,7 +828,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:24:44Z",
   },
   "k6-dashboard": {
-    category: "automation",
+    category: "deployments",
     serviceName: "k6-web-dashboard",
     clusterIP: "10.43.4.252",
     readyEndpoints: 0,
@@ -828,7 +838,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-16T18:16:20Z",
   },
   "finance-api": {
-    category: "platform",
+    category: "web-applications",
     serviceName: "vero-vault-finance",
     clusterIP: "10.43.99.211",
     readyEndpoints: 2,
@@ -838,7 +848,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-28T21:17:19Z",
   },
   "dev-io-mcp": {
-    category: "developer",
+    category: "ai-services",
     serviceName: "dev-io-mcp",
     clusterIP: "10.43.188.213",
     readyEndpoints: 1,
@@ -848,7 +858,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-24T06:51:20Z",
   },
   diago: {
-    category: "developer",
+    category: "ai-services",
     serviceName: "diago",
     clusterIP: "10.43.200.69",
     readyEndpoints: 1,
@@ -858,7 +868,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-27T19:09:47Z",
   },
   postgresql: {
-    category: "data",
+    category: "databases-storage",
     serviceName: "postgresql",
     clusterIP: "10.43.19.66",
     readyEndpoints: 1,
@@ -868,7 +878,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-24T11:24:21Z",
   },
   redis: {
-    category: "data",
+    category: "databases-storage",
     serviceName: "redis",
     clusterIP: "10.43.251.8",
     readyEndpoints: 1,
@@ -878,7 +888,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:22:23Z",
   },
   mongodb: {
-    category: "data",
+    category: "databases-storage",
     serviceName: "mongodb",
     clusterIP: "10.43.255.200",
     readyEndpoints: 1,
@@ -888,7 +898,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:23:33Z",
   },
   nats: {
-    category: "messaging",
+    category: "messaging-events",
     serviceName: "nats",
     clusterIP: "10.43.233.25",
     readyEndpoints: 3,
@@ -898,7 +908,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-27T09:49:43Z",
   },
   kafka: {
-    category: "messaging",
+    category: "messaging-events",
     serviceName: "kafka",
     clusterIP: "10.43.114.51",
     readyEndpoints: 1,
@@ -908,7 +918,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:23:00Z",
   },
   prometheus: {
-    category: "observability",
+    category: "observability-metrics",
     serviceName: "monitoring-kube-prometheus-prometheus",
     clusterIP: "10.43.216.124",
     readyEndpoints: 1,
@@ -918,7 +928,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-24T19:07:46Z",
   },
   loki: {
-    category: "observability",
+    category: "observability-metrics",
     serviceName: "loki",
     clusterIP: "10.43.140.26",
     readyEndpoints: 1,
@@ -928,7 +938,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-28T19:08:55Z",
   },
   tempo: {
-    category: "observability",
+    category: "observability-metrics",
     serviceName: "tempo",
     clusterIP: "10.43.236.243",
     readyEndpoints: 1,
@@ -938,7 +948,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-24T19:08:23Z",
   },
   alloy: {
-    category: "observability",
+    category: "observability-metrics",
     serviceName: "alloy",
     clusterIP: "10.43.123.64",
     readyEndpoints: 1,
@@ -948,7 +958,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-28T19:08:33Z",
   },
   "temporal-frontend": {
-    category: "automation",
+    category: "automation-workflows",
     serviceName: "temporal-frontend",
     clusterIP: "10.43.73.124",
     readyEndpoints: 1,
@@ -958,7 +968,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:41:39Z",
   },
   "minio-api": {
-    category: "data",
+    category: "databases-storage",
     serviceName: "minio",
     clusterIP: "10.43.121.253",
     readyEndpoints: 1,
@@ -968,7 +978,7 @@ const operationalMeta: Record<string, OperationalMeta> = {
     lastDeployedAt: "2026-07-18T08:24:10Z",
   },
   "schema-registry": {
-    category: "messaging",
+    category: "messaging-events",
     serviceName: "schema-registry",
     clusterIP: "10.43.207.216",
     readyEndpoints: 1,
@@ -986,40 +996,58 @@ const categoryConfig: {
   icon: LucideIcon
 }[] = [
   {
-    id: "observability",
-    label: "Observability",
-    description: "Metrics, logs, traces, topology, and telemetry transport.",
-    icon: ActivityIcon,
+    id: "web-applications",
+    label: "Web Applications",
+    description: "Launchable application and API surfaces with external URLs.",
+    icon: AppWindowIcon,
   },
   {
-    id: "data",
+    id: "databases-storage",
     label: "Databases & Storage",
     description: "Persistent data, caches, object storage, and admin tools.",
     icon: DatabaseIcon,
   },
   {
-    id: "messaging",
+    id: "observability-metrics",
+    label: "Observability & Metrics",
+    description: "Metrics, logs, traces, topology, and telemetry transport.",
+    icon: ActivityIcon,
+  },
+  {
+    id: "automation-workflows",
+    label: "Automation & Workflows",
+    description: "Workflow engines, orchestration, and integration surfaces.",
+    icon: WorkflowIcon,
+  },
+  {
+    id: "deployments",
+    label: "Deployments & Testing",
+    description: "Release surfaces, ephemeral workloads, and load-test runs.",
+    icon: RocketIcon,
+  },
+  {
+    id: "ai-services",
+    label: "AI & MCP Services",
+    description: "AI-facing MCP endpoints, agents, and engineering services.",
+    icon: BotIcon,
+  },
+  {
+    id: "messaging-events",
     label: "Messaging & Events",
     description: "Brokers, streams, schemas, and event administration.",
     icon: MessageSquareIcon,
   },
   {
-    id: "automation",
-    label: "Automation & Testing",
-    description: "Workflow engines, orchestration, and load-test surfaces.",
-    icon: WorkflowIcon,
-  },
-  {
-    id: "developer",
-    label: "MCP & Developer Tools",
-    description: "MCP endpoints, engineering utilities, email, and gRPC tools.",
+    id: "developer-tools",
+    label: "Developer Tools",
+    description: "Email testing, protocol exploration, and engineering tools.",
     icon: CloudCogIcon,
   },
   {
-    id: "platform",
+    id: "platform-security",
     label: "Platform & Security",
-    description: "Application APIs, secrets, and core platform capabilities.",
-    icon: SparklesIcon,
+    description: "Secrets, access control, and core platform capabilities.",
+    icon: ShieldCheckIcon,
   },
 ]
 
@@ -1250,12 +1278,14 @@ function ResourceCard({
   onCopy,
   copied,
   index,
+  openInNewTab,
 }: {
   item: CatalogItem
   onDetails: (item: CatalogItem) => void
   onCopy: (item: CatalogItem) => void
   copied: boolean
   index: number
+  openInNewTab: boolean
 }) {
   const Icon = item.icon
 
@@ -1343,8 +1373,8 @@ function ResourceCard({
               render={
                 <a
                   href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  target={openInNewTab ? "_blank" : undefined}
+                  rel={openInNewTab ? "noopener noreferrer" : undefined}
                 />
               }
               nativeButton={false}
@@ -1390,6 +1420,8 @@ export default function DashboardClient({
   const [sortMode, setSortMode] = React.useState<SortMode>("recommended")
   const [selectedItem, setSelectedItem] = React.useState<CatalogItem | null>(null)
   const [copiedId, setCopiedId] = React.useState<string | null>(null)
+  const [compactCatalog, setCompactCatalog] = React.useState(false)
+  const [openInNewTab, setOpenInNewTab] = React.useState(true)
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1406,6 +1438,22 @@ export default function DashboardClient({
 
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
+
+  React.useEffect(() => {
+    function readPreferences() {
+      setCompactCatalog(
+        window.localStorage.getItem("kubedeck-compact-catalog") === "true"
+      )
+      setOpenInNewTab(
+        window.localStorage.getItem("kubedeck-external-links") !== "false"
+      )
+    }
+
+    readPreferences()
+    window.addEventListener("kubedeck:preferences", readPreferences)
+    return () =>
+      window.removeEventListener("kubedeck:preferences", readPreferences)
   }, [])
 
   const filteredItems = React.useMemo(() => {
@@ -1445,7 +1493,13 @@ export default function DashboardClient({
     `${admin.firstName.at(0) ?? ""}${admin.lastName.at(0) ?? ""}`.toUpperCase()
 
   return (
-    <main id="main-content" className="dashboard-shell liquid-stage">
+    <main
+      id="main-content"
+      className={cn(
+        "dashboard-shell liquid-stage",
+        compactCatalog && "dashboard-shell--compact"
+      )}
+    >
       <a className="skip-link" href="#catalog">
         Skip to catalog
       </a>
@@ -1457,10 +1511,8 @@ export default function DashboardClient({
       />
 
       <aside className="dashboard-sidebar" aria-label="Primary navigation">
-        <a className="sidebar-brand" href="#overview" aria-label="KubeDeck home">
-          <span className="brand-mark" aria-hidden="true">
-            <BoxesIcon />
-          </span>
+        <a className="sidebar-brand" href="/dashboard" aria-label="KubeDeck home">
+          <KubeDeckLogo className="brand-mark" priority />
           <span className="sr-only">KubeDeck</span>
         </a>
         <nav className="dashboard-nav">
@@ -1484,13 +1536,16 @@ export default function DashboardClient({
             <NetworkIcon />
           </a>
           <a
-            href="#category-data"
+            href="#category-databases-storage"
             aria-label="Data services"
             data-label="Data"
           >
             <DatabaseIcon />
           </a>
           <a href="#catalog" aria-label="Service catalog" data-label="Catalog">
+            <BoxesIcon />
+          </a>
+          <a href="/settings" aria-label="Settings" data-label="Settings">
             <Settings2Icon />
           </a>
           <form action="/api/auth/logout" method="post">
@@ -1527,13 +1582,12 @@ export default function DashboardClient({
 
           <div className="flex items-center gap-2">
             <div className="dashboard-wordmark" aria-label="KubeDeck">
-              <span className="brand-mark" aria-hidden="true">
-                <BoxesIcon />
-              </span>
+              <KubeDeckLogo className="brand-mark" />
               <span>
                 Kube<span>Deck</span>
               </span>
             </div>
+            <NotificationsMenu />
             <Dialog>
               <DialogTrigger render={<Button variant="outline" size="sm" />}>
                 <span className="connection-dot" aria-hidden="true" />
@@ -1895,9 +1949,10 @@ export default function DashboardClient({
                             item={item}
                             onDetails={setSelectedItem}
                             onCopy={copyClusterDns}
-                            copied={copiedId === item.id}
-                            index={index}
-                          />
+                          copied={copiedId === item.id}
+                          index={index}
+                          openInNewTab={openInNewTab}
+                        />
                         ))}
                       </AnimatePresence>
                     </motion.div>

@@ -1,5 +1,4 @@
 import {
-  BoxesIcon,
   Globe2Icon,
   LockKeyholeIcon,
   NetworkIcon,
@@ -10,6 +9,7 @@ import { redirect } from "next/navigation"
 
 import { AdminAuthForm } from "@/components/admin-auth-form"
 import { KubeDeckBanner } from "@/components/kubedeck-banner"
+import { KubeDeckLogo } from "@/components/kubedeck-logo"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -39,9 +39,7 @@ export default async function LoginPage() {
         <section className="login-showcase" aria-labelledby="login-heading">
           <div className="login-brand-row">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="brand-mark" aria-hidden="true">
-                <BoxesIcon />
-              </span>
+              <KubeDeckLogo className="brand-mark" priority />
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-base font-semibold tracking-tight">

@@ -35,7 +35,9 @@ export type AdminUser = {
 export type PublicAdmin = Pick<
   AdminUser,
   "id" | "firstName" | "lastName" | "email"
->
+> & {
+  role: "admin"
+}
 
 export type AdminInput = {
   firstName: string
@@ -103,6 +105,7 @@ export function toPublicAdmin(admin: AdminUser): PublicAdmin {
     firstName: admin.firstName,
     lastName: admin.lastName,
     email: admin.email,
+    role: "admin",
   }
 }
 
