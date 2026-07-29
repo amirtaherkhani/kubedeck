@@ -2,7 +2,7 @@ import { LockKeyholeIcon, ShieldCheckIcon } from "lucide-react"
 import { redirect } from "next/navigation"
 
 import { AdminAuthForm } from "@/components/admin-auth-form"
-import { KubeDeckTopologyHero } from "@/components/kubedeck-topology-hero"
+import { KubeDeckBanner } from "@/components/kubedeck-banner"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -26,7 +26,11 @@ export default async function LoginPage() {
   return (
     <main className="login-shell">
       <div className="login-frame">
-        <KubeDeckTopologyHero />
+        <KubeDeckBanner
+          className="login-banner"
+          headingId="login-heading"
+          priority
+        />
 
         <Card className="login-card [--card-spacing:--spacing(6)]">
           <CardHeader>

@@ -89,6 +89,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
+import { KubeDeckBanner } from "@/components/kubedeck-banner"
 import { cn } from "@/lib/utils"
 
 type CatalogStatus = "ready" | "attention"
@@ -1476,31 +1477,12 @@ export default function DashboardClient() {
           </div>
         </header>
 
-        <section className="hero-panel" aria-labelledby="page-title">
-          <div className="flex max-w-3xl flex-col gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary">
-                <CircleCheckIcon data-icon="inline-start" />
-                Multi-cluster ready
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                Snapshot · {capturedAt}
-              </span>
-            </div>
-            <div>
-              <h1
-                id="page-title"
-                className="max-w-2xl text-3xl font-semibold tracking-[-0.04em] text-balance sm:text-4xl"
-              >
-                Every cluster route,
-                <span className="text-primary"> mapped and ready.</span>
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-                Open web apps, copy internal service DNS, inspect ports, and
-                scan node and workload health across every registered cluster.
-              </p>
-            </div>
-          </div>
+        <section className="dashboard-hero" aria-label="KubeDeck overview">
+          <KubeDeckBanner
+            className="dashboard-banner"
+            headingId="page-title"
+            priority
+          />
 
           <div className="resource-meter" aria-labelledby="resources-title">
             <div className="flex items-start justify-between gap-6">

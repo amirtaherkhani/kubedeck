@@ -100,8 +100,9 @@ test("renders one-time admin setup and creates a hashed admin account", async (t
   assert.match(html, /Admin email/);
   assert.match(html, /Confirm password/);
   assert.match(html, /stores only a salted hash/);
-  assert.match(html, /Global multi-cluster/);
-  assert.match(html, /All Kubernetes clusters, nodes, apps, and services/);
+  assert.match(html, /Your Kubernetes ecosystem/);
+  assert.match(html, /Multi-cluster access across all Kubernetes nodes/);
+  assert.match(html, /kubedeck-banner\.png/);
   assert.doesNotMatch(html, /Rancher Desktop/i);
 
   const unverifiedSetup = await runtime.request("/api/auth/setup", {
@@ -182,7 +183,8 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
 
   const html = await dashboard.text();
   assert.match(html, /<title>KubeDeck — Kubernetes Launchpad<\/title>/i);
-  assert.match(html, /Every cluster route,/);
+  assert.match(html, /Your Kubernetes ecosystem/);
+  assert.match(html, /kubedeck-banner\.png/);
   assert.match(html, /Cluster DNS/);
   assert.match(html, /Observability/);
   assert.match(html, /Databases &amp; Storage/);
@@ -255,7 +257,7 @@ test("keeps browser setup available for incomplete backend environment values", 
 test("ships the admin schema, migration, and finished product assets", async () => {
   const [
     loginPage,
-    topologyHero,
+    bannerComponent,
     dashboardPage,
     dashboardClient,
     authSource,
@@ -265,11 +267,12 @@ test("ships the admin schema, migration, and finished product assets", async () 
     hosting,
     packageJson,
     socialImage,
+    bannerImage,
     environmentExample,
   ] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(
-      new URL("../components/kubedeck-topology-hero.tsx", import.meta.url),
+      new URL("../components/kubedeck-banner.tsx", import.meta.url),
       "utf8",
     ),
     readFile(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8"),
@@ -287,14 +290,16 @@ test("ships the admin schema, migration, and finished product assets", async () 
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../public/og.png", import.meta.url)),
+    readFile(new URL("../public/kubedeck-banner.png", import.meta.url)),
     readFile(new URL("../.env.example", import.meta.url), "utf8"),
   ]);
 
   assert.match(loginPage, /<AdminAuthForm mode=\{isSetup/);
-  assert.match(loginPage, /KubeDeckTopologyHero/);
-  assert.match(topologyHero, /topology-route/);
-  assert.match(topologyHero, /Animated global Kubernetes topology/);
+  assert.match(loginPage, /KubeDeckBanner/);
+  assert.match(bannerComponent, /src="\/kubedeck-banner\.png"/);
+  assert.match(bannerComponent, /Your Kubernetes ecosystem/);
   assert.match(dashboardPage, /getCurrentAdmin/);
+  assert.match(dashboardClient, /KubeDeckBanner/);
   assert.match(dashboardClient, /const webApps:/);
   assert.match(dashboardClient, /const operationalMeta:/);
   assert.doesNotMatch(dashboardClient, /rancher[- ]desktop/i);
@@ -317,8 +322,17 @@ test("ships the admin schema, migration, and finished product assets", async () 
   );
   assert.equal(socialImage.readUInt32BE(16), 1731);
   assert.equal(socialImage.readUInt32BE(20), 909);
+  assert.deepEqual(
+    [...bannerImage.subarray(0, 8)],
+    [137, 80, 78, 71, 13, 10, 26, 10],
+  );
+  assert.equal(bannerImage.readUInt32BE(16), 1731);
+  assert.equal(bannerImage.readUInt32BE(20), 909);
 
   await assert.rejects(
     access(new URL("../app/_sites-preview", import.meta.url)),
+  );
+  await assert.rejects(
+    access(new URL("../components/kubedeck-topology-hero.tsx", import.meta.url)),
   );
 });
