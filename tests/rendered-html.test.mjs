@@ -213,7 +213,7 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(html, /aria-label="Filter catalog by status"/);
   assert.match(html, /Last deploy/);
   assert.match(html, /unread notifications/);
-  assert.match(html, /kubedeck-kb-logo\.png/);
+  assert.match(html, /brand\/kubedeck-mark\.svg/);
   assert.match(html, /href="\/settings"/);
   assert.match(html, /Sign out/);
   assert.doesNotMatch(html, /rancher[- ]desktop/i);
@@ -295,6 +295,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
     dashboardClient,
     settingsPage,
     settingsClient,
+    manifestSource,
     authSource,
     schema,
     migration,
@@ -303,7 +304,17 @@ test("ships the admin schema, migration, and finished product assets", async () 
     packageJson,
     socialImage,
     bannerImage,
-    logoImage,
+    logoSvg,
+    logo16,
+    logo32,
+    logo48,
+    logo64,
+    logo128,
+    logo180,
+    logo192,
+    logo256,
+    logo512,
+    logo1024,
     liquidGlassPage,
     environmentExample,
     globalStyles,
@@ -331,6 +342,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
       new URL("../app/settings/settings-client.tsx", import.meta.url),
       "utf8",
     ),
+    readFile(new URL("../app/manifest.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/auth.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(
@@ -342,7 +354,20 @@ test("ships the admin schema, migration, and finished product assets", async () 
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../public/og.png", import.meta.url)),
     readFile(new URL("../public/kubedeck-banner.png", import.meta.url)),
-    readFile(new URL("../public/kubedeck-kb-logo.png", import.meta.url)),
+    readFile(
+      new URL("../public/brand/kubedeck-mark.svg", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../public/brand/kubedeck-mark-16.png", import.meta.url)),
+    readFile(new URL("../public/brand/kubedeck-mark-32.png", import.meta.url)),
+    readFile(new URL("../public/brand/kubedeck-mark-48.png", import.meta.url)),
+    readFile(new URL("../public/brand/kubedeck-mark-64.png", import.meta.url)),
+    readFile(new URL("../public/brand/kubedeck-mark-128.png", import.meta.url)),
+    readFile(new URL("../public/brand/kubedeck-mark-180.png", import.meta.url)),
+    readFile(new URL("../public/brand/kubedeck-mark-192.png", import.meta.url)),
+    readFile(new URL("../public/brand/kubedeck-mark-256.png", import.meta.url)),
+    readFile(new URL("../public/brand/kubedeck-mark-512.png", import.meta.url)),
+    readFile(new URL("../public/brand/kubedeck-mark-1024.png", import.meta.url)),
     readFile(
       new URL("../public/kubedeck-liquid-glass.html", import.meta.url),
       "utf8",
@@ -355,7 +380,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(loginPage, /KubeDeckBanner/);
   assert.match(bannerComponent, /src="\/kubedeck-banner\.png"/);
   assert.match(bannerComponent, /Your Kubernetes ecosystem/);
-  assert.match(logoComponent, /src="\/kubedeck-kb-logo\.png"/);
+  assert.match(logoComponent, /src="\/brand\/kubedeck-mark\.svg"/);
   assert.match(notificationsComponent, /Kubernetes discovery events/);
   assert.match(dashboardPage, /getCurrentAdmin/);
   assert.match(dashboardPage, /<DashboardClient admin=\{admin\}/);
@@ -366,6 +391,8 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(settingsPage, /getCurrentAdmin/);
   assert.match(settingsClient, /Single-admin authentication is active/);
   assert.match(settingsClient, /kubedeck-compact-catalog/);
+  assert.match(manifestSource, /kubedeck-mark-192\.png/);
+  assert.match(manifestSource, /kubedeck-mark-512\.png/);
   assert.doesNotMatch(dashboardClient, /rancher[- ]desktop/i);
   assert.match(authSource, /PBKDF2/);
   assert.match(authSource, /KUBEDECK_ADMIN_FIRST_NAME/);
@@ -376,6 +403,8 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(migration, /CREATE TABLE `admin_users`/);
   assert.match(hosting, /"d1": "DB"/);
   assert.match(layout, /summary_large_image/);
+  assert.match(layout, /kubedeck-mark\.svg/);
+  assert.match(layout, /kubedeck-mark-180\.png/);
   assert.match(layout, /Manrope/);
   assert.doesNotMatch(layout, /\bGeist\b/);
   assert.match(globalStyles, /font-family: var\(--font-manrope\)/);
@@ -405,12 +434,28 @@ test("ships the admin schema, migration, and finished product assets", async () 
   );
   assert.equal(bannerImage.readUInt32BE(16), 1731);
   assert.equal(bannerImage.readUInt32BE(20), 909);
-  assert.deepEqual(
-    [...logoImage.subarray(0, 8)],
-    [137, 80, 78, 71, 13, 10, 26, 10],
-  );
-  assert.equal(logoImage.readUInt32BE(16), 512);
-  assert.equal(logoImage.readUInt32BE(20), 512);
+  assert.match(logoSvg, /<title id="title">KubeDeck KB logo<\/title>/);
+  assert.match(logoSvg, /fill-rule="evenodd"/);
+  assert.match(logoSvg, /linearGradient id="monogram"/);
+  for (const [asset, size] of [
+    [logo16, 16],
+    [logo32, 32],
+    [logo48, 48],
+    [logo64, 64],
+    [logo128, 128],
+    [logo180, 180],
+    [logo192, 192],
+    [logo256, 256],
+    [logo512, 512],
+    [logo1024, 1024],
+  ]) {
+    assert.deepEqual(
+      [...asset.subarray(0, 8)],
+      [137, 80, 78, 71, 13, 10, 26, 10],
+    );
+    assert.equal(asset.readUInt32BE(16), size);
+    assert.equal(asset.readUInt32BE(20), size);
+  }
 
   await assert.rejects(
     access(new URL("../app/_sites-preview", import.meta.url)),

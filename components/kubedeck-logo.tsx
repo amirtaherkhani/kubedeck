@@ -12,10 +12,10 @@ export function KubeDeckLogo({
   return (
     <span className={cn("kubedeck-logo", className)} aria-hidden="true">
       <Image
-        src="/kubedeck-kb-logo.png"
+        src="/brand/kubedeck-mark.svg"
         alt=""
-        width={512}
-        height={512}
+        width={1024}
+        height={1024}
         priority={priority}
         unoptimized
       />

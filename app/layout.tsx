@@ -34,8 +34,31 @@ export async function generateMetadata(): Promise<Metadata> {
     title,
     description,
     icons: {
-      icon: "/kubedeck-kb-logo.png",
-      apple: "/kubedeck-kb-logo.png",
+      icon: [
+        {
+          url: "/brand/kubedeck-mark.svg",
+          type: "image/svg+xml",
+          sizes: "any",
+        },
+        {
+          url: "/brand/kubedeck-mark-32.png",
+          type: "image/png",
+          sizes: "32x32",
+        },
+        {
+          url: "/brand/kubedeck-mark-16.png",
+          type: "image/png",
+          sizes: "16x16",
+        },
+      ],
+      shortcut: "/brand/kubedeck-mark-32.png",
+      apple: [
+        {
+          url: "/brand/kubedeck-mark-180.png",
+          type: "image/png",
+          sizes: "180x180",
+        },
+      ],
     },
     openGraph: {
       title,

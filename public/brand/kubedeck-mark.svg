@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">KubeDeck KB logo</title>
+  <desc id="description">Geometric K and B monogram in cyan and blue on a midnight navy field.</desc>
+  <defs>
+    <linearGradient id="background" x1="96" y1="64" x2="928" y2="960" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#061425"/>
+      <stop offset="0.5" stop-color="#020b18"/>
+      <stop offset="1" stop-color="#010713"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientTransform="translate(512 484) rotate(90) scale(468)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0a69ff" stop-opacity="0.16"/>
+      <stop offset="0.58" stop-color="#08dff4" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#020b18" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="monogram" x1="160" y1="208" x2="844" y2="784" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#19edf2"/>
+      <stop offset="0.48" stop-color="#0bb9ff"/>
+      <stop offset="1" stop-color="#0756ff"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="208" y1="176" x2="802" y2="824" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d9ffff" stop-opacity="0.95"/>
+      <stop offset="0.25" stop-color="#92f8ff" stop-opacity="0.5"/>
+      <stop offset="0.72" stop-color="#4eb8ff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#0756ff" stop-opacity="0.12"/>
+    </linearGradient>
+    <filter id="shadow" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#008cff" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#background)"/>
+  <rect width="1024" height="1024" fill="url(#halo)"/>
+
+  <g fill="url(#monogram)" stroke="url(#edge)" stroke-width="2.5" stroke-linejoin="round" filter="url(#shadow)">
+    <path d="M482 132 176 316Q160 326 160 344v336q0 18 16 28l306 184V742L282 622v-70l162 162V586l-88-88 126-90V300L282 420v-64l200-120Z"/>
+    <path fill-rule="evenodd" d="M510 132 832 326q16 10 16 28v98l-80 48 80 48v132q0 18-16 28L510 892Zm94 198v198l126-76v-46Zm0 212v198l126-76v-46Z"/>
+  </g>
+</svg>
