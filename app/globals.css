@@ -400,6 +400,8 @@
 .settings-header,
 .settings-hero-status,
 .settings-card,
+.node-chart-card,
+.node-table-card,
 .liquid-glass-card,
 .resource-meter,
 .stat-strip,
@@ -845,12 +847,179 @@
 }
 
 .kubedeck-banner-image {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   transform-origin: 58% 48%;
   animation: kubedeck-banner-drift 18s ease-in-out infinite alternate;
+}
+
+.kubedeck-live-graph {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.kubedeck-live-link {
+  --live-link-delay: 0s;
+  --live-link-duration: 3.8s;
+  position: absolute;
+  height: 1px;
+  overflow: visible;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--chart-2), transparent 96%),
+    color-mix(in oklch, var(--chart-2), transparent 52%),
+    color-mix(in oklch, var(--primary), transparent 78%)
+  );
+  opacity: 0.85;
+  transform-origin: left center;
+}
+
+.kubedeck-live-link::after {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: clamp(0.28rem, 0.7vw, 0.7rem);
+  height: clamp(0.16rem, 0.32vw, 0.28rem);
+  border-radius: 999px;
+  background: white;
+  box-shadow:
+    0 0 0.3rem color-mix(in oklch, white, transparent 18%),
+    0 0 0.8rem color-mix(in oklch, var(--chart-2), transparent 8%),
+    0 0 1.4rem color-mix(in oklch, var(--primary), transparent 40%);
+  content: "";
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  animation: kubedeck-packet-flow var(--live-link-duration) linear infinite;
+  animation-delay: var(--live-link-delay);
+}
+
+.kubedeck-live-link--top {
+  top: 46.2%;
+  left: 59.25%;
+  width: 13.8%;
+  transform: rotate(-90deg);
+}
+
+.kubedeck-live-link--left {
+  top: 42.7%;
+  left: 50.35%;
+  width: 9.6%;
+  transform: rotate(11deg);
+  --live-link-delay: -1.7s;
+  --live-link-duration: 3.2s;
+}
+
+.kubedeck-live-link--right {
+  top: 46.1%;
+  left: 59.3%;
+  width: 9.1%;
+  transform: rotate(-12deg);
+  --live-link-delay: -0.85s;
+  --live-link-duration: 3.4s;
+}
+
+.kubedeck-live-link--lower-left {
+  top: 64.4%;
+  left: 50.5%;
+  width: 12.8%;
+  transform: rotate(-48deg);
+  --live-link-delay: -2.35s;
+  --live-link-duration: 4.1s;
+}
+
+.kubedeck-live-link--lower-right {
+  top: 46.5%;
+  left: 59.25%;
+  width: 12.5%;
+  transform: rotate(48deg);
+  --live-link-delay: -1.15s;
+  --live-link-duration: 3.7s;
+}
+
+.kubedeck-live-link--bottom {
+  top: 71.6%;
+  left: 59.25%;
+  width: 13.2%;
+  transform: rotate(-90deg);
+  --live-link-delay: -2.75s;
+  --live-link-duration: 4.4s;
+}
+
+.kubedeck-live-beacon {
+  --beacon-delay: 0s;
+  position: absolute;
+  width: clamp(0.34rem, 0.72vw, 0.72rem);
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in oklch, white, transparent 22%);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--chart-2), white 14%);
+  box-shadow:
+    0 0 0.45rem color-mix(in oklch, var(--chart-2), transparent 8%),
+    0 0 1rem color-mix(in oklch, var(--primary), transparent 48%);
+  transform: translate(-50%, -50%);
+  animation: kubedeck-beacon-breathe 2.8s ease-in-out infinite;
+  animation-delay: var(--beacon-delay);
+}
+
+.kubedeck-live-beacon::after {
+  position: absolute;
+  inset: -55%;
+  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 36%);
+  border-radius: inherit;
+  content: "";
+  animation: kubedeck-beacon-ring 2.8s ease-out infinite;
+  animation-delay: var(--beacon-delay);
+}
+
+.kubedeck-live-beacon--core {
+  top: 46.3%;
+  left: 59.25%;
+  width: clamp(0.52rem, 1vw, 1rem);
+}
+
+.kubedeck-live-beacon--top {
+  top: 27.1%;
+  left: 59.25%;
+  --beacon-delay: -0.45s;
+}
+
+.kubedeck-live-beacon--left {
+  top: 42.7%;
+  left: 50.35%;
+  --beacon-delay: -1.3s;
+}
+
+.kubedeck-live-beacon--right {
+  top: 42.7%;
+  left: 67.95%;
+  --beacon-delay: -0.8s;
+}
+
+.kubedeck-live-beacon--lower-left {
+  top: 64.4%;
+  left: 50.5%;
+  --beacon-delay: -1.9s;
+}
+
+.kubedeck-live-beacon--lower-right {
+  top: 64.4%;
+  left: 67.75%;
+  --beacon-delay: -2.3s;
+}
+
+.kubedeck-live-beacon--bottom {
+  top: 71.6%;
+  left: 59.25%;
+  --beacon-delay: -1.05s;
 }
 
 .login-banner {
@@ -887,6 +1056,55 @@
 
   to {
     transform: scale(1.018);
+  }
+}
+
+@keyframes kubedeck-packet-flow {
+  0%,
+  10% {
+    left: 0;
+    opacity: 0;
+  }
+
+  18%,
+  82% {
+    opacity: 1;
+  }
+
+  90%,
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes kubedeck-beacon-breathe {
+  0%,
+  100% {
+    filter: brightness(0.9);
+    opacity: 0.72;
+  }
+
+  50% {
+    filter: brightness(1.35);
+    opacity: 1;
+  }
+}
+
+@keyframes kubedeck-beacon-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.62);
+  }
+
+  28% {
+    opacity: 0.86;
+  }
+
+  82%,
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
   }
 }
 
@@ -1209,6 +1427,40 @@
   padding: 0.35rem;
 }
 
+.notification-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem;
+}
+
+.notification-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem 0.45rem;
+}
+
+.notification-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.55rem;
+  background: color-mix(in oklch, var(--background), transparent 20%);
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.notification-summary svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  color: var(--chart-3);
+}
+
 .notification-item {
   align-items: flex-start;
   gap: 0.7rem;
@@ -1338,6 +1590,108 @@
 .stat-strip > div {
   background: color-mix(in oklch, var(--background), transparent 28%);
   padding: 1.1rem 1.25rem;
+}
+
+.node-review {
+  margin-top: 1rem;
+  scroll-margin-top: 7rem;
+}
+
+.node-review-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.25rem 0.25rem 0.85rem;
+}
+
+.node-review-heading h2 {
+  margin-top: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.node-review-heading p {
+  max-width: 62ch;
+  margin-top: 0.35rem;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.node-scope-selector {
+  max-width: min(100%, 46rem);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.node-review-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.node-chart-card,
+.node-table-card {
+  border-radius: 1rem;
+}
+
+.node-resource-chart {
+  width: 100%;
+  height: 18.25rem;
+  aspect-ratio: auto;
+}
+
+.node-chart-card [data-slot="card-footer"] {
+  color: var(--muted-foreground);
+  font-family: var(--font-geist-mono);
+  font-size: 0.62rem;
+}
+
+.node-table-card [data-slot="table-head"] {
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+}
+
+.node-table-card [data-slot="table-cell"] {
+  font-family: var(--font-geist-mono);
+  font-size: 0.7rem;
+}
+
+.node-table-card [data-slot="table-cell"]:first-child,
+.node-table-card [data-slot="table-cell"]:nth-child(2) {
+  font-family: var(--font-manrope);
+}
+
+.node-row--attention {
+  background: color-mix(in oklch, var(--destructive), transparent 94%);
+}
+
+.node-name-cell,
+.node-heartbeat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.node-name-cell strong,
+.node-heartbeat strong {
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.node-name-cell small,
+.node-heartbeat small,
+.node-condition {
+  color: var(--muted-foreground);
+  font-size: 0.62rem;
+}
+
+.node-condition {
+  display: block;
+  margin-top: 0.3rem;
+  white-space: normal;
 }
 
 .dns-panel {
@@ -2148,6 +2502,15 @@
     display: none;
   }
 
+  .node-review-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .node-scope-selector {
+    justify-content: flex-start;
+  }
+
   .settings-hero {
     align-items: flex-start;
     flex-direction: column;
@@ -2276,6 +2639,10 @@
     align-items: start;
   }
 
+  .node-resource-chart {
+    height: 16rem;
+  }
+
   .settings-grid,
   .settings-grid--account {
     grid-template-columns: minmax(0, 1fr);
@@ -2373,6 +2740,24 @@
 
   .availability-panel {
     align-items: flex-start;
+  }
+
+  .node-scope-selector {
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+
+  .node-resource-chart {
+    height: 14rem;
+  }
+
+  .node-chart-card [data-slot="card-footer"] {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .settings-shell {

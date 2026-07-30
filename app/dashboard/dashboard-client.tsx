@@ -4,6 +4,13 @@ import * as React from "react"
 import type { LucideIcon } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
 import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+} from "recharts"
+import {
   ActivityIcon,
   AppWindowIcon,
   ArrowDownAZIcon,
@@ -37,6 +44,7 @@ import {
   NetworkIcon,
   RocketIcon,
   SearchIcon,
+  ServerIcon,
   ServerCogIcon,
   Settings2Icon,
   ShieldCheckIcon,
@@ -58,6 +66,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart"
 import {
   Dialog,
   DialogContent,
@@ -91,6 +107,15 @@ import {
 } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
   Radio,
   RadioGroup,
   RadioIndicator,
@@ -98,6 +123,13 @@ import {
 import { KubeDeckBanner } from "@/components/kubedeck-banner"
 import { KubeDeckLogo } from "@/components/kubedeck-logo"
 import { NotificationsMenu } from "@/components/notifications-menu"
+import {
+  getNodeResourceTrend,
+  monitoringSnapshot,
+  nodeSnapshots,
+  nodeSummary,
+  type NodeSnapshot,
+} from "@/lib/kubedeck-monitoring"
 import { cn } from "@/lib/utils"
 
 type CatalogStatus = "ready" | "attention"
@@ -664,7 +696,7 @@ const services: CatalogBase[] = [
 ]
 
 const clusterDomain = "cluster.local"
-const capturedAt = "Jul 29, 2026 · 05:21 UTC"
+const capturedAt = monitoringSnapshot.capturedAt
 
 const operationalMeta: Record<string, OperationalMeta> = {
   grafana: {
@@ -1070,10 +1102,18 @@ const catalogItems: CatalogItem[] = [...webApps, ...services].map((item) => {
 
 const clusterStats = [
   { label: "Clusters", value: "All", detail: "registered contexts" },
-  { label: "Nodes", value: "Ready", detail: "aggregated health" },
+  {
+    label: "Nodes",
+    value: String(nodeSummary.total),
+    detail: `${nodeSummary.ready} ready · ${nodeSummary.attention} attention`,
+  },
   { label: "Namespaces", value: "18", detail: "active cluster scopes" },
   { label: "Workloads", value: "46", detail: "deployments + stateful sets" },
-  { label: "Pods", value: "62 / 68", detail: "running and ready" },
+  {
+    label: "Pods",
+    value: `${nodeSummary.pods} / ${nodeSummary.podCapacity}`,
+    detail: "allocated across sample nodes",
+  },
 ] as const
 
 const nodeResources: {
@@ -1085,33 +1125,52 @@ const nodeResources: {
 }[] = [
   {
     label: "CPU",
-    value: "6%",
-    detail: "626m / 10 cores",
-    usage: 6,
+    value: "48%",
+    detail: "fleet average",
+    usage: 48,
     icon: CpuIcon,
   },
   {
     label: "Memory",
-    value: "38%",
-    detail: "12.0 / 31.3 GiB",
-    usage: 38,
+    value: "65%",
+    detail: "fleet average",
+    usage: 65,
     icon: MemoryStickIcon,
   },
   {
     label: "Storage",
-    value: "53%",
-    detail: "52.3 / 97.9 GiB",
-    usage: 53,
+    value: "52%",
+    detail: "fleet average",
+    usage: 52,
     icon: HardDriveIcon,
   },
   {
-    label: "Fleet uptime",
-    value: "12h 29m",
-    detail: "oldest ready node",
-    usage: 52,
-    icon: Clock3Icon,
+    label: "Pod allocation",
+    value: "69%",
+    detail: `${nodeSummary.pods} / ${nodeSummary.podCapacity} pod capacity`,
+    usage: 69,
+    icon: BoxesIcon,
   },
 ]
+
+const nodeChartConfig = {
+  cpu: {
+    label: "CPU",
+    color: "var(--chart-1)",
+  },
+  memory: {
+    label: "Memory",
+    color: "var(--chart-2)",
+  },
+  storage: {
+    label: "Storage",
+    color: "var(--chart-3)",
+  },
+  pods: {
+    label: "Pod allocation",
+    color: "var(--chart-4)",
+  },
+} satisfies ChartConfig
 
 function getCategory(category: CategoryId) {
   return categoryConfig.find((item) => item.id === category)!
@@ -1216,6 +1275,242 @@ function ResourceMetric({
         {detail}
       </p>
     </div>
+  )
+}
+
+function NodeStatusBadge({ node }: { node: NodeSnapshot }) {
+  if (node.status === "attention") {
+    return (
+      <Badge variant="destructive">
+        <CircleDotDashedIcon data-icon="inline-start" />
+        Attention
+      </Badge>
+    )
+  }
+
+  return (
+    <Badge variant="secondary">
+      <CircleCheckIcon data-icon="inline-start" />
+      Ready
+    </Badge>
+  )
+}
+
+function MultiNodeReview({
+  showControlPlaneNodes,
+  showWorkerNodes,
+  highlightNodePressure,
+}: {
+  showControlPlaneNodes: boolean
+  showWorkerNodes: boolean
+  highlightNodePressure: boolean
+}) {
+  const [selectedNodeId, setSelectedNodeId] = React.useState("fleet")
+  const visibleNodes = nodeSnapshots.filter(
+    (node) =>
+      (node.role === "control-plane" && showControlPlaneNodes) ||
+      (node.role === "worker" && showWorkerNodes)
+  )
+  const activeNodeId =
+    selectedNodeId === "fleet" ||
+    visibleNodes.some((node) => node.id === selectedNodeId)
+      ? selectedNodeId
+      : "fleet"
+  const activeNode = nodeSnapshots.find((node) => node.id === activeNodeId)
+  const chartData = getNodeResourceTrend(activeNodeId)
+  const activeLabel = activeNode?.name ?? "Fleet average"
+
+  return (
+    <section
+      id="node-review"
+      className="node-review"
+      aria-labelledby="node-review-title"
+    >
+      <div className="node-review-heading">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">
+              <ServerIcon data-icon="inline-start" />
+              Multi-node
+            </Badge>
+            <Badge variant="outline">{monitoringSnapshot.mode}</Badge>
+          </div>
+          <h2 id="node-review-title">Cluster node review</h2>
+          <p>
+            Compare node conditions and four normalized resource signals across
+            the selected Kubernetes scope.
+          </p>
+        </div>
+        <RadioGroup
+          value={activeNodeId}
+          onValueChange={setSelectedNodeId}
+          aria-label="Select node telemetry scope"
+          className="node-scope-selector"
+        >
+          <Radio value="fleet">
+            <RadioIndicator />
+            Fleet
+          </Radio>
+          {visibleNodes.map((node) => (
+            <Radio key={node.id} value={node.id}>
+              <RadioIndicator />
+              {node.name}
+            </Radio>
+          ))}
+        </RadioGroup>
+      </div>
+
+      <div className="node-review-grid">
+        <Card className="node-chart-card">
+          <CardHeader>
+            <CardTitle>Resource history</CardTitle>
+            <CardDescription>
+              {activeLabel} · normalized percentage over the preview window
+            </CardDescription>
+            <CardAction>
+              <Badge variant="outline">4 properties</Badge>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={nodeChartConfig}
+              className="node-resource-chart"
+              initialDimension={{ width: 760, height: 292 }}
+              aria-label={`${activeLabel} CPU, memory, storage, and pod allocation line chart`}
+            >
+              <LineChart
+                accessibilityLayer
+                data={chartData}
+                margin={{ left: 4, right: 12, top: 8 }}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 5" />
+                <XAxis
+                  dataKey="time"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  width={38}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${value}%`}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent indicator="line" />}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                {Object.keys(nodeChartConfig).map((property) => (
+                  <Line
+                    key={property}
+                    dataKey={property}
+                    type="monotone"
+                    stroke={`var(--color-${property})`}
+                    strokeWidth={2.2}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                  />
+                ))}
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+          <CardFooter className="justify-between gap-3">
+            <span>
+              {monitoringSnapshot.source} · captured {capturedAt}
+            </span>
+            <Badge variant="outline">Preview data</Badge>
+          </CardFooter>
+        </Card>
+
+        <Card className="node-table-card">
+          <CardHeader>
+            <CardTitle>Node status</CardTitle>
+            <CardDescription>
+              {visibleNodes.length} visible nodes · {nodeSummary.attention} need
+              attention
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {visibleNodes.length > 0 ? (
+              <Table>
+                <TableCaption className="sr-only">
+                  Multi-node Kubernetes status snapshot
+                </TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Node</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>CPU</TableHead>
+                    <TableHead>Memory</TableHead>
+                    <TableHead>Storage</TableHead>
+                    <TableHead>Pods</TableHead>
+                    <TableHead>Heartbeat</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleNodes.map((node) => (
+                    <TableRow
+                      key={node.id}
+                      className={cn(
+                        highlightNodePressure &&
+                          node.status === "attention" &&
+                          "node-row--attention"
+                      )}
+                    >
+                      <TableCell>
+                        <span className="node-name-cell">
+                          <strong>{node.name}</strong>
+                          <small>
+                            {node.cluster} ·{" "}
+                            {node.role === "control-plane"
+                              ? "control plane"
+                              : "worker"}{" "}
+                            · {node.internalIp}
+                          </small>
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <NodeStatusBadge node={node} />
+                        <small className="node-condition">
+                          {node.condition}
+                        </small>
+                      </TableCell>
+                      <TableCell>{node.cpu}%</TableCell>
+                      <TableCell>{node.memory}%</TableCell>
+                      <TableCell>{node.storage}%</TableCell>
+                      <TableCell>{node.pods}</TableCell>
+                      <TableCell>
+                        <span className="node-heartbeat">
+                          <strong>{node.heartbeat}</strong>
+                          <small>
+                            {node.kubeletVersion} · {node.age}
+                          </small>
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <ServerIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>No node roles selected</EmptyTitle>
+                  <EmptyDescription>
+                    Enable control-plane or worker nodes in Kubernetes
+                    Settings.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </section>
   )
 }
 
@@ -1422,6 +1717,11 @@ export default function DashboardClient({
   const [copiedId, setCopiedId] = React.useState<string | null>(null)
   const [compactCatalog, setCompactCatalog] = React.useState(false)
   const [openInNewTab, setOpenInNewTab] = React.useState(true)
+  const [showControlPlaneNodes, setShowControlPlaneNodes] =
+    React.useState(true)
+  const [showWorkerNodes, setShowWorkerNodes] = React.useState(true)
+  const [highlightNodePressure, setHighlightNodePressure] =
+    React.useState(true)
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1447,6 +1747,16 @@ export default function DashboardClient({
       )
       setOpenInNewTab(
         window.localStorage.getItem("kubedeck-external-links") !== "false"
+      )
+      setShowControlPlaneNodes(
+        window.localStorage.getItem("kubedeck-show-control-plane") !== "false"
+      )
+      setShowWorkerNodes(
+        window.localStorage.getItem("kubedeck-show-workers") !== "false"
+      )
+      setHighlightNodePressure(
+        window.localStorage.getItem("kubedeck-highlight-node-pressure") !==
+          "false"
       )
     }
 
@@ -1526,9 +1836,9 @@ export default function DashboardClient({
             <CircleGaugeIcon />
           </a>
           <a
-            href="#fleet-resources"
-            aria-label="Fleet resources"
-            data-label="Fleet"
+            href="#node-review"
+            aria-label="Cluster node review"
+            data-label="Nodes"
           >
             <ServerCogIcon />
           </a>
@@ -1637,6 +1947,7 @@ export default function DashboardClient({
           <KubeDeckBanner
             className="dashboard-banner"
             headingId="page-title"
+            liveGraph
             priority
           />
 
@@ -1653,11 +1964,13 @@ export default function DashboardClient({
                 >
                   Fleet resources
                 </p>
-                <p className="mt-1 text-sm font-medium">All ready nodes</p>
+                <p className="mt-1 text-sm font-medium">
+                  {nodeSummary.total} nodes · {nodeSummary.attention} attention
+                </p>
               </div>
-              <Badge variant="secondary">
-                <CircleCheckIcon data-icon="inline-start" />
-                Healthy
+              <Badge variant="outline">
+                <CircleGaugeIcon data-icon="inline-start" />
+                Preview
               </Badge>
             </div>
             <div className="resource-meter-grid">
@@ -1666,7 +1979,7 @@ export default function DashboardClient({
               ))}
             </div>
             <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
-              metrics-server + kubelet summary · aggregated at capture time
+              {monitoringSnapshot.source} · illustrative values at capture time
             </p>
           </div>
         </section>
@@ -1686,6 +1999,12 @@ export default function DashboardClient({
             </div>
           ))}
         </section>
+
+        <MultiNodeReview
+          showControlPlaneNodes={showControlPlaneNodes}
+          showWorkerNodes={showWorkerNodes}
+          highlightNodePressure={highlightNodePressure}
+        />
 
         <section className="dns-panel" aria-labelledby="dns-title">
           <div className="dns-intro">

@@ -190,6 +190,7 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(html, /<title>KubeDeck — Kubernetes Launchpad<\/title>/i);
   assert.match(html, /Your Kubernetes ecosystem/);
   assert.match(html, /kubedeck-banner\.png/);
+  assert.match(html, /kubedeck-live-graph/);
   assert.match(html, /Cluster DNS/);
   assert.match(html, /Observability &amp; Metrics/);
   assert.match(html, /Databases &amp; Storage/);
@@ -204,6 +205,17 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(html, /kube-dns\.kube-system\.svc\.cluster\.local/);
   assert.match(html, /10\.43\.0\.10/);
   assert.match(html, /Fleet resources/);
+  assert.match(html, /Cluster node review/);
+  assert.match(html, /Resource history/);
+  assert.match(html, /4 properties/);
+  assert.match(html, /control-plane-01/);
+  assert.match(html, /worker-data-01/);
+  assert.match(html, /Illustrative multi-node snapshot/);
+  assert.match(html, /Select node telemetry scope/);
+  assert.match(html, /CPU/);
+  assert.match(html, /Memory/);
+  assert.match(html, /Storage/);
+  assert.match(html, /Pod allocation/);
   assert.match(html, /Global discovery connected/);
   assert.match(html, /aria-label="Primary navigation"/);
   assert.match(html, /data-slot="animated-radio-group"/);
@@ -212,7 +224,7 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(html, /aria-label="Filter by resource kind"/);
   assert.match(html, /aria-label="Filter catalog by status"/);
   assert.match(html, /Last deploy/);
-  assert.match(html, /unread notifications/);
+  assert.match(html, /unread status notifications/);
   assert.match(html, /brand\/kubedeck-mark\.svg/);
   assert.match(html, /href="\/settings"/);
   assert.match(html, /Sign out/);
@@ -295,6 +307,9 @@ test("ships the admin schema, migration, and finished product assets", async () 
     dashboardClient,
     settingsPage,
     settingsClient,
+    monitoringSource,
+    chartComponent,
+    tableComponent,
     manifestSource,
     authSource,
     schema,
@@ -342,6 +357,12 @@ test("ships the admin schema, migration, and finished product assets", async () 
       new URL("../app/settings/settings-client.tsx", import.meta.url),
       "utf8",
     ),
+    readFile(
+      new URL("../lib/kubedeck-monitoring.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../components/ui/chart.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/ui/table.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/manifest.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/auth.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
@@ -380,17 +401,33 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(loginPage, /KubeDeckBanner/);
   assert.match(bannerComponent, /src="\/kubedeck-banner\.png"/);
   assert.match(bannerComponent, /Your Kubernetes ecosystem/);
+  assert.match(bannerComponent, /liveGraph/);
+  assert.match(bannerComponent, /kubedeck-live-link/);
+  assert.match(bannerComponent, /kubedeck-live-beacon/);
   assert.match(logoComponent, /src="\/brand\/kubedeck-mark\.svg"/);
-  assert.match(notificationsComponent, /Kubernetes discovery events/);
+  assert.match(notificationsComponent, /Services and Kubernetes nodes/);
+  assert.match(notificationsComponent, /kubedeck-notify-services/);
+  assert.match(notificationsComponent, /kubedeck-notify-nodes/);
   assert.match(dashboardPage, /getCurrentAdmin/);
   assert.match(dashboardPage, /<DashboardClient admin=\{admin\}/);
   assert.match(dashboardClient, /KubeDeckBanner/);
   assert.match(dashboardClient, /const webApps:/);
   assert.match(dashboardClient, /const operationalMeta:/);
   assert.match(dashboardClient, /AI & MCP Services/);
+  assert.match(dashboardClient, /MultiNodeReview/);
+  assert.match(dashboardClient, /ChartContainer/);
+  assert.match(dashboardClient, /LineChart/);
   assert.match(settingsPage, /getCurrentAdmin/);
   assert.match(settingsClient, /Single-admin authentication is active/);
   assert.match(settingsClient, /kubedeck-compact-catalog/);
+  assert.match(settingsClient, /Multi-node cluster review/);
+  assert.match(settingsClient, /Service status notifications/);
+  assert.match(settingsClient, /Node status notifications/);
+  assert.match(monitoringSource, /Illustrative multi-node snapshot/);
+  assert.match(monitoringSource, /control-plane-01/);
+  assert.match(monitoringSource, /worker-data-01/);
+  assert.match(chartComponent, /ResponsiveContainer/);
+  assert.match(tableComponent, /data-slot="table"/);
   assert.match(manifestSource, /kubedeck-mark-192\.png/);
   assert.match(manifestSource, /kubedeck-mark-512\.png/);
   assert.doesNotMatch(dashboardClient, /rancher[- ]desktop/i);
@@ -410,6 +447,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(globalStyles, /font-family: var\(--font-manrope\)/);
   assert.match(globalStyles, /\.dashboard-sidebar/);
   assert.match(globalStyles, /\.liquid-orbit/);
+  assert.match(packageJson, /"recharts": "\^3\.8\.0"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.match(environmentExample, /KUBEDECK_ADMIN_EMAIL=/);
   assert.match(liquidGlassPage, /<html lang="en">/);

@@ -19,6 +19,7 @@ import {
   PencilLineIcon,
   RadioTowerIcon,
   RocketIcon,
+  ServerIcon,
   ServerCogIcon,
   Settings2Icon,
   ShieldCheckIcon,
@@ -71,12 +72,24 @@ type Preferences = {
   motion: boolean
   compactCatalog: boolean
   externalLinks: boolean
+  showControlPlaneNodes: boolean
+  showWorkerNodes: boolean
+  highlightNodePressure: boolean
+  serviceNotifications: boolean
+  nodeNotifications: boolean
+  warningNotificationsOnly: boolean
 }
 
 const preferenceKeys: Record<keyof Preferences, string> = {
   motion: "kubedeck-motion-enabled",
   compactCatalog: "kubedeck-compact-catalog",
   externalLinks: "kubedeck-external-links",
+  showControlPlaneNodes: "kubedeck-show-control-plane",
+  showWorkerNodes: "kubedeck-show-workers",
+  highlightNodePressure: "kubedeck-highlight-node-pressure",
+  serviceNotifications: "kubedeck-notify-services",
+  nodeNotifications: "kubedeck-notify-nodes",
+  warningNotificationsOnly: "kubedeck-notify-warnings-only",
 }
 
 const categories = [
@@ -117,6 +130,12 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
     motion: true,
     compactCatalog: false,
     externalLinks: true,
+    showControlPlaneNodes: true,
+    showWorkerNodes: true,
+    highlightNodePressure: true,
+    serviceNotifications: true,
+    nodeNotifications: true,
+    warningNotificationsOnly: false,
   })
 
   React.useEffect(() => {
@@ -127,6 +146,24 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
         window.localStorage.getItem(preferenceKeys.compactCatalog) === "true",
       externalLinks:
         window.localStorage.getItem(preferenceKeys.externalLinks) !== "false",
+      showControlPlaneNodes:
+        window.localStorage.getItem(preferenceKeys.showControlPlaneNodes) !==
+        "false",
+      showWorkerNodes:
+        window.localStorage.getItem(preferenceKeys.showWorkerNodes) !== "false",
+      highlightNodePressure:
+        window.localStorage.getItem(preferenceKeys.highlightNodePressure) !==
+        "false",
+      serviceNotifications:
+        window.localStorage.getItem(preferenceKeys.serviceNotifications) !==
+        "false",
+      nodeNotifications:
+        window.localStorage.getItem(preferenceKeys.nodeNotifications) !==
+        "false",
+      warningNotificationsOnly:
+        window.localStorage.getItem(
+          preferenceKeys.warningNotificationsOnly
+        ) === "true",
     }
     document.documentElement.classList.toggle(
       "kubedeck-motion-off",
@@ -355,6 +392,85 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
 
             <Card className="settings-card settings-card--wide">
               <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ServerIcon />
+                  Multi-node cluster review
+                </CardTitle>
+                <CardDescription>
+                  Choose which Kubernetes node roles appear in the home review
+                  and how pressure conditions are emphasized.
+                </CardDescription>
+                <CardAction>
+                  <Badge variant="outline">3 sample nodes · 4 signals</Badge>
+                </CardAction>
+              </CardHeader>
+              <CardContent>
+                <FieldGroup className="settings-preferences">
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldTitle>Show control-plane nodes</FieldTitle>
+                      <FieldDescription>
+                        Include scheduler and control-plane hosts in the node
+                        table and chart selector.
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch
+                      checked={preferences.showControlPlaneNodes}
+                      onCheckedChange={(checked) =>
+                        updatePreference("showControlPlaneNodes", checked)
+                      }
+                      aria-label="Show control-plane nodes"
+                    />
+                  </Field>
+                  <Separator />
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldTitle>Show worker nodes</FieldTitle>
+                      <FieldDescription>
+                        Include application and data workers in the node review.
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch
+                      checked={preferences.showWorkerNodes}
+                      onCheckedChange={(checked) =>
+                        updatePreference("showWorkerNodes", checked)
+                      }
+                      aria-label="Show worker nodes"
+                    />
+                  </Field>
+                  <Separator />
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldTitle>Highlight node pressure</FieldTitle>
+                      <FieldDescription>
+                        Emphasize memory, disk, PID, or readiness conditions in
+                        the node status table.
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch
+                      checked={preferences.highlightNodePressure}
+                      onCheckedChange={(checked) =>
+                        updatePreference("highlightNodePressure", checked)
+                      }
+                      aria-label="Highlight node pressure conditions"
+                    />
+                  </Field>
+                </FieldGroup>
+                <Alert className="mt-5 border-primary/25 bg-primary/5">
+                  <ActivityIcon />
+                  <AlertTitle>Telemetry source</AlertTitle>
+                  <AlertDescription>
+                    The current screen uses an illustrative multi-node snapshot.
+                    Connect metrics-server plus kubelet summary data, or
+                    Prometheus history, before treating the four-property chart
+                    as live telemetry.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+
+            <Card className="settings-card settings-card--wide">
+              <CardHeader>
                 <CardTitle>Intelligent service taxonomy</CardTitle>
                 <CardDescription>
                   Every catalog entry is assigned by its operational purpose.
@@ -453,28 +569,66 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
 
             <Card className="settings-card">
               <CardHeader>
-                <CardTitle>Notification policy</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <BellRingIcon />
+                  Notification policy
+                </CardTitle>
                 <CardDescription>
-                  What appears in the notification menu.
+                  Control which captured service and node states appear in the
+                  notification menu.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="settings-capability-list">
-                {[
-                  ["Discovery snapshots", RadioTowerIcon],
-                  ["Endpoint readiness", BellRingIcon],
-                  ["DNS availability", NetworkIcon],
-                  ["Telemetry health", ActivityIcon],
-                ].map(([label, Icon]) => (
-                  <div key={String(label)}>
-                    <span className="settings-capability-icon">
-                      <Icon />
-                    </span>
-                    <span>{String(label)}</span>
-                    <Badge className="ml-auto" variant="outline">
-                      Enabled
-                    </Badge>
-                  </div>
-                ))}
+              <CardContent>
+                <FieldGroup className="settings-preferences">
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldTitle>Service status notifications</FieldTitle>
+                      <FieldDescription>
+                        Report endpoint readiness and telemetry service health.
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch
+                      checked={preferences.serviceNotifications}
+                      onCheckedChange={(checked) =>
+                        updatePreference("serviceNotifications", checked)
+                      }
+                      aria-label="Enable service status notifications"
+                    />
+                  </Field>
+                  <Separator />
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldTitle>Node status notifications</FieldTitle>
+                      <FieldDescription>
+                        Report readiness, heartbeat, and pressure conditions.
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch
+                      checked={preferences.nodeNotifications}
+                      onCheckedChange={(checked) =>
+                        updatePreference("nodeNotifications", checked)
+                      }
+                      aria-label="Enable node status notifications"
+                    />
+                  </Field>
+                  <Separator />
+                  <Field orientation="horizontal">
+                    <FieldContent>
+                      <FieldTitle>Warnings only</FieldTitle>
+                      <FieldDescription>
+                        Hide healthy summaries and keep only states that need
+                        attention.
+                      </FieldDescription>
+                    </FieldContent>
+                    <Switch
+                      checked={preferences.warningNotificationsOnly}
+                      onCheckedChange={(checked) =>
+                        updatePreference("warningNotificationsOnly", checked)
+                      }
+                      aria-label="Show warning notifications only"
+                    />
+                  </Field>
+                </FieldGroup>
               </CardContent>
             </Card>
 
