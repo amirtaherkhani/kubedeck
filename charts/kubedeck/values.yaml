@@ -1,0 +1,108 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/amirtaherkhani/kubedeck
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: false
+  className: ""
+  forceHttps: false
+  annotations: {}
+  hosts:
+    - host: kubedeck.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+admin:
+  existingSecret: kubedeck-admin
+  secretKeys:
+    firstName: KUBEDECK_ADMIN_FIRST_NAME
+    lastName: KUBEDECK_ADMIN_LAST_NAME
+    email: KUBEDECK_ADMIN_EMAIL
+    password: KUBEDECK_ADMIN_PASSWORD
+
+persistence:
+  enabled: true
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+startupProbe:
+  enabled: true
+  path: /
+  failureThreshold: 30
+  periodSeconds: 5
+  timeoutSeconds: 3
+
+readinessProbe:
+  enabled: true
+  path: /
+  initialDelaySeconds: 2
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+livenessProbe:
+  enabled: true
+  path: /
+  initialDelaySeconds: 5
+  periodSeconds: 30
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+terminationGracePeriodSeconds: 30
+
+extraEnv: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

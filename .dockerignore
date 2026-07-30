@@ -1,0 +1,14 @@
+.git
+.wrangler
+.vinext
+dist
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+.DS_Store
+*.png
+!public/**/*.png
+!public/*.png
+.playwright-mcp
