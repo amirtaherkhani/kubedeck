@@ -861,6 +861,8 @@
   overflow: hidden;
   border-radius: inherit;
   pointer-events: none;
+  transform-origin: 63% 50%;
+  animation: kubedeck-banner-drift 18s ease-in-out infinite alternate;
 }
 
 .kubedeck-live-link {
@@ -902,7 +904,7 @@
 .kubedeck-live-link--top {
   top: 50.8%;
   left: 62.85%;
-  width: 27.3%;
+  width: 9.1%;
   transform: rotate(-90deg);
 }
 
@@ -943,10 +945,10 @@
 }
 
 .kubedeck-live-link--bottom {
-  top: 80.7%;
+  top: 50.8%;
   left: 62.85%;
-  width: 29.9%;
-  transform: rotate(-90deg);
+  width: 10%;
+  transform: rotate(90deg);
   --live-link-delay: -2.75s;
   --live-link-duration: 4.4s;
 }

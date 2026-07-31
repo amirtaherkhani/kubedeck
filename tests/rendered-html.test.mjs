@@ -676,6 +676,18 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(globalStyles, /font-family: var\(--font-manrope\)/);
   assert.match(globalStyles, /\.dashboard-sidebar/);
   assert.match(globalStyles, /\.liquid-orbit/);
+  assert.match(
+    globalStyles,
+    /\.kubedeck-live-graph\s*\{[^}]*animation: kubedeck-banner-drift/s,
+  );
+  assert.match(
+    globalStyles,
+    /\.kubedeck-live-link--top\s*\{[^}]*width: 9\.1%/s,
+  );
+  assert.match(
+    globalStyles,
+    /\.kubedeck-live-link--bottom\s*\{[^}]*top: 50\.8%[^}]*width: 10%[^}]*rotate\(90deg\)/s,
+  );
   assert.match(packageJson, /"recharts": "\^3\.8\.0"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.match(environmentExample, /KUBEDECK_ADMIN_EMAIL=/);
