@@ -137,6 +137,7 @@ type CatalogKind = "app" | "service"
 type KindFilter = CatalogKind | "all"
 type StatusFilter = CatalogStatus | "all"
 type SortMode = "recommended" | "name" | "namespace"
+export type DashboardView = "overview" | "nodes" | "dns" | "catalog"
 type DashboardAdmin = {
   firstName: string
   lastName: string
@@ -1703,10 +1704,44 @@ function ResourceCard({
   )
 }
 
+const dashboardViewMeta: Record<
+  DashboardView,
+  { eyebrow: string; title: string; description: string }
+> = {
+  overview: {
+    eyebrow: "Fleet overview",
+    title: "Kubernetes operations dashboard",
+    description:
+      "Monitor the global cluster scope, review resource pressure, and move directly to the operational workspace you need.",
+  },
+  nodes: {
+    eyebrow: "Cluster infrastructure",
+    title: "Nodes and resource health",
+    description:
+      "Compare Kubernetes nodes, pressure conditions, heartbeat state, and four normalized resource signals.",
+  },
+  dns: {
+    eyebrow: "Cluster networking",
+    title: "DNS and service discovery",
+    description:
+      "Review the active cluster domain, CoreDNS service identity, resolver IP, and pod search path.",
+  },
+  catalog: {
+    eyebrow: "Service catalog",
+    title: "Applications and services",
+    description:
+      "Browse one operational category at a time with focused search, readiness, DNS, ports, uptime, and deployment details.",
+  },
+}
+
 export default function DashboardClient({
   admin,
+  view = "overview",
+  catalogCategory,
 }: {
   admin: DashboardAdmin
+  view?: DashboardView
+  catalogCategory?: string
 }) {
   const searchRef = React.useRef<HTMLInputElement>(null)
   const [search, setSearch] = React.useState("")
@@ -1725,6 +1760,8 @@ export default function DashboardClient({
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (view !== "catalog") return
+
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault()
         searchRef.current?.focus()
@@ -1738,7 +1775,7 @@ export default function DashboardClient({
 
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [])
+  }, [view])
 
   React.useEffect(() => {
     function readPreferences() {
@@ -1766,16 +1803,34 @@ export default function DashboardClient({
       window.removeEventListener("kubedeck:preferences", readPreferences)
   }, [])
 
+  const activeCategory =
+    categoryConfig.find((category) => category.id === catalogCategory) ??
+    categoryConfig[0]
+
   const filteredItems = React.useMemo(() => {
     const filtered = catalogItems.filter((item) => {
+      const categoryMatch =
+        view !== "catalog" || item.category === activeCategory.id
       const kindMatch = kindFilter === "all" || item.kind === kindFilter
       const statusMatch =
         statusFilter === "all" || item.status === statusFilter
-      return kindMatch && statusMatch && matchesSearch(item, search)
+      return (
+        categoryMatch &&
+        kindMatch &&
+        statusMatch &&
+        matchesSearch(item, search)
+      )
     })
 
     return sortItems(filtered, sortMode)
-  }, [kindFilter, search, sortMode, statusFilter])
+  }, [
+    activeCategory.id,
+    kindFilter,
+    search,
+    sortMode,
+    statusFilter,
+    view,
+  ])
 
   const groupedCategories = categoryConfig
     .map((category) => ({
@@ -1810,8 +1865,8 @@ export default function DashboardClient({
         compactCatalog && "dashboard-shell--compact"
       )}
     >
-      <a className="skip-link" href="#catalog">
-        Skip to catalog
+      <a className="skip-link" href="#dashboard-page-content">
+        Skip to page content
       </a>
 
       <div className="liquid-grid" aria-hidden="true" />
@@ -1821,38 +1876,77 @@ export default function DashboardClient({
       />
 
       <aside className="dashboard-sidebar" aria-label="Primary navigation">
-        <a className="sidebar-brand" href="/dashboard" aria-label="KubeDeck home">
+        <a
+          className="sidebar-brand"
+          href="/dashboard"
+          aria-label="KubeDeck home"
+        >
           <KubeDeckLogo className="brand-mark" priority />
           <span className="sr-only">KubeDeck</span>
         </a>
         <nav className="dashboard-nav">
           <a
-            className="is-active"
-            href="#overview"
-            aria-current="page"
+            className={cn(view === "overview" && "is-active")}
+            href="/dashboard"
+            aria-current={view === "overview" ? "page" : undefined}
             aria-label="Overview"
             data-label="Overview"
           >
             <CircleGaugeIcon />
           </a>
           <a
-            href="#node-review"
+            className={cn(view === "nodes" && "is-active")}
+            href="/dashboard/nodes"
+            aria-current={view === "nodes" ? "page" : undefined}
             aria-label="Cluster node review"
             data-label="Nodes"
           >
             <ServerCogIcon />
           </a>
-          <a href="#dns-title" aria-label="Cluster DNS" data-label="DNS">
+          <a
+            className={cn(view === "dns" && "is-active")}
+            href="/dashboard/dns"
+            aria-current={view === "dns" ? "page" : undefined}
+            aria-label="Cluster DNS"
+            data-label="DNS"
+          >
             <NetworkIcon />
           </a>
+          {/* Standard links avoid vinext's unsupported dynamic router import. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
-            href="#category-databases-storage"
+            className={cn(
+              view === "catalog" &&
+                activeCategory.id === "databases-storage" &&
+                "is-active"
+            )}
+            href="/dashboard/catalog/databases-storage"
+            aria-current={
+              view === "catalog" && activeCategory.id === "databases-storage"
+                ? "page"
+                : undefined
+            }
             aria-label="Data services"
             data-label="Data"
           >
             <DatabaseIcon />
           </a>
-          <a href="#catalog" aria-label="Service catalog" data-label="Catalog">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
+            className={cn(
+              view === "catalog" &&
+                activeCategory.id !== "databases-storage" &&
+                "is-active"
+            )}
+            href="/dashboard/catalog/web-applications"
+            aria-current={
+              view === "catalog" && activeCategory.id !== "databases-storage"
+                ? "page"
+                : undefined
+            }
+            aria-label="Service catalog"
+            data-label="Catalog"
+          >
             <BoxesIcon />
           </a>
           <a href="/settings" aria-label="Settings" data-label="Settings">
@@ -1939,74 +2033,148 @@ export default function DashboardClient({
           </div>
         </header>
 
-        <section
-          id="overview"
-          className="dashboard-hero"
-          aria-label="KubeDeck overview"
-        >
-          <KubeDeckBanner
-            className="dashboard-banner"
-            headingId="page-title"
-            liveGraph
-            priority
-          />
-
-          <div
-            id="fleet-resources"
-            className="resource-meter"
-            aria-labelledby="resources-title"
-          >
-            <div className="flex items-start justify-between gap-6">
+        <div id="dashboard-page-content" className="dashboard-page-content">
+          {view !== "overview" ? (
+            <section
+              className="dashboard-page-heading"
+              aria-labelledby="dashboard-view-title"
+            >
               <div>
-                <p
-                  id="resources-title"
-                  className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
-                >
-                  Fleet resources
-                </p>
-                <p className="mt-1 text-sm font-medium">
-                  {nodeSummary.total} nodes · {nodeSummary.attention} attention
-                </p>
+                <Badge variant="secondary">
+                  {dashboardViewMeta[view].eyebrow}
+                </Badge>
+                <h1 id="dashboard-view-title">
+                  {dashboardViewMeta[view].title}
+                </h1>
+                <p>{dashboardViewMeta[view].description}</p>
               </div>
-              <Badge variant="outline">
-                <CircleGaugeIcon data-icon="inline-start" />
-                Preview
-              </Badge>
-            </div>
-            <div className="resource-meter-grid">
-              {nodeResources.map((resource) => (
-                <ResourceMetric key={resource.label} {...resource} />
-              ))}
-            </div>
-            <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
-              {monitoringSnapshot.source} · illustrative values at capture time
-            </p>
-          </div>
-        </section>
+              {view === "catalog" ? (
+                <Badge variant="outline">
+                  {activeCategory.label} ·{" "}
+                  {
+                    catalogItems.filter(
+                      (item) => item.category === activeCategory.id
+                    ).length
+                  }{" "}
+                  resources
+                </Badge>
+              ) : (
+                <Badge variant="outline">{monitoringSnapshot.mode}</Badge>
+              )}
+            </section>
+          ) : null}
 
-        <section className="stat-strip" aria-label="Global cluster overview">
-          {clusterStats.map((stat) => (
-            <div key={stat.label} className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                {stat.label}
-              </p>
-              <p className="mt-2 text-xl font-semibold tracking-tight">
-                {stat.value}
-              </p>
-              <p className="mt-1 truncate text-xs text-muted-foreground">
-                {stat.detail}
-              </p>
-            </div>
-          ))}
-        </section>
+          {view === "overview" ? (
+            <>
+              <section
+                id="overview"
+                className="dashboard-hero"
+                aria-label="KubeDeck overview"
+              >
+                <KubeDeckBanner
+                  className="dashboard-banner"
+                  headingId="overview-banner-title"
+                  liveGraph
+                  priority
+                />
 
-        <MultiNodeReview
-          showControlPlaneNodes={showControlPlaneNodes}
-          showWorkerNodes={showWorkerNodes}
-          highlightNodePressure={highlightNodePressure}
-        />
+                <div
+                  id="fleet-resources"
+                  className="resource-meter"
+                  aria-labelledby="resources-title"
+                >
+                  <div className="flex items-start justify-between gap-6">
+                    <div>
+                      <p
+                        id="resources-title"
+                        className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground"
+                      >
+                        Fleet resources
+                      </p>
+                      <p className="mt-1 text-sm font-medium">
+                        {nodeSummary.total} nodes · {nodeSummary.attention}{" "}
+                        attention
+                      </p>
+                    </div>
+                    <Badge variant="outline">
+                      <CircleGaugeIcon data-icon="inline-start" />
+                      Preview
+                    </Badge>
+                  </div>
+                  <div className="resource-meter-grid">
+                    {nodeResources.map((resource) => (
+                      <ResourceMetric key={resource.label} {...resource} />
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
+                    {monitoringSnapshot.source} · illustrative values at capture
+                    time
+                  </p>
+                </div>
+              </section>
 
-        <section className="dns-panel" aria-labelledby="dns-title">
+              <section
+                className="stat-strip"
+                aria-label="Global cluster overview"
+              >
+                {clusterStats.map((stat) => (
+                  <div key={stat.label} className="min-w-0">
+                    <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                      {stat.label}
+                    </p>
+                    <p className="mt-2 text-xl font-semibold tracking-tight">
+                      {stat.value}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {stat.detail}
+                    </p>
+                  </div>
+                ))}
+              </section>
+
+              <nav
+                className="dashboard-workspace-grid"
+                aria-label="Dashboard workspaces"
+              >
+                <a href="/dashboard/nodes">
+                  <ServerCogIcon />
+                  <span>
+                    <strong>Node health</strong>
+                    <small>Pressure, heartbeat, and resource history</small>
+                  </span>
+                  <ArrowUpRightIcon />
+                </a>
+                <a href="/dashboard/dns">
+                  <NetworkIcon />
+                  <span>
+                    <strong>Cluster DNS</strong>
+                    <small>CoreDNS, service IP, and search domains</small>
+                  </span>
+                  <ArrowUpRightIcon />
+                </a>
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                <a href="/dashboard/catalog/web-applications">
+                  <BoxesIcon />
+                  <span>
+                    <strong>Service catalog</strong>
+                    <small>Apps, services, endpoints, and ports</small>
+                  </span>
+                  <ArrowUpRightIcon />
+                </a>
+              </nav>
+            </>
+          ) : null}
+
+          {view === "nodes" ? (
+            <MultiNodeReview
+              showControlPlaneNodes={showControlPlaneNodes}
+              showWorkerNodes={showWorkerNodes}
+              highlightNodePressure={highlightNodePressure}
+            />
+          ) : null}
+
+          {view === "dns" ? (
+            <section className="dns-panel" aria-labelledby="dns-title">
           <div className="dns-intro">
             <span className="resource-icon" aria-hidden="true">
               <ServerCogIcon />
@@ -2050,23 +2218,35 @@ export default function DashboardClient({
               <small>Verified from a monitoring pod</small>
             </div>
           </div>
-        </section>
+            </section>
+          ) : null}
 
-        <nav className="category-index" aria-label="Service categories">
+          {view === "catalog" ? (
+            <>
+              <nav className="category-index" aria-label="Service categories">
           {categoryConfig.map((category) => {
             const Icon = category.icon
             const count = catalogItems.filter(
               (item) => item.category === category.id
             ).length
             return (
-              <a key={category.id} href={`#category-${category.id}`}>
+              <a
+                key={category.id}
+                className={cn(
+                  activeCategory.id === category.id && "is-active"
+                )}
+                href={`/dashboard/catalog/${category.id}`}
+                aria-current={
+                  activeCategory.id === category.id ? "page" : undefined
+                }
+              >
                 <Icon aria-hidden="true" />
                 <span>{category.label}</span>
                 <small>{count}</small>
               </a>
             )
           })}
-        </nav>
+              </nav>
 
         <section
           className="sticky-toolbar"
@@ -2281,6 +2461,9 @@ export default function DashboardClient({
             )}
           </AnimatePresence>
         </motion.div>
+            </>
+          ) : null}
+        </div>
 
         <footer className="mt-16 flex flex-col gap-3 border-t border-border py-7 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>KubeDeck · Global multi-cluster Kubernetes launchpad</p>

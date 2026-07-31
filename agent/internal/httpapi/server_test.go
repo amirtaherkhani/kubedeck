@@ -1,0 +1,234 @@
+package httpapi
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/amirtaherkhani/kubedeck-agent/internal/dnsconfig"
+	"github.com/amirtaherkhani/kubedeck-agent/internal/model"
+	"github.com/amirtaherkhani/kubedeck-agent/internal/stream"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesfake "k8s.io/client-go/kubernetes/fake"
+)
+
+type staticSource struct {
+	ready    bool
+	snapshot model.Snapshot
+}
+
+func (s staticSource) Ready() bool {
+	return s.ready
+}
+
+func (s staticSource) Snapshot() model.Snapshot {
+	return s.snapshot
+}
+
+func TestSnapshotRequiresBearerToken(t *testing.T) {
+	t.Parallel()
+
+	source := staticSource{
+		ready: true,
+		snapshot: model.Snapshot{
+			SchemaVersion: model.SchemaVersion,
+			Cluster:       model.Cluster{ID: "homelab"},
+		},
+	}
+	server := New(
+		source,
+		stream.NewBroker("homelab", 8),
+		dnsconfig.New(kubernetesfake.NewSimpleClientset(), dnsconfig.Options{}),
+		"test-token",
+		time.Second,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+
+	request := httptest.NewRequest(http.MethodGet, "/v1/snapshot", nil)
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, request)
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthorized status = %d", response.Code)
+	}
+
+	request = httptest.NewRequest(http.MethodGet, "/v1/snapshot", nil)
+	request.Header.Set("Authorization", "Bearer test-token")
+	response = httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("authorized status = %d, body = %s", response.Code, response.Body)
+	}
+	if !strings.Contains(response.Body.String(), model.SchemaVersion) {
+		t.Fatalf("snapshot response does not contain schema version: %s", response.Body)
+	}
+}
+
+func TestSSEStartsWithSnapshotAndSupportsStreaming(t *testing.T) {
+	t.Parallel()
+
+	source := staticSource{
+		ready: true,
+		snapshot: model.Snapshot{
+			SchemaVersion: model.SchemaVersion,
+			Cluster: model.Cluster{
+				ID:   "homelab",
+				Name: "Home lab",
+			},
+		},
+	}
+	broker := stream.NewBroker("homelab", 8)
+	server := httptest.NewServer(New(
+		source,
+		broker,
+		dnsconfig.New(kubernetesfake.NewSimpleClientset(), dnsconfig.Options{}),
+		"",
+		time.Second,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	).Handler())
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+"/v1/events", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := server.Client().Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("SSE status = %d", response.StatusCode)
+	}
+	if contentType := response.Header.Get("Content-Type"); !strings.HasPrefix(contentType, "text/event-stream") {
+		t.Fatalf("Content-Type = %q", contentType)
+	}
+
+	scanner := bufio.NewScanner(response.Body)
+	lines := make([]string, 0, 8)
+	for scanner.Scan() && len(lines) < 6 {
+		lines = append(lines, scanner.Text())
+	}
+	joined := strings.Join(lines, "\n")
+	for _, expected := range []string{
+		"retry: 3000",
+		"event: snapshot",
+		`"clusterId":"homelab"`,
+		model.SchemaVersion,
+	} {
+		if !strings.Contains(joined, expected) {
+			t.Fatalf("SSE output missing %q:\n%s", expected, joined)
+		}
+	}
+}
+
+func TestDNSConfigurationEndpointAppliesAliasesAndPublishesEvent(t *testing.T) {
+	t.Parallel()
+
+	kube := kubernetesfake.NewSimpleClientset(
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "grafana", Namespace: "monitoring"}},
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "coredns-custom",
+				Namespace:       "kube-system",
+				ResourceVersion: "8",
+			},
+		},
+	)
+	broker := stream.NewBroker("homelab", 8)
+	_, live, _, unsubscribe := broker.Subscribe(0)
+	defer unsubscribe()
+	server := New(
+		staticSource{ready: true},
+		broker,
+		dnsconfig.New(kube, dnsconfig.Options{
+			Enabled:       true,
+			Namespace:     "kube-system",
+			ConfigMapName: "coredns-custom",
+			OverrideKey:   "kubedeck.override",
+			ClusterDomain: "cluster.local",
+		}),
+		"test-token",
+		time.Second,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+
+	request := httptest.NewRequest(
+		http.MethodPut,
+		"/v1/dns/config",
+		strings.NewReader(`{
+			"resourceVersion":"8",
+			"aliases":[{
+				"hostname":"grafana.home.arpa",
+				"service":"grafana",
+				"namespace":"monitoring"
+			}]
+		}`),
+	)
+	request.Header.Set("Authorization", "Bearer test-token")
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("PUT status = %d, body = %s", response.Code, response.Body)
+	}
+	var state dnsconfig.State
+	if err := json.Unmarshal(response.Body.Bytes(), &state); err != nil {
+		t.Fatal(err)
+	}
+	if len(state.Aliases) != 1 || state.Aliases[0].Hostname != "grafana.home.arpa" {
+		t.Fatalf("unexpected DNS state: %#v", state)
+	}
+	select {
+	case event := <-live:
+		if event.Name != "dns.config.changed" {
+			t.Fatalf("DNS event name = %q", event.Name)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("DNS event was not published")
+	}
+}
+
+func TestDNSConfigurationEndpointIsReadOnlyWhenDisabled(t *testing.T) {
+	t.Parallel()
+
+	server := New(
+		staticSource{ready: true},
+		stream.NewBroker("homelab", 8),
+		dnsconfig.New(kubernetesfake.NewSimpleClientset(), dnsconfig.Options{
+			Namespace:     "kube-system",
+			ConfigMapName: "coredns-custom",
+			OverrideKey:   "kubedeck.override",
+			ClusterDomain: "cluster.local",
+		}),
+		"",
+		time.Second,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+
+	getRequest := httptest.NewRequest(http.MethodGet, "/v1/dns/config", nil)
+	getResponse := httptest.NewRecorder()
+	server.Handler().ServeHTTP(getResponse, getRequest)
+	if getResponse.Code != http.StatusOK || !strings.Contains(getResponse.Body.String(), `"enabled":false`) {
+		t.Fatalf("GET status = %d, body = %s", getResponse.Code, getResponse.Body)
+	}
+
+	putRequest := httptest.NewRequest(
+		http.MethodPut,
+		"/v1/dns/config",
+		strings.NewReader(`{"resourceVersion":"1","aliases":[]}`),
+	)
+	putResponse := httptest.NewRecorder()
+	server.Handler().ServeHTTP(putResponse, putRequest)
+	if putResponse.Code != http.StatusForbidden {
+		t.Fatalf("PUT status = %d, body = %s", putResponse.Code, putResponse.Body)
+	}
+}

@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1.7
+
+FROM golang:1.26.2-alpine AS builder
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build \
+      -trimpath \
+      -ldflags="-s -w" \
+      -o /out/kubedeck-agent \
+      ./cmd/kubedeck-agent
+
+FROM scratch
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder --chown=65532:65532 /out/kubedeck-agent /kubedeck-agent
+
+USER 65532:65532
+
+EXPOSE 8080
+
+ENTRYPOINT ["/kubedeck-agent"]
