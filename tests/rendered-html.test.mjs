@@ -102,10 +102,10 @@ test("renders one-time admin setup and creates a hashed admin account", async (t
   assert.match(html, /Admin email/);
   assert.match(html, /Confirm password/);
   assert.match(html, /stores only a salted hash/);
-  assert.match(html, /Your Kubernetes ecosystem/);
-  assert.match(html, /Kubernetes services and nodes connected through/);
-  assert.match(html, /aria-label="KubeDeck scope"/);
-  assert.match(html, /kubedeck-banner\.png/);
+  assert.match(html, /All your clusters/);
+  assert.match(html, /A calm home for the noisy parts of Kubernetes/);
+  assert.match(html, /aria-label="Workspace scope"/);
+  assert.match(html, /brand\/kubedeck-mark\.svg/);
   assert.doesNotMatch(html, /Rancher Desktop/i);
 
   const unverifiedSetup = await runtime.request("/api/auth/setup", {
@@ -626,7 +626,8 @@ test("ships the admin schema, migration, and finished product assets", async () 
   ]);
 
   assert.match(loginPage, /<AdminAuthForm mode=\{isSetup/);
-  assert.match(loginPage, /KubeDeckBanner/);
+  assert.match(loginPage, /auth-cluster-scene/);
+  assert.match(loginPage, /One happy little deck/);
   assert.match(bannerComponent, /src="\/kubedeck-banner\.png"/);
   assert.match(bannerComponent, /Your Kubernetes ecosystem/);
   assert.match(bannerComponent, /liveGraph/);
