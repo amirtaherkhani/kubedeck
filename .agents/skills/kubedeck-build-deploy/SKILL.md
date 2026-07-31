@@ -83,9 +83,10 @@ KUBEDECK_TARGET_PLATFORM=linux/arm64
 ```
 
 Use repository-relative values-file paths from the repository root. Existing
-user-supplied Helm values are preserved and merged with new chart defaults.
-Explicit optional values files are applied afterward. Immutable image values
-and Secret wiring are applied last.
+installed Helm values, including computed values required by immutable
+resources, are preserved and merged with new chart defaults. Explicit optional
+values files are applied afterward. Immutable image values and Secret wiring
+are applied last.
 
 ## Secrets and DNS Safety
 

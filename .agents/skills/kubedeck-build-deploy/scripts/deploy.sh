@@ -319,15 +319,20 @@ agent_helm_command=(
   --create-namespace
 )
 
+# Preserve computed installed values as well as user overrides. This keeps
+# immutable resources such as an existing PVC's storageClassName stable when
+# chart defaults differ from the originally installed release.
 if helm --kube-context "$context" status "$app_release" --namespace "$namespace" >/dev/null 2>&1; then
   helm --kube-context "$context" get values "$app_release" \
     --namespace "$namespace" \
+    --all \
     --output yaml >"$temp_dir/app-existing-values.yaml"
   app_helm_command+=(-f "$temp_dir/app-existing-values.yaml")
 fi
 if helm --kube-context "$context" status "$agent_release" --namespace "$namespace" >/dev/null 2>&1; then
   helm --kube-context "$context" get values "$agent_release" \
     --namespace "$namespace" \
+    --all \
     --output yaml >"$temp_dir/agent-existing-values.yaml"
   agent_helm_command+=(-f "$temp_dir/agent-existing-values.yaml")
 fi
