@@ -135,7 +135,7 @@ backend can enable horizontally scaled application replicas.
 ## Repository layout
 
 ```text
-agent/                    Go Kubernetes discovery and CoreDNS agent
+kubedeck-agent/           Go Kubernetes discovery and CoreDNS agent
 app/                      KubeDeck App Router pages and API proxies
 charts/kubedeck/          Dashboard Helm chart
 charts/kubedeck-agent/    Agent, RBAC, SSE, and CoreDNS Helm chart
@@ -172,13 +172,13 @@ npm run db:generate
 Agent checks:
 
 ```bash
-cd agent
+cd kubedeck-agent
 go test -race ./...
 go vet ./...
 ```
 
 The agent package choices, environment variables, API contract, and CoreDNS
-safety model are documented in [`agent/README.md`](agent/README.md).
+safety model are documented in [`kubedeck-agent/README.md`](kubedeck-agent/README.md).
 
 ## Administrator setup
 
