@@ -1,0 +1,4 @@
+interface:
+  display_name: "KubeDeck Build & Deploy"
+  short_description: "Build and deploy the KubeDeck app and agent"
+  default_prompt: "Use $kubedeck-build-deploy to update the requested remote branch, build both immutable KubeDeck images, deploy both Helm releases to Kubernetes, and verify their rollouts."
