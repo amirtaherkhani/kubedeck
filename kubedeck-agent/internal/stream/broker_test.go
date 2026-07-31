@@ -18,13 +18,16 @@ func TestBrokerReplayAndLiveDelivery(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	replay, live, gap, cancel := broker.Subscribe(first.ID)
+	replay, live, gap, latestID, cancel := broker.Subscribe(first.ID)
 	defer cancel()
 	if gap {
 		t.Fatal("unexpected history gap")
 	}
 	if len(replay) != 1 || replay[0].ID != second.ID {
 		t.Fatalf("unexpected replay: %#v", replay)
+	}
+	if latestID != second.ID {
+		t.Fatalf("latest subscription ID = %d, want %d", latestID, second.ID)
 	}
 
 	third, err := broker.Publish("snapshot", map[string]int{"generation": 3})
@@ -50,9 +53,30 @@ func TestBrokerReportsHistoryGap(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	_, _, gap, cancel := broker.Subscribe(1)
+	_, _, gap, _, cancel := broker.Subscribe(1)
 	defer cancel()
 	if !gap {
 		t.Fatal("expected history gap")
+	}
+}
+
+func TestBrokerDisconnectsSlowSubscribersWithoutBlockingPublishers(t *testing.T) {
+	t.Parallel()
+
+	broker := NewBroker("homelab", 32)
+	_, live, _, _, cancel := broker.Subscribe(0)
+	defer cancel()
+	for generation := 1; generation <= 17; generation++ {
+		if _, err := broker.Publish("snapshot", generation); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	received := 0
+	for range live {
+		received++
+	}
+	if received != 16 {
+		t.Fatalf("slow subscriber received %d buffered events, want 16", received)
 	}
 }

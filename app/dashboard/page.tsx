@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import DashboardClient from "./dashboard-client"
 
 import { getCurrentAdmin } from "@/lib/auth"
+import { readInitialClusterSnapshot } from "@/lib/kubedeck-agent"
 
 export const dynamic = "force-dynamic"
 
@@ -10,5 +11,13 @@ export default async function DashboardPage() {
   const admin = await getCurrentAdmin()
   if (!admin) redirect("/")
 
-  return <DashboardClient admin={admin} view="overview" />
+  const initialSnapshot = await readInitialClusterSnapshot()
+
+  return (
+    <DashboardClient
+      admin={admin}
+      view="overview"
+      initialSnapshot={initialSnapshot}
+    />
+  )
 }

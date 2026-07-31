@@ -44,14 +44,12 @@ KubeDeck is currently an early `v0.1` foundation.
 The repository includes the dashboard, responsive liquid-glass interface,
 authentication, Kubernetes catalog, multi-node review, notifications, settings,
 Go cluster agent, container runtimes, and separate Helm charts for the app and
-agent. The agent now provides live Kubernetes API discovery, resource metrics,
-reconnecting SSE updates, and opt-in CoreDNS service-alias management.
-
-The dashboard catalog and node charts still present an explicitly labeled
-illustrative fallback while their UI data adapter is completed. Live snapshots
-are available through the authenticated `/api/cluster/snapshot` and
-`/api/cluster/events` server-side proxies; the CoreDNS settings editor already
-uses the live agent contract.
+agent. The agent provides live Kubernetes API discovery, resource metrics,
+reconnecting SSE updates, and opt-in CoreDNS service-alias management. The
+dashboard now server-renders the current authenticated agent snapshot and then
+keeps the overview, nodes, catalog, DNS, settings, charts, and notifications
+current through `/api/cluster/events`. An explicitly labeled illustrative
+fallback is used only while the agent is unavailable.
 
 ## Highlights
 
@@ -69,7 +67,8 @@ uses the live agent contract.
   - Messaging & Events
   - Developer Tools
   - Platform & Security
-- Multi-node cluster review with CPU, memory, storage, and pod-allocation charts
+- Multi-node cluster review with live CPU, memory, ephemeral-storage request,
+  and pod-allocation charts collected during the current browser session
 - Graphical readiness, uptime, endpoint, and last-deployment indicators
 - Service and node status notification center
 - Search, status filters, resource-kind filters, and sorting
@@ -375,7 +374,8 @@ the `kubedeck.override` key and refuses to overwrite unrecognized content.
       Namespace, and Node discovery agent
 - [x] Kubernetes watch-based snapshot and SSE updates
 - [x] Opt-in CoreDNS Service alias management
-- [ ] Bind every dashboard catalog and chart view to live agent snapshots
+- [x] Bind dashboard, catalog, DNS, settings, notifications, and session charts
+      to live agent snapshots
 - [ ] Prometheus and metrics-server resource histories
 - [ ] Multi-cluster connection management
 - [ ] Configurable classification rules and annotations

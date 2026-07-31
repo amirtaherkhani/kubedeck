@@ -89,6 +89,124 @@ async function setupAdmin(runtime) {
   return setCookie.split(";")[0];
 }
 
+function createAgentSnapshot() {
+  return {
+    schemaVersion: "kubedeck.io/v1alpha1",
+    generatedAt: "2026-07-31T12:00:00Z",
+    cluster: {
+      id: "test-cluster",
+      name: "Realtime Test Cluster",
+      kubernetesVersion: "v1.36.3",
+      platform: "linux/arm64",
+    },
+    summary: {
+      nodes: 1,
+      readyNodes: 1,
+      namespaces: 2,
+      pods: 1,
+      readyPods: 1,
+      workloads: 1,
+      readyWorkloads: 1,
+      services: 1,
+      readyServices: 1,
+      ingresses: 1,
+      persistentVolumes: 0,
+      warningEvents: 0,
+    },
+    dns: {
+      provider: "CoreDNS",
+      serviceName: "kube-system/kube-dns",
+      serviceDNS: "kube-dns.kube-system.svc.cluster.local",
+      serviceIP: "10.43.0.10",
+      clusterDomain: "cluster.local",
+      ports: [
+        { name: "dns", protocol: "UDP", port: 53 },
+        { name: "dns-tcp", protocol: "TCP", port: 53 },
+      ],
+      searchPath: [
+        "<namespace>.svc.cluster.local",
+        "svc.cluster.local",
+        "cluster.local",
+      ],
+      ready: true,
+      readyEndpoints: 1,
+      totalEndpoints: 1,
+    },
+    nodes: [
+      {
+        name: "live-node-01",
+        role: "control-plane",
+        ready: true,
+        status: "Ready",
+        internalIP: "10.0.0.1",
+        kubeletVersion: "v1.36.3",
+        osImage: "Linux",
+        operatingSystem: "linux",
+        architecture: "arm64",
+        containerRuntime: "containerd://2",
+        createdAt: "2026-07-30T12:00:00Z",
+        uptimeSeconds: 86400,
+        lastHeartbeatAt: "2026-07-31T11:59:30Z",
+        capacity: {
+          cpuMilli: 4000,
+          memoryBytes: 8589934592,
+          ephemeralStorageBytes: 107374182400,
+          pods: 20,
+        },
+        usage: {
+          cpuMilli: 1000,
+          cpuPercent: 25,
+          memoryBytes: 4294967296,
+          memoryPercent: 50,
+          pods: 1,
+          podAllocationPercent: 5,
+          ephemeralStorageRequestedBytes: 1073741824,
+          ephemeralStorageRequestPercent: 1,
+          metricsAvailable: true,
+        },
+        conditions: [{ type: "Ready", status: "True" }],
+        unschedulable: false,
+      },
+    ],
+    pods: [],
+    workloads: [],
+    services: [
+      {
+        uid: "service-payments",
+        namespace: "apps",
+        name: "payments-api",
+        category: "web-applications",
+        type: "ClusterIP",
+        status: "ready",
+        clusterDNS: "payments-api.apps.svc.cluster.local",
+        clusterIP: "10.43.1.20",
+        externalIPs: [],
+        externalURLs: ["https://payments.example.test/"],
+        ports: [
+          {
+            name: "http",
+            protocol: "TCP",
+            port: 80,
+            targetPort: "3000",
+          },
+        ],
+        readyEndpoints: 1,
+        totalEndpoints: 1,
+        readyPods: 1,
+        totalPods: 1,
+        workloads: [
+          { kind: "Deployment", namespace: "apps", name: "payments-api" },
+        ],
+        lastDeployedAt: "2026-07-31T11:00:00Z",
+        uptimeSeconds: 3600,
+      },
+    ],
+    ingresses: [],
+    volumes: [],
+    events: [],
+  };
+}
+
 test("renders one-time admin setup and creates a hashed admin account", async (t) => {
   const runtime = await createRuntime();
   t.after(() => runtime.dispose());
@@ -215,7 +333,7 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(html, /href="\/dashboard\/nodes"/);
   assert.match(html, /href="\/dashboard\/dns"/);
   assert.match(html, /href="\/dashboard\/catalog\/web-applications"/);
-  assert.match(html, /Global discovery connected/);
+  assert.match(html, /Connecting to agent/);
   assert.match(html, /aria-label="Primary navigation"/);
   assert.match(html, /unread status notifications/);
   assert.match(html, /brand\/kubedeck-mark\.svg/);
@@ -300,7 +418,7 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   assert.match(settingsHtml, />App</);
   assert.match(settingsHtml, />Users</);
   assert.match(settingsHtml, /Admin/);
-  assert.match(settingsHtml, /All registered clusters/);
+  assert.match(settingsHtml, /Connection pending/);
 
   const unconfiguredAgentSnapshot = await runtime.request(
     "/api/cluster/snapshot",
@@ -334,6 +452,7 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
 
 test("proxies authenticated cluster snapshots and SSE without exposing the agent token", async (t) => {
   const requests = [];
+  const agentSnapshot = createAgentSnapshot();
   const agentServer = createServer((request, response) => {
     requests.push({
       path: request.url,
@@ -346,12 +465,7 @@ test("proxies authenticated cluster snapshots and SSE without exposing the agent
     }
     if (request.url === "/v1/snapshot") {
       response.writeHead(200, { "content-type": "application/json" });
-      response.end(
-        JSON.stringify({
-          schemaVersion: "kubedeck.io/v1alpha1",
-          cluster: { id: "test-cluster" },
-        }),
-      );
+      response.end(JSON.stringify(agentSnapshot));
       return;
     }
     if (request.url === "/v1/events") {
@@ -418,10 +532,7 @@ test("proxies authenticated cluster snapshots and SSE without exposing the agent
   });
   assert.equal(snapshot.status, 200);
   assert.equal(snapshot.headers.get("cache-control"), "no-store");
-  assert.deepEqual(await snapshot.json(), {
-    schemaVersion: "kubedeck.io/v1alpha1",
-    cluster: { id: "test-cluster" },
-  });
+  assert.deepEqual(await snapshot.json(), agentSnapshot);
 
   const events = await runtime.request("/api/cluster/events", {
     headers: { cookie: loginCookie, "last-event-id": "41" },
@@ -456,28 +567,49 @@ test("proxies authenticated cluster snapshots and SSE without exposing the agent
   assert.equal(replaceDNS.status, 200);
   assert.equal((await replaceDNS.json()).aliases[0].hostname, "grafana.home.arpa");
 
-  assert.deepEqual(requests, [
-    {
-      path: "/v1/snapshot",
-      authorization: "Bearer internal-agent-token",
-      lastEventId: undefined,
-    },
-    {
-      path: "/v1/events",
-      authorization: "Bearer internal-agent-token",
-      lastEventId: "41",
-    },
-    {
-      path: "/v1/dns/config",
-      authorization: "Bearer internal-agent-token",
-      lastEventId: undefined,
-    },
-    {
-      path: "/v1/dns/config",
-      authorization: "Bearer internal-agent-token",
-      lastEventId: undefined,
-    },
-  ]);
+  const dashboard = await runtime.request("/dashboard", {
+    headers: { cookie: loginCookie },
+  });
+  assert.equal(dashboard.status, 200);
+  const dashboardHtml = await dashboard.text();
+  assert.match(dashboardHtml, /Live discovery connected/);
+  assert.match(dashboardHtml, /Realtime Test Cluster/);
+  assert.match(dashboardHtml, /kubedeck-agent · updated/);
+
+  const nodes = await runtime.request("/dashboard/nodes", {
+    headers: { cookie: loginCookie },
+  });
+  assert.match(await nodes.text(), /live-node-01/);
+
+  const dns = await runtime.request("/dashboard/dns", {
+    headers: { cookie: loginCookie },
+  });
+  const dnsHtml = await dns.text();
+  assert.match(dnsHtml, /CoreDNS ready/);
+  assert.match(dnsHtml, /1\/1 endpoints ready/);
+
+  const catalog = await runtime.request(
+    "/dashboard/catalog/web-applications",
+    { headers: { cookie: loginCookie } },
+  );
+  const catalogHtml = await catalog.text();
+  assert.match(catalogHtml, /Payments api/);
+  assert.match(catalogHtml, /payments-api\.apps\.svc\.cluster\.local/);
+  assert.doesNotMatch(catalogHtml, /Homelab API/);
+
+  assert.ok(
+    requests.every(
+      (request) => request.authorization === "Bearer internal-agent-token",
+    ),
+  );
+  const snapshotRequests = requests.filter(
+    (request) => request.path === "/v1/snapshot",
+  );
+  assert.ok(snapshotRequests.length >= 5);
+  assert.equal(
+    requests.find((request) => request.path === "/v1/events")?.lastEventId,
+    "41",
+  );
 });
 
 test("bootstraps the first admin from complete backend environment values", async (t) => {
@@ -638,7 +770,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(notificationsComponent, /kubedeck-notify-services/);
   assert.match(notificationsComponent, /kubedeck-notify-nodes/);
   assert.match(dashboardPage, /getCurrentAdmin/);
-  assert.match(dashboardPage, /<DashboardClient admin=\{admin\}/);
+  assert.match(dashboardPage, /<DashboardClient[\s\S]*admin=\{admin\}/);
   assert.match(dashboardClient, /KubeDeckBanner/);
   assert.match(dashboardClient, /const webApps:/);
   assert.match(dashboardClient, /const operationalMeta:/);
@@ -652,7 +784,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(settingsClient, /Multi-node cluster review/);
   assert.match(settingsClient, /Service status notifications/);
   assert.match(settingsClient, /Node status notifications/);
-  assert.match(monitoringSource, /Illustrative multi-node snapshot/);
+  assert.match(monitoringSource, /Illustrative fallback snapshot/);
   assert.match(monitoringSource, /control-plane-01/);
   assert.match(monitoringSource, /worker-data-01/);
   assert.match(chartComponent, /ResponsiveContainer/);

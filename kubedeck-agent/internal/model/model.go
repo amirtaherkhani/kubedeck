@@ -42,14 +42,16 @@ type Summary struct {
 }
 
 type DNSProfile struct {
-	Provider      string   `json:"provider"`
-	ServiceName   string   `json:"serviceName,omitempty"`
-	ServiceDNS    string   `json:"serviceDNS,omitempty"`
-	ServiceIP     string   `json:"serviceIP,omitempty"`
-	ClusterDomain string   `json:"clusterDomain"`
-	Ports         []Port   `json:"ports"`
-	SearchPath    []string `json:"searchPath"`
-	Ready         bool     `json:"ready"`
+	Provider       string   `json:"provider"`
+	ServiceName    string   `json:"serviceName,omitempty"`
+	ServiceDNS     string   `json:"serviceDNS,omitempty"`
+	ServiceIP      string   `json:"serviceIP,omitempty"`
+	ClusterDomain  string   `json:"clusterDomain"`
+	Ports          []Port   `json:"ports"`
+	SearchPath     []string `json:"searchPath"`
+	Ready          bool     `json:"ready"`
+	ReadyEndpoints int      `json:"readyEndpoints"`
+	TotalEndpoints int      `json:"totalEndpoints"`
 }
 
 type Node struct {
@@ -149,7 +151,14 @@ type Workload struct {
 	Status         string            `json:"status"`
 	CreatedAt      time.Time         `json:"createdAt"`
 	LastDeployedAt *time.Time        `json:"lastDeployedAt,omitempty"`
+	Selector       map[string]string `json:"selector,omitempty"`
 	Labels         map[string]string `json:"labels,omitempty"`
+}
+
+type ObjectReference struct {
+	Kind      string `json:"kind"`
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
 }
 
 type Service struct {
@@ -169,6 +178,7 @@ type Service struct {
 	TotalEndpoints int               `json:"totalEndpoints"`
 	ReadyPods      int               `json:"readyPods"`
 	TotalPods      int               `json:"totalPods"`
+	Workloads      []ObjectReference `json:"workloads"`
 	LastDeployedAt *time.Time        `json:"lastDeployedAt,omitempty"`
 	UptimeSeconds  int64             `json:"uptimeSeconds"`
 	Labels         map[string]string `json:"labels,omitempty"`

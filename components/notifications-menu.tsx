@@ -31,10 +31,11 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import {
-  monitoringSnapshot,
-  nodeSnapshots,
-  nodeSummary,
-} from "@/lib/kubedeck-monitoring"
+  buildLiveNodes,
+  relativeTimestamp,
+  type ClusterSnapshot,
+} from "@/lib/kubedeck-cluster"
+import type { ClusterConnectionStatus } from "@/lib/use-kubedeck-cluster"
 import { cn } from "@/lib/utils"
 
 type NotificationScope = "service" | "node"
@@ -49,49 +50,6 @@ type StatusNotification = {
   time: string
   icon: LucideIcon
 }
-
-const pressureNode = nodeSnapshots.find((node) => node.status === "attention")
-
-const notifications: StatusNotification[] = [
-  {
-    id: "service-k6-endpoint",
-    scope: "service",
-    severity: "warning",
-    title: "Service has no ready endpoint",
-    description: "k6 Dashboard reports 0/0 endpoints in the captured catalog.",
-    time: "Service snapshot",
-    icon: CircleAlertIcon,
-  },
-  {
-    id: "service-telemetry-ready",
-    scope: "service",
-    severity: "success",
-    title: "Telemetry services ready",
-    description: "Prometheus, Loki, Tempo, and Alloy have ready endpoints.",
-    time: "Service snapshot",
-    icon: ActivityIcon,
-  },
-  {
-    id: "node-memory-pressure",
-    scope: "node",
-    severity: "warning",
-    title: "Node needs attention",
-    description: pressureNode
-      ? `${pressureNode.name} reports ${pressureNode.condition.toLowerCase()} at ${pressureNode.memory}% memory.`
-      : "A node condition requires review.",
-    time: "Illustrative node preview",
-    icon: MemoryStickIcon,
-  },
-  {
-    id: "node-ready-summary",
-    scope: "node",
-    severity: "success",
-    title: "Nodes reporting Ready",
-    description: `${nodeSummary.ready} of ${nodeSummary.total} sample nodes currently report Ready.`,
-    time: "Illustrative node preview",
-    icon: ServerIcon,
-  },
-]
 
 const notificationPreferenceKeys = {
   service: "kubedeck-notify-services",
@@ -112,13 +70,23 @@ function readStoredIds() {
   }
 }
 
-export function NotificationsMenu() {
+export function NotificationsMenu({
+  snapshot,
+  connectionStatus,
+}: {
+  snapshot: ClusterSnapshot | null
+  connectionStatus: ClusterConnectionStatus
+}) {
   const [readIds, setReadIds] = React.useState<Set<string>>(() => new Set())
   const [preferences, setPreferences] = React.useState({
     service: true,
     node: true,
     warningsOnly: false,
   })
+  const notifications = React.useMemo(
+    () => buildNotifications(snapshot, connectionStatus),
+    [connectionStatus, snapshot]
+  )
 
   React.useEffect(() => {
     function readPreferences() {
@@ -315,10 +283,110 @@ export function NotificationsMenu() {
         )}
         <DropdownMenuSeparator />
         <p className="px-2 py-1.5 text-[10px] leading-4 text-muted-foreground">
-          {monitoringSnapshot.mode} · connect{" "}
-          {monitoringSnapshot.liveIntegration} for live alerts.
+          {snapshot
+            ? "Live kubedeck-agent snapshot and Kubernetes warning events."
+            : "Waiting for a live kubedeck-agent snapshot."}
         </p>
       </DropdownMenuContent>
     </DropdownMenu>
   )
+}
+
+function buildNotifications(
+  snapshot: ClusterSnapshot | null,
+  connectionStatus: ClusterConnectionStatus
+): StatusNotification[] {
+  if (!snapshot) {
+    return [
+      {
+        id: "agent-unavailable",
+        scope: "service",
+        severity: "warning",
+        title: "Cluster agent is not connected",
+        description:
+          "KubeDeck is waiting for an authenticated snapshot and live event stream.",
+        time:
+          connectionStatus === "unavailable"
+            ? "Agent unavailable"
+            : "Connecting",
+        icon: CircleAlertIcon,
+      },
+    ]
+  }
+
+  const result: StatusNotification[] = []
+  const generatedAt = Date.parse(snapshot.generatedAt)
+  for (const service of snapshot.services
+    .filter((item) => item.status !== "ready")
+    .slice(0, 4)) {
+    result.push({
+      id: `service-${service.uid || `${service.namespace}-${service.name}`}`,
+      scope: "service",
+      severity: "warning",
+      title: `${service.namespace}/${service.name} needs attention`,
+      description: `${service.readyEndpoints}/${service.totalEndpoints} endpoints and ${service.readyPods}/${service.totalPods} pods are ready.`,
+      time: "Latest agent snapshot",
+      icon: CircleAlertIcon,
+    })
+  }
+
+  for (const node of buildLiveNodes(snapshot)
+    .filter((item) => item.status === "attention")
+    .slice(0, 4)) {
+    result.push({
+      id: `node-${node.id}`,
+      scope: "node",
+      severity: "warning",
+      title: `${node.name} needs attention`,
+      description: `${node.condition}; CPU ${node.cpu}%, memory ${node.memory}%, pod allocation ${node.podAllocation}%.`,
+      time: node.heartbeat,
+      icon: MemoryStickIcon,
+    })
+  }
+
+  for (const event of snapshot.events
+    .filter((item) => item.type.toLowerCase() === "warning")
+    .slice(0, 4)) {
+    const nodeEvent = event.regardingKind?.toLowerCase() === "node"
+    result.push({
+      id: `event-${event.uid || event.name}`,
+      scope: nodeEvent ? "node" : "service",
+      severity: "warning",
+      title: event.reason || "Kubernetes warning event",
+      description: [
+        event.regardingNamespace,
+        event.regardingName,
+        event.message,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      time: relativeTimestamp(
+        event.lastSeenAt || event.firstSeenAt,
+        Number.isFinite(generatedAt) ? generatedAt : Date.now()
+      ),
+      icon: CircleAlertIcon,
+    })
+  }
+
+  result.push(
+    {
+      id: "service-ready-summary",
+      scope: "service",
+      severity: "success",
+      title: "Service readiness summary",
+      description: `${snapshot.summary.readyServices} of ${snapshot.summary.services} Services have ready endpoints.`,
+      time: "Latest agent snapshot",
+      icon: ActivityIcon,
+    },
+    {
+      id: "node-ready-summary",
+      scope: "node",
+      severity: "success",
+      title: "Node readiness summary",
+      description: `${snapshot.summary.readyNodes} of ${snapshot.summary.nodes} nodes report Kubernetes Ready.`,
+      time: "Latest agent snapshot",
+      icon: ServerIcon,
+    }
+  )
+  return result
 }

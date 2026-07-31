@@ -36,13 +36,15 @@ versions aligned when upgrading.
   allocation, CPU, memory, and requested ephemeral storage
 - Pods, containers, readiness, restart counts, owners, IPs, images, and
   CPU/memory
-- Deployments, StatefulSets, and DaemonSets with desired/ready counts and the
-  latest matching Pod creation time as `lastDeployedAt`
+- Deployments, StatefulSets, and DaemonSets with desired/ready counts, selectors,
+  and the latest matching Pod creation time as `lastDeployedAt`
 - Services, cluster DNS names, ClusterIPs, ports, matching Pods, EndpointSlice
-  readiness, ingress URLs, uptime, and intelligent category assignment
+  readiness, related workload references, ingress URLs, uptime, and intelligent
+  category assignment
 - Ingress routes and TLS hosts
 - PersistentVolumes and PersistentVolumeClaims
-- CoreDNS service name, DNS service IP, ports, cluster domain, and search path
+- CoreDNS service name, DNS service IP, ports, endpoint readiness, cluster
+  domain, and search path
 - Recent Kubernetes events for the notification surface
 
 Storage percentage is explicitly
@@ -63,7 +65,9 @@ permission to scrape kubelet Summary APIs.
 
 The stream sends an initial snapshot, debounced resource-change snapshots,
 metrics snapshots, and heartbeat comments. It supports the standard
-`Last-Event-ID` header and replays a bounded in-memory history:
+`Last-Event-ID` header and replays a bounded in-memory history. When the client
+falls behind that history, the agent sends only the newest full snapshot so
+stale replay cannot roll the dashboard backward:
 
 ```text
 retry: 3000
@@ -157,4 +161,12 @@ For local development:
 KUBECONFIG="$HOME/.kube/config" \
 KUBEDECK_CLUSTER_ID=local \
 go run ./cmd/kubedeck-agent
+```
+
+Run the complete agent verification suite with race detection and static
+analysis:
+
+```bash
+go test -race ./...
+go vet ./...
 ```

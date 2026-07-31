@@ -1,5 +1,10 @@
 import { env as cloudflareEnv } from "cloudflare:workers"
 
+import {
+  parseClusterSnapshot,
+  type ClusterSnapshot,
+} from "@/lib/kubedeck-cluster"
+
 const AGENT_URL_KEY = "KUBEDECK_AGENT_URL"
 const AGENT_TOKEN_KEY = "KUBEDECK_AGENT_TOKEN"
 
@@ -42,4 +47,26 @@ export function requestClusterAgent(
     headers,
     cache: "no-store",
   })
+}
+
+export async function readClusterSnapshot(): Promise<ClusterSnapshot> {
+  const response = await requestClusterAgent("/v1/snapshot", {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(3_000),
+  })
+  if (!response.ok) {
+    throw new Error(`Cluster agent returned HTTP ${response.status}.`)
+  }
+  return parseClusterSnapshot(await response.json())
+}
+
+export async function readInitialClusterSnapshot() {
+  try {
+    return await readClusterSnapshot()
+  } catch (error) {
+    if (!(error instanceof AgentConfigurationError)) {
+      console.error("[KubeDeck] Initial cluster snapshot failed.", error)
+    }
+    return null
+  }
 }

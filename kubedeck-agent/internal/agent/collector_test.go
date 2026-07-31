@@ -2,16 +2,19 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/amirtaherkhani/kubedeck-agent/internal/config"
+	"github.com/amirtaherkhani/kubedeck-agent/internal/model"
 	"github.com/amirtaherkhani/kubedeck-agent/internal/stream"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -134,6 +137,22 @@ func TestCollectorBuildsDashboardSnapshotFromInformerCaches(t *testing.T) {
 				},
 			}},
 		},
+		&discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "kube-system",
+				Name:      "kube-dns-abc",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "kube-dns",
+				},
+			},
+			AddressType: discoveryv1.AddressTypeIPv4,
+			Endpoints: []discoveryv1.Endpoint{{
+				Addresses: []string{"10.42.0.10"},
+				Conditions: discoveryv1.EndpointConditions{
+					Ready: boolPtr(true),
+				},
+			}},
+		},
 		&appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace:         "apps",
@@ -149,6 +168,112 @@ func TestCollectorBuildsDashboardSnapshotFromInformerCaches(t *testing.T) {
 				ReadyReplicas:     1,
 				AvailableReplicas: 1,
 			},
+		},
+		&appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:         "apps",
+				Name:              "state-store",
+				UID:               types.UID("statefulset-1"),
+				CreationTimestamp: metav1.NewTime(now.Add(-2 * time.Hour)),
+			},
+			Spec: appsv1.StatefulSetSpec{
+				Replicas: int32Ptr(1),
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "state-store"}},
+			},
+			Status: appsv1.StatefulSetStatus{
+				ReadyReplicas:     1,
+				AvailableReplicas: 1,
+			},
+		},
+		&appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:         "apps",
+				Name:              "node-agent",
+				UID:               types.UID("daemonset-1"),
+				CreationTimestamp: metav1.NewTime(now.Add(-3 * time.Hour)),
+			},
+			Spec: appsv1.DaemonSetSpec{
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "node-agent"}},
+			},
+			Status: appsv1.DaemonSetStatus{
+				DesiredNumberScheduled: 1,
+			},
+		},
+		&networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:         "apps",
+				Name:              "postgresql-admin",
+				UID:               types.UID("ingress-1"),
+				CreationTimestamp: metav1.NewTime(now),
+			},
+			Spec: networkingv1.IngressSpec{
+				TLS: []networkingv1.IngressTLS{{Hosts: []string{"database.example.test"}}},
+				Rules: []networkingv1.IngressRule{{
+					Host: "database.example.test",
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{{
+								Path:     "/admin",
+								PathType: pathTypePtr(networkingv1.PathTypePrefix),
+								Backend: networkingv1.IngressBackend{
+									Service: &networkingv1.IngressServiceBackend{
+										Name: "postgresql",
+										Port: networkingv1.ServiceBackendPort{Number: 5432},
+									},
+								},
+							}},
+						},
+					},
+				}},
+			},
+		},
+		&corev1.PersistentVolume{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "data-volume",
+				UID:               types.UID("pv-1"),
+				CreationTimestamp: metav1.NewTime(now.Add(-24 * time.Hour)),
+			},
+			Spec: corev1.PersistentVolumeSpec{
+				Capacity:         corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("10Gi")},
+				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				StorageClassName: "local-path",
+			},
+			Status: corev1.PersistentVolumeStatus{Phase: corev1.VolumeBound},
+		},
+		&corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:         "apps",
+				Name:              "postgresql-data",
+				UID:               types.UID("pvc-1"),
+				CreationTimestamp: metav1.NewTime(now.Add(-23 * time.Hour)),
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				Resources: corev1.VolumeResourceRequirements{
+					Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("10Gi")},
+				},
+				StorageClassName: stringPtr("local-path"),
+				VolumeName:       "data-volume",
+			},
+			Status: corev1.PersistentVolumeClaimStatus{Phase: corev1.ClaimBound},
+		},
+		&corev1.Event{
+			ObjectMeta:     metav1.ObjectMeta{Namespace: "apps", Name: "pod-warning", UID: types.UID("event-1")},
+			Type:           corev1.EventTypeWarning,
+			Reason:         "BackOff",
+			Message:        "Container restarted",
+			Count:          2,
+			LastTimestamp:  metav1.NewTime(now),
+			InvolvedObject: corev1.ObjectReference{Kind: "Pod", Namespace: "apps", Name: "postgresql-0"},
+		},
+		&corev1.Event{
+			ObjectMeta:     metav1.ObjectMeta{Namespace: "apps", Name: "pod-normal", UID: types.UID("event-2")},
+			Type:           corev1.EventTypeNormal,
+			Reason:         "Pulled",
+			Message:        "Image pulled",
+			Count:          1,
+			LastTimestamp:  metav1.NewTime(now.Add(-time.Minute)),
+			InvolvedObject: corev1.ObjectReference{Kind: "Pod", Namespace: "apps", Name: "postgresql-0"},
 		},
 	}
 	kube := kubernetesfake.NewSimpleClientset(objects...)
@@ -265,6 +390,56 @@ func TestCollectorBuildsDashboardSnapshotFromInformerCaches(t *testing.T) {
 	if snapshot.DNS.ServiceIP != "10.43.0.10" {
 		t.Fatalf("DNS profile = %#v", snapshot.DNS)
 	}
+	if !snapshot.DNS.Ready || snapshot.DNS.ReadyEndpoints != 1 || snapshot.DNS.TotalEndpoints != 1 {
+		t.Fatalf("DNS readiness = %#v", snapshot.DNS)
+	}
+	if snapshot.Summary.Workloads != 3 || snapshot.Summary.ReadyWorkloads != 2 {
+		t.Fatalf("workload summary = %#v", snapshot.Summary)
+	}
+	if snapshot.Summary.Ingresses != 1 || snapshot.Summary.PersistentVolumes != 2 || snapshot.Summary.WarningEvents != 1 {
+		t.Fatalf("resource summary = %#v", snapshot.Summary)
+	}
+	if len(snapshot.Ingresses) != 1 || snapshot.Ingresses[0].Routes[0].URL != "https://database.example.test/admin" {
+		t.Fatalf("ingress snapshot = %#v", snapshot.Ingresses)
+	}
+	if len(snapshot.Volumes) != 2 || len(snapshot.Events) != 2 || snapshot.Events[0].Type != corev1.EventTypeWarning {
+		t.Fatalf("volume/event snapshot = volumes=%#v events=%#v", snapshot.Volumes, snapshot.Events)
+	}
+	for _, service := range snapshot.Services {
+		if service.Name == "postgresql" {
+			if len(service.Workloads) != 1 || service.Workloads[0].Kind != "Deployment" {
+				t.Fatalf("service workload references = %#v", service.Workloads)
+			}
+			if len(service.ExternalURLs) != 1 || service.ExternalURLs[0] != "https://database.example.test/admin" {
+				t.Fatalf("service external URLs = %#v", service.ExternalURLs)
+			}
+		}
+	}
+
+	_, live, _, _, unsubscribe := broker.Subscribe(broker.LatestID())
+	defer unsubscribe()
+	if _, err := kube.CoreV1().Services("apps").Create(
+		context.Background(),
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "new-api", Namespace: "apps"}},
+		metav1.CreateOptions{},
+	); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case event := <-live:
+		if event.Name != "snapshot" {
+			t.Fatalf("watch event name = %q", event.Name)
+		}
+		var updated model.Snapshot
+		if err := json.Unmarshal(event.Data, &updated); err != nil {
+			t.Fatal(err)
+		}
+		if updated.Summary.Services != 3 {
+			t.Fatalf("watched service summary = %#v", updated.Summary)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for informer-driven snapshot")
+	}
 }
 
 func boolPtr(value bool) *bool {
@@ -272,5 +447,13 @@ func boolPtr(value bool) *bool {
 }
 
 func int32Ptr(value int32) *int32 {
+	return &value
+}
+
+func stringPtr(value string) *string {
+	return &value
+}
+
+func pathTypePtr(value networkingv1.PathType) *networkingv1.PathType {
 	return &value
 }

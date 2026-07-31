@@ -145,6 +145,13 @@ func (s *Server) writeDNSError(w http.ResponseWriter, err error) {
 }
 
 func (s *Server) events(w http.ResponseWriter, r *http.Request) {
+	if !s.source.Ready() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"error": "Kubernetes informer caches are still syncing",
+		})
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache, no-store")
 	w.Header().Set("Connection", "keep-alive")
@@ -152,7 +159,7 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	controller := http.NewResponseController(w)
 
 	afterID := parseLastEventID(r)
-	replay, live, historyGap, unsubscribe := s.broker.Subscribe(afterID)
+	replay, live, historyGap, latestID, unsubscribe := s.broker.Subscribe(afterID)
 	defer unsubscribe()
 
 	if _, err := fmt.Fprint(w, "retry: 3000\n\n"); err != nil {
@@ -162,9 +169,9 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if afterID == 0 || historyGap {
+	if afterID == 0 || historyGap || afterID > latestID {
 		event := stream.Event{
-			ID:        s.broker.LatestID(),
+			ID:        latestID,
 			Name:      "snapshot",
 			ClusterID: s.source.Snapshot().Cluster.ID,
 			SentAt:    time.Now().UTC(),
@@ -174,9 +181,11 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	for _, event := range replay {
-		if err := writeSSE(w, event); err != nil {
-			return
+	if afterID != 0 && !historyGap && afterID <= latestID {
+		for _, event := range replay {
+			if err := writeSSE(w, event); err != nil {
+				return
+			}
 		}
 	}
 	if err := controller.Flush(); err != nil {

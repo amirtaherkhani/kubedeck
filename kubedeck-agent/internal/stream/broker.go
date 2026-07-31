@@ -68,6 +68,7 @@ func (b *Broker) Subscribe(afterID uint64) (
 	replay []Event,
 	live <-chan Event,
 	historyGap bool,
+	latestID uint64,
 	cancel func(),
 ) {
 	b.mu.Lock()
@@ -85,6 +86,7 @@ func (b *Broker) Subscribe(afterID uint64) (
 
 	channel := make(chan Event, 16)
 	b.subscribers[channel] = struct{}{}
+	latestID = b.nextID
 
 	var once sync.Once
 	cancel = func() {
@@ -97,7 +99,7 @@ func (b *Broker) Subscribe(afterID uint64) (
 			}
 		})
 	}
-	return replay, channel, historyGap, cancel
+	return replay, channel, historyGap, latestID, cancel
 }
 
 func (b *Broker) LatestID() uint64 {

@@ -35,6 +35,10 @@ import {
 import { KubeDeckLogo } from "@/components/kubedeck-logo"
 import { NotificationsMenu } from "@/components/notifications-menu"
 import {
+  type ClusterSnapshot,
+} from "@/lib/kubedeck-cluster"
+import { useKubeDeckCluster } from "@/lib/use-kubedeck-cluster"
+import {
   Alert,
   AlertDescription,
   AlertTitle,
@@ -119,15 +123,16 @@ const preferenceKeys: Record<keyof Preferences, string> = {
 }
 
 const categories = [
-  { label: "Web Applications", count: 2, icon: AppWindowIcon },
-  { label: "Databases & Storage", count: 8, icon: DatabaseIcon },
-  { label: "Observability & Metrics", count: 7, icon: ActivityIcon },
-  { label: "Automation & Workflows", count: 3, icon: WorkflowIcon },
-  { label: "Deployments & Testing", count: 1, icon: RocketIcon },
-  { label: "AI & MCP Services", count: 2, icon: BotIcon },
-  { label: "Messaging & Events", count: 7, icon: RadioTowerIcon },
-  { label: "Developer Tools", count: 1, icon: Settings2Icon },
-  { label: "Platform & Security", count: 1, icon: ShieldCheckIcon },
+  { id: "web-applications", label: "Web Applications", count: 2, icon: AppWindowIcon },
+  { id: "databases-storage", label: "Databases & Storage", count: 8, icon: DatabaseIcon },
+  { id: "observability-metrics", label: "Observability & Metrics", count: 7, icon: ActivityIcon },
+  { id: "automation-workflows", label: "Automation & Workflows", count: 3, icon: WorkflowIcon },
+  { id: "deployments", label: "Deployments & Testing", count: 1, icon: RocketIcon },
+  { id: "ai-services", label: "AI & MCP Services", count: 2, icon: BotIcon },
+  { id: "messaging-events", label: "Messaging & Events", count: 7, icon: RadioTowerIcon },
+  { id: "developer-tools", label: "Developer Tools", count: 1, icon: Settings2Icon },
+  { id: "platform-security", label: "Platform & Security", count: 1, icon: ShieldCheckIcon },
+  { id: "other", label: "Other Services", count: 0, icon: ServerIcon },
 ] as const
 
 const roleDefinitions = [
@@ -151,7 +156,15 @@ const roleDefinitions = [
   },
 ] as const
 
-export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
+export default function SettingsClient({
+  admin,
+  initialSnapshot,
+}: {
+  admin: SettingsAdmin
+  initialSnapshot: ClusterSnapshot | null
+}) {
+  const { snapshot, status: connectionStatus } =
+    useKubeDeckCluster(initialSnapshot)
   const [preferences, setPreferences] = React.useState<Preferences>({
     motion: true,
     compactCatalog: false,
@@ -351,7 +364,10 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
           <Badge variant="outline">Settings</Badge>
         </a>
         <div className="flex items-center gap-2">
-          <NotificationsMenu />
+          <NotificationsMenu
+            snapshot={snapshot}
+            connectionStatus={connectionStatus}
+          />
           <Button
             variant="outline"
             render={<a href="/dashboard" />}
@@ -376,10 +392,23 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
           </p>
         </div>
         <div className="settings-hero-status">
-          <span className="connection-dot" aria-hidden="true" />
+          <span
+            className={`connection-dot${connectionStatus === "live" ? "" : " connection-dot--pending"}${connectionStatus === "unavailable" ? " connection-dot--unavailable" : ""}`}
+            aria-hidden="true"
+          />
           <span>
-            <strong>Global discovery connected</strong>
-            <small>Read-only · captured Jul 29, 2026 at 05:21 UTC</small>
+            <strong>
+              {connectionStatus === "live"
+                ? "Live discovery connected"
+                : connectionStatus === "reconnecting"
+                  ? "Reconnecting to kubedeck-agent"
+                  : "Connecting to kubedeck-agent"}
+            </strong>
+            <small>
+              {snapshot
+                ? `Read-only · ${snapshot.cluster.name} · updated ${snapshot.generatedAt}`
+                : "Read-only · waiting for live cluster data"}
+            </small>
           </span>
         </div>
       </section>
@@ -447,7 +476,7 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
                   <span>Effective role</span>
                   <strong>Administrator</strong>
                   <span>Cluster scope</span>
-                  <strong>All registered clusters</strong>
+                  <strong>{snapshot?.cluster.name || "Connection pending"}</strong>
                   <span>Session policy</span>
                   <strong>HTTP-only · 12 hours</strong>
                   <span>Authentication</span>
@@ -493,14 +522,17 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
                 </CardDescription>
                 <CardAction>
                   <Badge variant="secondary">
-                    <span className="connection-dot" aria-hidden="true" />
-                    Connected
+                    <span
+                      className={`connection-dot${connectionStatus === "live" ? "" : " connection-dot--pending"}${connectionStatus === "unavailable" ? " connection-dot--unavailable" : ""}`}
+                      aria-hidden="true"
+                    />
+                    {connectionStatus === "live" ? "Connected" : "Connecting"}
                   </Badge>
                 </CardAction>
               </CardHeader>
               <CardContent className="settings-facts">
                 <span>Context</span>
-                <strong>All registered clusters</strong>
+                <strong>{snapshot?.cluster.name || "Agent connection pending"}</strong>
                 <span>Resources</span>
                 <strong>Ingress, Service, EndpointSlice</strong>
                 <span>Workloads</span>
@@ -508,7 +540,7 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
                 <span>Access mode</span>
                 <strong>Read-only discovery</strong>
                 <span>Refresh source</span>
-                <strong>Captured inventory</strong>
+                <strong>Informer watches + SSE</strong>
               </CardContent>
             </Card>
 
@@ -521,15 +553,24 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
               </CardHeader>
               <CardContent className="settings-facts">
                 <span>Cluster domain</span>
-                <strong className="font-mono">cluster.local</strong>
+                <strong className="font-mono">
+                  {snapshot?.dns.clusterDomain || "cluster.local"}
+                </strong>
                 <span>Base DNS service</span>
                 <strong className="font-mono">
-                  kube-dns.kube-system.svc.cluster.local
+                  {snapshot?.dns.serviceDNS ||
+                    "kube-dns.kube-system.svc.cluster.local"}
                 </strong>
                 <span>DNS service IP</span>
-                <strong className="font-mono">10.43.0.10</strong>
-                <span>Pod DNS policy</span>
-                <strong>ClusterFirst</strong>
+                <strong className="font-mono">
+                  {snapshot?.dns.serviceIP || "Unavailable"}
+                </strong>
+                <span>CoreDNS endpoints</span>
+                <strong>
+                  {snapshot
+                    ? `${snapshot.dns.readyEndpoints ?? 0} / ${snapshot.dns.totalEndpoints ?? 0} ready`
+                    : "Waiting for agent"}
+                </strong>
               </CardContent>
             </Card>
 
@@ -789,7 +830,9 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
                   and how pressure conditions are emphasized.
                 </CardDescription>
                 <CardAction>
-                  <Badge variant="outline">3 sample nodes · 4 signals</Badge>
+                  <Badge variant="outline">
+                    {snapshot?.summary.nodes ?? 3} {snapshot ? "live" : "sample"} nodes · 4 signals
+                  </Badge>
                 </CardAction>
               </CardHeader>
               <CardContent>
@@ -848,10 +891,9 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
                   <ActivityIcon />
                   <AlertTitle>Telemetry source</AlertTitle>
                   <AlertDescription>
-                    The current screen uses an illustrative multi-node snapshot.
-                    Connect metrics-server plus kubelet summary data, or
-                    Prometheus history, before treating the four-property chart
-                    as live telemetry.
+                    {snapshot
+                      ? `${snapshot.nodes.filter((node) => node.usage.metricsAvailable).length}/${snapshot.nodes.length} nodes currently report CPU and memory through metrics-server. Ephemeral storage is requested capacity, not filesystem usage.`
+                      : "The fallback screen is illustrative until kubedeck-agent supplies informer and metrics-server snapshots."}
                   </AlertDescription>
                 </Alert>
               </CardContent>
@@ -864,12 +906,24 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
                   Every catalog entry is assigned by its operational purpose.
                 </CardDescription>
                 <CardAction>
-                  <Badge variant="outline">32 services</Badge>
+                  <Badge variant="outline">
+                    {snapshot?.summary.services ?? 32} {snapshot ? "live" : "sample"} services
+                  </Badge>
                 </CardAction>
               </CardHeader>
               <CardContent className="settings-category-grid">
                 {categories.map((category) => {
                   const Icon = category.icon
+                  const count = snapshot
+                    ? snapshot.services.filter(
+                        (service) =>
+                          (service.category || "other") === category.id ||
+                          (category.id === "other" &&
+                            !categories.some(
+                              (candidate) => candidate.id === service.category
+                            ))
+                      ).length
+                    : category.count
                   return (
                     <div key={category.label}>
                       <span className="settings-category-icon">
@@ -877,7 +931,7 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
                       </span>
                       <span className="min-w-0">
                         <strong>{category.label}</strong>
-                        <small>{category.count} catalog entries</small>
+                        <small>{count} catalog entries</small>
                       </span>
                     </div>
                   )
@@ -962,7 +1016,7 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
                   Notification policy
                 </CardTitle>
                 <CardDescription>
-                  Control which captured service and node states appear in the
+                  Control which live service and node states appear in the
                   notification menu.
                 </CardDescription>
               </CardHeader>

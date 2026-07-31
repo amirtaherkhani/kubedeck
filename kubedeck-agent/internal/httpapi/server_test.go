@@ -71,6 +71,26 @@ func TestSnapshotRequiresBearerToken(t *testing.T) {
 	}
 }
 
+func TestEventsRejectsRequestsUntilInformerCachesAreReady(t *testing.T) {
+	t.Parallel()
+
+	server := New(
+		staticSource{ready: false},
+		stream.NewBroker("homelab", 8),
+		dnsconfig.New(kubernetesfake.NewSimpleClientset(), dnsconfig.Options{}),
+		"",
+		time.Second,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+	request := httptest.NewRequest(http.MethodGet, "/v1/events", nil)
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, request)
+	if response.Code != http.StatusServiceUnavailable ||
+		!strings.Contains(response.Body.String(), "still syncing") {
+		t.Fatalf("syncing event response = %d %s", response.Code, response.Body)
+	}
+}
+
 func TestSSEStartsWithSnapshotAndSupportsStreaming(t *testing.T) {
 	t.Parallel()
 
@@ -129,6 +149,122 @@ func TestSSEStartsWithSnapshotAndSupportsStreaming(t *testing.T) {
 			t.Fatalf("SSE output missing %q:\n%s", expected, joined)
 		}
 	}
+	if _, err := broker.Publish("snapshot", model.Snapshot{
+		SchemaVersion: model.SchemaVersion,
+		Cluster:       model.Cluster{ID: "homelab", Name: "Updated live cluster"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	liveBlock := readSSEBlock(t, scanner)
+	if !strings.Contains(liveBlock, "id: 1") ||
+		!strings.Contains(liveBlock, "Updated live cluster") {
+		t.Fatalf("live SSE block = %q", liveBlock)
+	}
+}
+
+func TestSSEHistoryGapSendsCurrentSnapshotWithoutStaleReplay(t *testing.T) {
+	t.Parallel()
+
+	broker := stream.NewBroker("homelab", 2)
+	for generation := 1; generation <= 4; generation++ {
+		if _, err := broker.Publish("snapshot", map[string]int{"generation": generation}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	server := httptest.NewServer(New(
+		staticSource{
+			ready: true,
+			snapshot: model.Snapshot{
+				SchemaVersion: model.SchemaVersion,
+				Cluster:       model.Cluster{ID: "homelab", Name: "Current cluster"},
+			},
+		},
+		broker,
+		dnsconfig.New(kubernetesfake.NewSimpleClientset(), dnsconfig.Options{}),
+		"",
+		20*time.Millisecond,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	).Handler())
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+"/v1/events", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Last-Event-ID", "1")
+	response, err := server.Client().Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+
+	scanner := bufio.NewScanner(response.Body)
+	retryBlock := readSSEBlock(t, scanner)
+	currentBlock := readSSEBlock(t, scanner)
+	nextBlock := readSSEBlock(t, scanner)
+	if retryBlock != "retry: 3000" {
+		t.Fatalf("retry block = %q", retryBlock)
+	}
+	if !strings.Contains(currentBlock, "id: 4") ||
+		!strings.Contains(currentBlock, "Current cluster") {
+		t.Fatalf("current snapshot block = %q", currentBlock)
+	}
+	if !strings.HasPrefix(nextBlock, ": heartbeat") {
+		t.Fatalf("history gap replayed stale data: %q", nextBlock)
+	}
+}
+
+func TestSSEInitialConnectionSkipsHistoricalReplay(t *testing.T) {
+	t.Parallel()
+
+	broker := stream.NewBroker("homelab", 8)
+	if _, err := broker.Publish("snapshot", map[string]string{"name": "Historical cluster"}); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(New(
+		staticSource{
+			ready: true,
+			snapshot: model.Snapshot{
+				SchemaVersion: model.SchemaVersion,
+				Cluster:       model.Cluster{ID: "homelab", Name: "Current cluster"},
+			},
+		},
+		broker,
+		dnsconfig.New(kubernetesfake.NewSimpleClientset(), dnsconfig.Options{}),
+		"",
+		20*time.Millisecond,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	).Handler())
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+"/v1/events", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := server.Client().Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+
+	scanner := bufio.NewScanner(response.Body)
+	retryBlock := readSSEBlock(t, scanner)
+	currentBlock := readSSEBlock(t, scanner)
+	nextBlock := readSSEBlock(t, scanner)
+	if retryBlock != "retry: 3000" {
+		t.Fatalf("retry block = %q", retryBlock)
+	}
+	if !strings.Contains(currentBlock, "id: 1") ||
+		!strings.Contains(currentBlock, "Current cluster") {
+		t.Fatalf("current snapshot block = %q", currentBlock)
+	}
+	if !strings.HasPrefix(nextBlock, ": heartbeat") {
+		t.Fatalf("initial connection replayed historical data: %q", nextBlock)
+	}
 }
 
 func TestDNSConfigurationEndpointAppliesAliasesAndPublishesEvent(t *testing.T) {
@@ -145,7 +281,7 @@ func TestDNSConfigurationEndpointAppliesAliasesAndPublishesEvent(t *testing.T) {
 		},
 	)
 	broker := stream.NewBroker("homelab", 8)
-	_, live, _, unsubscribe := broker.Subscribe(0)
+	_, live, _, _, unsubscribe := broker.Subscribe(0)
 	defer unsubscribe()
 	server := New(
 		staticSource{ready: true},
@@ -231,4 +367,51 @@ func TestDNSConfigurationEndpointIsReadOnlyWhenDisabled(t *testing.T) {
 	if putResponse.Code != http.StatusForbidden {
 		t.Fatalf("PUT status = %d, body = %s", putResponse.Code, putResponse.Body)
 	}
+}
+
+func TestDNSConfigurationEndpointRejectsAmbiguousJSON(t *testing.T) {
+	t.Parallel()
+
+	server := New(
+		staticSource{ready: true},
+		stream.NewBroker("homelab", 8),
+		dnsconfig.New(kubernetesfake.NewSimpleClientset(), dnsconfig.Options{}),
+		"",
+		time.Second,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+
+	for name, body := range map[string]string{
+		"unknown field": `{"resourceVersion":"1","aliases":[],"replaceCorefile":true}`,
+		"two objects":   `{"resourceVersion":"1","aliases":[]} {"aliases":[]}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodPut, "/v1/dns/config", strings.NewReader(body))
+			response := httptest.NewRecorder()
+			server.Handler().ServeHTTP(response, request)
+			if response.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d body = %s", response.Code, response.Body)
+			}
+		})
+	}
+}
+
+func readSSEBlock(t *testing.T, scanner *bufio.Scanner) string {
+	t.Helper()
+	lines := make([]string, 0, 4)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			if len(lines) > 0 {
+				return strings.Join(lines, "\n")
+			}
+			continue
+		}
+		lines = append(lines, line)
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatal(err)
+	}
+	t.Fatal("SSE stream ended before the next block")
+	return ""
 }

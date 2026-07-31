@@ -29,9 +29,9 @@ export type ResourceTrendPoint = {
 
 export const monitoringSnapshot = {
   capturedAt: "Jul 29, 2026 · 05:21 UTC",
-  mode: "Illustrative multi-node snapshot",
-  source: "metrics-server + kubelet summary preview",
-  liveIntegration: "Prometheus or a read-only in-cluster collector",
+  mode: "Illustrative fallback snapshot",
+  source: "bundled fallback inventory",
+  liveIntegration: "kubedeck-agent",
 } as const
 
 export const nodeSnapshots: NodeSnapshot[] = [

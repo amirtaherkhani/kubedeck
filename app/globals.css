@@ -261,6 +261,17 @@
   animation: connection-breathe 2.4s ease-in-out infinite;
 }
 
+.connection-dot--pending {
+  background: var(--chart-3);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--chart-3), transparent 82%);
+}
+
+.connection-dot--unavailable {
+  background: var(--destructive);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive), transparent 82%);
+  animation: none;
+}
+
 .liquid-stage {
   position: relative;
   isolation: isolate;

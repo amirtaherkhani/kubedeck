@@ -102,6 +102,7 @@ func (c *Collector) buildSnapshot() (model.Snapshot, error) {
 		podsByNamespace,
 		endpointsByService,
 		ingressURLs,
+		workloads,
 		c.config.ClusterDomain,
 	)
 	volumes := buildVolumes(persistentVolumes, persistentVolumeClaims)
@@ -187,6 +188,9 @@ func buildNodes(
 	result := make([]model.Node, 0, len(nodes))
 	for _, node := range nodes {
 		ready, status, heartbeat := nodeStatus(node)
+		if ready && node.Spec.Unschedulable {
+			status = "Unschedulable"
+		}
 		nodePods := activePods(podsByNode[node.Name])
 		capacity := model.NodeCapacity{
 			CPUMilli:              node.Status.Allocatable.Cpu().MilliValue(),
@@ -352,6 +356,7 @@ func buildWorkloads(
 			Status:         workloadStatus(desired, deployment.Status.ReadyReplicas),
 			CreatedAt:      deployment.CreationTimestamp.Time.UTC(),
 			LastDeployedAt: lastDeploy,
+			Selector:       cloneMap(deployment.Spec.Selector.MatchLabels),
 			Labels:         cloneMap(deployment.Labels),
 		})
 	}
@@ -375,6 +380,7 @@ func buildWorkloads(
 			Status:         workloadStatus(desired, statefulSet.Status.ReadyReplicas),
 			CreatedAt:      statefulSet.CreationTimestamp.Time.UTC(),
 			LastDeployedAt: lastDeploy,
+			Selector:       cloneMap(statefulSet.Spec.Selector.MatchLabels),
 			Labels:         cloneMap(statefulSet.Labels),
 		})
 	}
@@ -395,6 +401,7 @@ func buildWorkloads(
 			Status:         workloadStatus(desired, daemonSet.Status.NumberReady),
 			CreatedAt:      daemonSet.CreationTimestamp.Time.UTC(),
 			LastDeployedAt: lastDeploy,
+			Selector:       cloneMap(daemonSet.Spec.Selector.MatchLabels),
 			Labels:         cloneMap(daemonSet.Labels),
 		})
 	}
@@ -416,6 +423,7 @@ func buildServices(
 	podsByNamespace map[string][]*corev1.Pod,
 	endpoints map[string]endpointCounts,
 	ingressURLs map[string][]string,
+	workloads []model.Workload,
 	clusterDomain string,
 ) []model.Service {
 	result := make([]model.Service, 0, len(services))
@@ -491,6 +499,7 @@ func buildServices(
 			TotalEndpoints: counts.total,
 			ReadyPods:      readyPods,
 			TotalPods:      len(matchedPods),
+			Workloads:      relatedWorkloads(service, matchedPods, workloads),
 			LastDeployedAt: lastDeploy,
 			UptimeSeconds:  uptimeSeconds,
 			Labels:         cloneMap(service.Labels),
@@ -722,8 +731,42 @@ func buildDNSProfile(
 	)
 	profile.ServiceIP = normalizedClusterIP(selected.Spec.ClusterIP)
 	profile.Ports = servicePorts(selected.Spec.Ports)
-	profile.Ready = endpoints[selected.Namespace+"/"+selected.Name].ready > 0
+	counts := endpoints[selected.Namespace+"/"+selected.Name]
+	profile.ReadyEndpoints = counts.ready
+	profile.TotalEndpoints = counts.total
+	profile.Ready = counts.ready > 0
 	return profile
+}
+
+func relatedWorkloads(
+	service *corev1.Service,
+	servicePods []*corev1.Pod,
+	workloads []model.Workload,
+) []model.ObjectReference {
+	result := make([]model.ObjectReference, 0)
+	for _, workload := range workloads {
+		if workload.Namespace != service.Namespace {
+			continue
+		}
+		matched := workload.Name == service.Name
+		if !matched && len(workload.Selector) > 0 {
+			selector := labels.SelectorFromSet(workload.Selector)
+			for _, pod := range servicePods {
+				if selector.Matches(labels.Set(pod.Labels)) {
+					matched = true
+					break
+				}
+			}
+		}
+		if matched {
+			result = append(result, model.ObjectReference{
+				Kind:      workload.Kind,
+				Namespace: workload.Namespace,
+				Name:      workload.Name,
+			})
+		}
+	}
+	return result
 }
 
 func indexPodsByNode(pods []*corev1.Pod) map[string][]*corev1.Pod {
@@ -888,6 +931,7 @@ func workloadStatus(desired, ready int32) string {
 }
 
 func nodeStatus(node *corev1.Node) (bool, string, *time.Time) {
+	ready := false
 	status := "Unknown"
 	var heartbeat *time.Time
 	for _, condition := range node.Status.Conditions {
@@ -896,17 +940,22 @@ func nodeStatus(node *corev1.Node) (bool, string, *time.Time) {
 				heartbeat = timePtr(condition.LastHeartbeatTime.Time.UTC())
 			}
 			if condition.Status == corev1.ConditionTrue {
-				return true, "Ready", heartbeat
+				ready = true
+				status = "Ready"
+				continue
 			}
 			status = firstNonEmpty(condition.Reason, string(condition.Status))
 		}
 	}
+	if !ready {
+		return false, status, heartbeat
+	}
 	for _, condition := range node.Status.Conditions {
 		if condition.Status == corev1.ConditionTrue && condition.Type != corev1.NodeReady {
-			return false, firstNonEmpty(condition.Reason, string(condition.Type)), heartbeat
+			return true, firstNonEmpty(condition.Reason, string(condition.Type)), heartbeat
 		}
 	}
-	return false, status, heartbeat
+	return true, status, heartbeat
 }
 
 func nodeConditions(conditions []corev1.NodeCondition) []model.NodeCondition {

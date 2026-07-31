@@ -124,12 +124,24 @@ import { KubeDeckBanner } from "@/components/kubedeck-banner"
 import { KubeDeckLogo } from "@/components/kubedeck-logo"
 import { NotificationsMenu } from "@/components/notifications-menu"
 import {
-  getNodeResourceTrend,
+  getNodeResourceTrend as getFallbackNodeResourceTrend,
   monitoringSnapshot,
-  nodeSnapshots,
-  nodeSummary,
+  nodeSnapshots as fallbackNodeSnapshots,
+  nodeSummary as fallbackNodeSummary,
   type NodeSnapshot,
 } from "@/lib/kubedeck-monitoring"
+import {
+  buildLiveNodes,
+  buildResourceTrend,
+  formatDuration,
+  humanize,
+  normalizeClusterCategory,
+  type ClusterCategory,
+  type ClusterService,
+  type ClusterSnapshot,
+  type SnapshotHistory,
+} from "@/lib/kubedeck-cluster"
+import { useKubeDeckCluster } from "@/lib/use-kubedeck-cluster"
 import { cn } from "@/lib/utils"
 
 type CatalogStatus = "ready" | "attention"
@@ -144,16 +156,7 @@ type DashboardAdmin = {
   email: string
   role: "admin"
 }
-type CategoryId =
-  | "web-applications"
-  | "databases-storage"
-  | "observability-metrics"
-  | "automation-workflows"
-  | "deployments"
-  | "ai-services"
-  | "messaging-events"
-  | "developer-tools"
-  | "platform-security"
+type CategoryId = ClusterCategory
 
 type CatalogBase = {
   id: string
@@ -180,7 +183,7 @@ type OperationalMeta = {
   totalEndpoints: number
   uptime: string
   uptimeHours: number
-  lastDeployedAt: string
+  lastDeployedAt?: string
 }
 
 type CatalogItem = CatalogBase &
@@ -696,8 +699,8 @@ const services: CatalogBase[] = [
   },
 ]
 
-const clusterDomain = "cluster.local"
-const capturedAt = monitoringSnapshot.capturedAt
+const fallbackClusterDomain = "cluster.local"
+const fallbackCapturedAt = monitoringSnapshot.capturedAt
 
 const operationalMeta: Record<string, OperationalMeta> = {
   grafana: {
@@ -1082,11 +1085,17 @@ const categoryConfig: {
     description: "Secrets, access control, and core platform capabilities.",
     icon: ShieldCheckIcon,
   },
+  {
+    id: "other",
+    label: "Other Services",
+    description: "Cluster services without a more specific KubeDeck category.",
+    icon: BoxesIcon,
+  },
 ]
 
-const catalogItems: CatalogItem[] = [...webApps, ...services].map((item) => {
+const fallbackCatalogItems: CatalogItem[] = [...webApps, ...services].map((item) => {
   const meta = operationalMeta[item.id]
-  const internalDns = `${meta.serviceName}.${item.namespace}.svc.${clusterDomain}`
+  const internalDns = `${meta.serviceName}.${item.namespace}.svc.${fallbackClusterDomain}`
   const readiness =
     meta.totalEndpoints > 0
       ? Math.round((meta.readyEndpoints / meta.totalEndpoints) * 100)
@@ -1101,29 +1110,31 @@ const catalogItems: CatalogItem[] = [...webApps, ...services].map((item) => {
   }
 })
 
-const clusterStats = [
+const fallbackClusterStats = [
   { label: "Clusters", value: "All", detail: "registered contexts" },
   {
     label: "Nodes",
-    value: String(nodeSummary.total),
-    detail: `${nodeSummary.ready} ready · ${nodeSummary.attention} attention`,
+    value: String(fallbackNodeSummary.total),
+    detail: `${fallbackNodeSummary.ready} ready · ${fallbackNodeSummary.attention} attention`,
   },
   { label: "Namespaces", value: "18", detail: "active cluster scopes" },
   { label: "Workloads", value: "46", detail: "deployments + stateful sets" },
   {
     label: "Pods",
-    value: `${nodeSummary.pods} / ${nodeSummary.podCapacity}`,
+    value: `${fallbackNodeSummary.pods} / ${fallbackNodeSummary.podCapacity}`,
     detail: "allocated across sample nodes",
   },
 ] as const
 
-const nodeResources: {
+type ResourceMetricData = {
   label: string
   value: string
   detail: string
   usage: number
   icon: LucideIcon
-}[] = [
+}
+
+const fallbackNodeResources: ResourceMetricData[] = [
   {
     label: "CPU",
     value: "48%",
@@ -1148,7 +1159,7 @@ const nodeResources: {
   {
     label: "Pod allocation",
     value: "69%",
-    detail: `${nodeSummary.pods} / ${nodeSummary.podCapacity} pod capacity`,
+    detail: `${fallbackNodeSummary.pods} / ${fallbackNodeSummary.podCapacity} pod capacity`,
     usage: 69,
     icon: BoxesIcon,
   },
@@ -1177,8 +1188,10 @@ function getCategory(category: CategoryId) {
   return categoryConfig.find((item) => item.id === category)!
 }
 
-function formatUtcTimestamp(timestamp: string) {
+function formatUtcTimestamp(timestamp?: string) {
+  if (!timestamp) return "No workload rollout observed"
   const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return "Timestamp unavailable"
   const months = [
     "Jan",
     "Feb",
@@ -1231,6 +1244,182 @@ function sortItems(items: CatalogItem[], sortMode: SortMode) {
   })
 }
 
+function buildLiveCatalogItems(snapshot: ClusterSnapshot): CatalogItem[] {
+  return snapshot.services.map((service) => {
+    const category = normalizeClusterCategory(service.category)
+    const href = service.externalURLs[0]
+    const externalDomain = href ? externalAddress(href) : undefined
+    const ports = service.ports.map(formatServicePort)
+    const protocols = new Set(
+      service.ports.map((port) => port.protocol.toUpperCase())
+    )
+    if (href) protocols.add(href.toLowerCase().startsWith("https:") ? "HTTPS" : "HTTP")
+    const workload = service.workloads?.[0]
+    const displayName = humanize(
+      service.labels?.["app.kubernetes.io/name"] || service.name
+    )
+
+    return {
+      id: service.uid || `${service.namespace}/${service.name}`,
+      name: displayName,
+      kind: href ? "app" : "service",
+      namespace: service.namespace,
+      summary: liveServiceSummary(service, category),
+      endpoint: externalDomain || service.clusterDNS,
+      href,
+      ports: ports.length > 0 ? ports : ["No declared ports"],
+      protocol: [...protocols].join(" / ") || "Unspecified",
+      workload: workload
+        ? `${workload.kind}/${workload.name}`
+        : `Service/${service.name}`,
+      pods:
+        service.totalPods > 0
+          ? `${service.readyPods} / ${service.totalPods} ready`
+          : `${service.readyEndpoints} endpoints`,
+      source: href
+        ? `Ingress + Service/${service.name}`
+        : `Service/${service.name}`,
+      status: service.status === "ready" ? "ready" : "attention",
+      icon: getCategory(category).icon,
+      category,
+      serviceName: service.name,
+      clusterIP: service.clusterIP || "Headless / external",
+      readyEndpoints: service.readyEndpoints,
+      totalEndpoints: service.totalEndpoints,
+      uptime: formatDuration(service.uptimeSeconds),
+      uptimeHours: service.uptimeSeconds / 3_600,
+      lastDeployedAt: service.lastDeployedAt,
+      externalDomain,
+      internalDns: service.clusterDNS,
+      readiness:
+        service.totalEndpoints > 0
+          ? Math.round(
+              (service.readyEndpoints / service.totalEndpoints) * 100
+            )
+          : 0,
+    }
+  })
+}
+
+function buildLiveClusterStats(snapshot: ClusterSnapshot) {
+  return [
+    { label: "Clusters", value: "1", detail: snapshot.cluster.name },
+    {
+      label: "Nodes",
+      value: String(snapshot.summary.nodes),
+      detail: `${snapshot.summary.readyNodes} ready · ${snapshot.summary.nodes - snapshot.summary.readyNodes} attention`,
+    },
+    {
+      label: "Namespaces",
+      value: String(snapshot.summary.namespaces),
+      detail: "live cluster scopes",
+    },
+    {
+      label: "Workloads",
+      value: String(snapshot.summary.workloads),
+      detail: `${snapshot.summary.readyWorkloads} ready`,
+    },
+    {
+      label: "Pods",
+      value: `${snapshot.summary.readyPods} / ${snapshot.summary.pods}`,
+      detail: "ready across all namespaces",
+    },
+  ]
+}
+
+function buildLiveNodeResources(snapshot: ClusterSnapshot): ResourceMetricData[] {
+  const nodesWithMetrics = snapshot.nodes.filter(
+    (node) => node.usage.metricsAvailable
+  )
+  const metricDetail =
+    nodesWithMetrics.length === snapshot.nodes.length
+      ? "live fleet average"
+      : `${nodesWithMetrics.length}/${snapshot.nodes.length} nodes reporting metrics`
+  const podCount = snapshot.nodes.reduce(
+    (total, node) => total + node.usage.pods,
+    0
+  )
+  const podCapacity = snapshot.nodes.reduce(
+    (total, node) => total + node.capacity.pods,
+    0
+  )
+
+  return [
+    {
+      label: "CPU",
+      value: `${averageNodeUsage(nodesWithMetrics, "cpuPercent")}%`,
+      detail: metricDetail,
+      usage: averageNodeUsage(nodesWithMetrics, "cpuPercent"),
+      icon: CpuIcon,
+    },
+    {
+      label: "Memory",
+      value: `${averageNodeUsage(nodesWithMetrics, "memoryPercent")}%`,
+      detail: metricDetail,
+      usage: averageNodeUsage(nodesWithMetrics, "memoryPercent"),
+      icon: MemoryStickIcon,
+    },
+    {
+      label: "Ephemeral requests",
+      value: `${averageNodeUsage(snapshot.nodes, "ephemeralStorageRequestPercent")}%`,
+      detail: "requested vs allocatable",
+      usage: averageNodeUsage(
+        snapshot.nodes,
+        "ephemeralStorageRequestPercent"
+      ),
+      icon: HardDriveIcon,
+    },
+    {
+      label: "Pod allocation",
+      value: `${averageNodeUsage(snapshot.nodes, "podAllocationPercent")}%`,
+      detail: `${podCount} / ${podCapacity} pod capacity`,
+      usage: averageNodeUsage(snapshot.nodes, "podAllocationPercent"),
+      icon: BoxesIcon,
+    },
+  ]
+}
+
+function averageNodeUsage(
+  nodes: ClusterSnapshot["nodes"],
+  property:
+    | "cpuPercent"
+    | "memoryPercent"
+    | "ephemeralStorageRequestPercent"
+    | "podAllocationPercent"
+) {
+  if (nodes.length === 0) return 0
+  const value =
+    nodes.reduce((total, node) => total + node.usage[property], 0) /
+    nodes.length
+  return Math.round(Math.max(0, Math.min(100, value)))
+}
+
+function formatServicePort(port: ClusterService["ports"][number]) {
+  const target =
+    port.targetPort && port.targetPort !== "0" && port.targetPort !== String(port.port)
+      ? ` → ${port.targetPort}`
+      : ""
+  const nodePort = port.nodePort ? ` · node ${port.nodePort}` : ""
+  return `${port.port}${target}${nodePort}`
+}
+
+function externalAddress(value: string) {
+  try {
+    const url = new URL(value)
+    return `${url.host}${url.pathname === "/" ? "" : url.pathname}`
+  } catch {
+    return value
+  }
+}
+
+function liveServiceSummary(
+  service: ClusterService,
+  category: ClusterCategory
+) {
+  const categoryName = getCategory(category).label.toLowerCase()
+  return `${service.type || "ClusterIP"} Kubernetes Service discovered live in ${categoryName}.`
+}
+
 function StatusBadge({ status }: { status: CatalogStatus }) {
   if (status === "attention") {
     return (
@@ -1255,7 +1444,7 @@ function ResourceMetric({
   detail,
   usage,
   icon: Icon,
-}: (typeof nodeResources)[number]) {
+}: ResourceMetricData) {
   return (
     <div className="resource-metric">
       <div className="flex items-center justify-between gap-3">
@@ -1301,13 +1490,21 @@ function MultiNodeReview({
   showControlPlaneNodes,
   showWorkerNodes,
   highlightNodePressure,
+  nodes,
+  history,
+  capturedAt,
+  isLive,
 }: {
   showControlPlaneNodes: boolean
   showWorkerNodes: boolean
   highlightNodePressure: boolean
+  nodes: NodeSnapshot[]
+  history: SnapshotHistory
+  capturedAt: string
+  isLive: boolean
 }) {
   const [selectedNodeId, setSelectedNodeId] = React.useState("fleet")
-  const visibleNodes = nodeSnapshots.filter(
+  const visibleNodes = nodes.filter(
     (node) =>
       (node.role === "control-plane" && showControlPlaneNodes) ||
       (node.role === "worker" && showWorkerNodes)
@@ -1317,9 +1514,14 @@ function MultiNodeReview({
     visibleNodes.some((node) => node.id === selectedNodeId)
       ? selectedNodeId
       : "fleet"
-  const activeNode = nodeSnapshots.find((node) => node.id === activeNodeId)
-  const chartData = getNodeResourceTrend(activeNodeId)
+  const activeNode = nodes.find((node) => node.id === activeNodeId)
+  const chartData = isLive
+    ? buildResourceTrend(history, activeNodeId)
+    : getFallbackNodeResourceTrend(activeNodeId)
   const activeLabel = activeNode?.name ?? "Fleet average"
+  const attentionCount = nodes.filter(
+    (node) => node.status === "attention"
+  ).length
 
   return (
     <section
@@ -1334,7 +1536,9 @@ function MultiNodeReview({
               <ServerIcon data-icon="inline-start" />
               Multi-node
             </Badge>
-            <Badge variant="outline">{monitoringSnapshot.mode}</Badge>
+            <Badge variant="outline">
+              {isLive ? "Live agent telemetry" : monitoringSnapshot.mode}
+            </Badge>
           </div>
           <h2 id="node-review-title">Cluster node review</h2>
           <p>
@@ -1366,7 +1570,7 @@ function MultiNodeReview({
           <CardHeader>
             <CardTitle>Resource history</CardTitle>
             <CardDescription>
-              {activeLabel} · normalized percentage over the preview window
+              {activeLabel} · normalized percentage over the {isLive ? "live session" : "preview window"}
             </CardDescription>
             <CardAction>
               <Badge variant="outline">4 properties</Badge>
@@ -1419,9 +1623,13 @@ function MultiNodeReview({
           </CardContent>
           <CardFooter className="justify-between gap-3">
             <span>
-              {monitoringSnapshot.source} · captured {capturedAt}
+              {isLive
+                ? "kubedeck-agent + metrics-server"
+                : monitoringSnapshot.source} · {isLive ? "updated" : "captured"} {capturedAt}
             </span>
-            <Badge variant="outline">Preview data</Badge>
+            <Badge variant="outline">
+              {isLive ? `${chartData.length} live samples` : "Preview data"}
+            </Badge>
           </CardFooter>
         </Card>
 
@@ -1429,7 +1637,7 @@ function MultiNodeReview({
           <CardHeader>
             <CardTitle>Node status</CardTitle>
             <CardDescription>
-              {visibleNodes.length} visible nodes · {nodeSummary.attention} need
+              {visibleNodes.length} visible nodes · {attentionCount} need
               attention
             </CardDescription>
           </CardHeader>
@@ -1437,7 +1645,7 @@ function MultiNodeReview({
             {visibleNodes.length > 0 ? (
               <Table>
                 <TableCaption className="sr-only">
-                  Multi-node Kubernetes status snapshot
+                  Multi-node Kubernetes {isLive ? "live status" : "status snapshot"}
                 </TableCaption>
                 <TableHeader>
                   <TableRow>
@@ -1738,11 +1946,15 @@ export default function DashboardClient({
   admin,
   view = "overview",
   catalogCategory,
+  initialSnapshot,
 }: {
   admin: DashboardAdmin
   view?: DashboardView
   catalogCategory?: string
+  initialSnapshot: ClusterSnapshot | null
 }) {
+  const { snapshot, history, status: connectionStatus, error: connectionError } =
+    useKubeDeckCluster(initialSnapshot)
   const searchRef = React.useRef<HTMLInputElement>(null)
   const [search, setSearch] = React.useState("")
   const [kindFilter, setKindFilter] = React.useState<KindFilter>("all")
@@ -1757,6 +1969,51 @@ export default function DashboardClient({
   const [showWorkerNodes, setShowWorkerNodes] = React.useState(true)
   const [highlightNodePressure, setHighlightNodePressure] =
     React.useState(true)
+
+  const isLive = Boolean(snapshot)
+  const catalogItems = React.useMemo(
+    () => (snapshot ? buildLiveCatalogItems(snapshot) : fallbackCatalogItems),
+    [snapshot]
+  )
+  const nodeSnapshots = React.useMemo(
+    () => (snapshot ? buildLiveNodes(snapshot) : fallbackNodeSnapshots),
+    [snapshot]
+  )
+  const nodeSummary = React.useMemo(
+    () => ({
+      total: nodeSnapshots.length,
+      ready: nodeSnapshots.filter((node) => node.status === "ready").length,
+      attention: nodeSnapshots.filter((node) => node.status === "attention")
+        .length,
+      pods: nodeSnapshots.reduce(
+        (total, node) => total + Number(node.pods.split(" / ")[0] || 0),
+        0
+      ),
+      podCapacity: nodeSnapshots.reduce(
+        (total, node) => total + Number(node.pods.split(" / ")[1] || 0),
+        0
+      ),
+    }),
+    [nodeSnapshots]
+  )
+  const clusterStats = snapshot
+    ? buildLiveClusterStats(snapshot)
+    : fallbackClusterStats
+  const nodeResources = snapshot
+    ? buildLiveNodeResources(snapshot)
+    : fallbackNodeResources
+  const clusterDomain = snapshot?.dns.clusterDomain || fallbackClusterDomain
+  const capturedAt = snapshot
+    ? formatUtcTimestamp(snapshot.generatedAt)
+    : fallbackCapturedAt
+  const connectionLabel =
+    connectionStatus === "live"
+      ? "Live discovery connected"
+      : connectionStatus === "reconnecting"
+        ? "Reconnecting to agent"
+        : connectionStatus === "unavailable"
+          ? "Agent unavailable"
+          : "Connecting to agent"
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1806,6 +2063,9 @@ export default function DashboardClient({
   const activeCategory =
     categoryConfig.find((category) => category.id === catalogCategory) ??
     categoryConfig[0]
+  const selectedItemView = selectedItem
+    ? catalogItems.find((item) => item.id === selectedItem.id) ?? null
+    : null
 
   const filteredItems = React.useMemo(() => {
     const filtered = catalogItems.filter((item) => {
@@ -1825,6 +2085,7 @@ export default function DashboardClient({
     return sortItems(filtered, sortMode)
   }, [
     activeCategory.id,
+    catalogItems,
     kindFilter,
     search,
     sortMode,
@@ -1991,40 +2252,58 @@ export default function DashboardClient({
                 Kube<span>Deck</span>
               </span>
             </div>
-            <NotificationsMenu />
+            <NotificationsMenu
+              snapshot={snapshot}
+              connectionStatus={connectionStatus}
+            />
             <Dialog>
               <DialogTrigger render={<Button variant="outline" size="sm" />}>
-                <span className="connection-dot" aria-hidden="true" />
-                Global discovery connected
+                <span
+                  className={cn(
+                    "connection-dot",
+                    connectionStatus !== "live" && "connection-dot--pending",
+                    connectionStatus === "unavailable" &&
+                      "connection-dot--unavailable"
+                  )}
+                  aria-hidden="true"
+                />
+                {connectionLabel}
               </DialogTrigger>
               <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Global cluster discovery</DialogTitle>
                   <DialogDescription>
-                    Read-only discovery across every registered Kubernetes
-                    cluster and node.
+                    Authenticated, read-only discovery from the KubeDeck agent
+                    running inside the active Kubernetes cluster.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col gap-4">
                   <div className="detail-grid">
                     <span>Context</span>
-                    <strong>All registered clusters</strong>
+                    <strong>{snapshot?.cluster.name || "Preview fallback"}</strong>
                     <span>Distribution</span>
-                    <strong>Kubernetes compatible</strong>
+                    <strong>
+                      {snapshot?.cluster.kubernetesVersion || "Kubernetes compatible"}
+                    </strong>
                     <span>Runtime</span>
-                    <strong>Runtime independent</strong>
+                    <strong>
+                      {snapshot?.cluster.platform || "Runtime independent"}
+                    </strong>
                     <span>Discovery</span>
                     <strong>Ingress + Service + EndpointSlice</strong>
                     <span>DNS policy</span>
                     <strong>ClusterFirst</strong>
                     <span>Captured</span>
                     <strong>{capturedAt}</strong>
+                    <span>Stream</span>
+                    <strong>{connectionLabel}</strong>
                   </div>
                   <Separator />
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Status and run age reflect the selected global scope.
-                    Continuous uptime uses cluster discovery and monitoring
-                    history.
+                    {connectionError ||
+                      (isLive
+                        ? "Snapshots refresh from Kubernetes watches and metrics-server samples over SSE."
+                        : "Illustrative fallback data remains visible until the cluster agent connects.")}
                   </p>
                 </div>
                 <DialogFooter showCloseButton />
@@ -2059,7 +2338,9 @@ export default function DashboardClient({
                   resources
                 </Badge>
               ) : (
-                <Badge variant="outline">{monitoringSnapshot.mode}</Badge>
+                <Badge variant="outline">
+                  {isLive ? "Live agent snapshot" : monitoringSnapshot.mode}
+                </Badge>
               )}
             </section>
           ) : null}
@@ -2098,7 +2379,7 @@ export default function DashboardClient({
                     </div>
                     <Badge variant="outline">
                       <CircleGaugeIcon data-icon="inline-start" />
-                      Preview
+                      {isLive ? "Live" : "Preview"}
                     </Badge>
                   </div>
                   <div className="resource-meter-grid">
@@ -2107,8 +2388,9 @@ export default function DashboardClient({
                     ))}
                   </div>
                   <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
-                    {monitoringSnapshot.source} · illustrative values at capture
-                    time
+                    {isLive
+                      ? `kubedeck-agent · updated ${capturedAt}`
+                      : `${monitoringSnapshot.source} · illustrative values at capture time`}
                   </p>
                 </div>
               </section>
@@ -2170,6 +2452,10 @@ export default function DashboardClient({
               showControlPlaneNodes={showControlPlaneNodes}
               showWorkerNodes={showWorkerNodes}
               highlightNodePressure={highlightNodePressure}
+              nodes={nodeSnapshots}
+              history={history}
+              capturedAt={capturedAt}
+              isLive={isLive}
             />
           ) : null}
 
@@ -2184,7 +2470,13 @@ export default function DashboardClient({
                 <h2 id="dns-title" className="text-lg font-semibold">
                   Cluster DNS profile
                 </h2>
-                <Badge variant="secondary">CoreDNS ready</Badge>
+                <Badge variant={snapshot?.dns.ready ? "secondary" : "outline"}>
+                  {snapshot
+                    ? snapshot.dns.ready
+                      ? `${snapshot.dns.provider} ready`
+                      : `${snapshot.dns.provider} needs attention`
+                    : "CoreDNS preview"}
+                </Badge>
               </div>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
                 Resolver and search domains for the active cluster scope.
@@ -2195,27 +2487,43 @@ export default function DashboardClient({
             <div>
               <span>DNS service</span>
               <strong className="font-mono">
-                kube-dns.kube-system.svc.cluster.local
+                {snapshot?.dns.serviceDNS ||
+                  "kube-dns.kube-system.svc.cluster.local"}
               </strong>
-              <small>CoreDNS · 1/1 available</small>
+              <small>
+                {snapshot
+                  ? `${snapshot.dns.provider} · ${snapshot.dns.readyEndpoints ?? 0}/${snapshot.dns.totalEndpoints ?? 0} endpoints ready`
+                  : "CoreDNS · preview"}
+              </small>
             </div>
             <div>
               <span>DNS Service IP</span>
-              <strong className="font-mono">10.43.0.10</strong>
-              <small>53 UDP/TCP · metrics 9153</small>
+              <strong className="font-mono">
+                {snapshot?.dns.serviceIP || "10.43.0.10"}
+              </strong>
+              <small>
+                {(snapshot?.dns.ports || []).length > 0
+                  ? snapshot?.dns.ports
+                      .map((port) => `${port.port} ${port.protocol}`)
+                      .join(" · ")
+                  : "53 UDP/TCP · metrics 9153"}
+              </small>
             </div>
             <div>
               <span>Base domain</span>
-              <strong className="font-mono">cluster.local</strong>
-              <small>Cache 30s · ndots:5</small>
+              <strong className="font-mono">{clusterDomain}</strong>
+              <small>Reported by kubedeck-agent</small>
             </div>
             <div className="dns-search-path">
               <span>Pod search path</span>
               <strong className="font-mono">
-                &lt;namespace&gt;.svc.cluster.local → svc.cluster.local →
-                cluster.local
+                {(snapshot?.dns.searchPath || [
+                  `<namespace>.svc.${clusterDomain}`,
+                  `svc.${clusterDomain}`,
+                  clusterDomain,
+                ]).join(" → ")}
               </strong>
-              <small>Verified from a monitoring pod</small>
+              <small>Active Kubernetes resolver search path</small>
             </div>
           </div>
             </section>
@@ -2467,114 +2775,116 @@ export default function DashboardClient({
 
         <footer className="mt-16 flex flex-col gap-3 border-t border-border py-7 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>KubeDeck · Global multi-cluster Kubernetes launchpad</p>
-          <p>Ingress + Service + EndpointSlice · {capturedAt}</p>
+          <p>
+            Ingress + Service + EndpointSlice · {isLive ? "live" : "preview"} · {capturedAt}
+          </p>
         </footer>
       </div>
 
       <Dialog
-        open={Boolean(selectedItem)}
+        open={Boolean(selectedItemView)}
         onOpenChange={(open) => {
           if (!open) setSelectedItem(null)
         }}
       >
-        {selectedItem && (
+        {selectedItemView && (
           <DialogContent className="sm:max-w-xl">
             <DialogHeader>
               <div className="mb-1 flex items-center gap-3">
                 <span className="resource-icon" aria-hidden="true">
-                  <selectedItem.icon />
+                  <selectedItemView.icon />
                 </span>
-                <StatusBadge status={selectedItem.status} />
+                <StatusBadge status={selectedItemView.status} />
                 <Badge variant="outline">
-                  {getCategory(selectedItem.category).label}
+                  {getCategory(selectedItemView.category).label}
                 </Badge>
               </div>
-              <DialogTitle>{selectedItem.name}</DialogTitle>
-              <DialogDescription>{selectedItem.summary}</DialogDescription>
+              <DialogTitle>{selectedItemView.name}</DialogTitle>
+              <DialogDescription>{selectedItemView.summary}</DialogDescription>
             </DialogHeader>
 
-            <AvailabilityGraphic item={selectedItem} />
+            <AvailabilityGraphic item={selectedItemView} />
             <Separator />
 
             <div className="detail-grid">
               <span>Surface</span>
               <strong>
-                {selectedItem.kind === "app" ? "Web app" : "Internal service"}
+                {selectedItemView.kind === "app" ? "Web app" : "Internal service"}
               </strong>
               <span>Namespace</span>
-              <strong>{selectedItem.namespace}</strong>
-              {selectedItem.externalDomain && (
+              <strong>{selectedItemView.namespace}</strong>
+              {selectedItemView.externalDomain && (
                 <>
                   <span>Ingress domain</span>
                   <strong className="truncate font-mono">
-                    {selectedItem.externalDomain}
+                    {selectedItemView.externalDomain}
                   </strong>
                 </>
               )}
               <span>Cluster DNS</span>
               <strong className="truncate font-mono">
-                {selectedItem.internalDns}
+                {selectedItemView.internalDns}
               </strong>
               <span>Service name</span>
-              <strong className="font-mono">{selectedItem.serviceName}</strong>
+              <strong className="font-mono">{selectedItemView.serviceName}</strong>
               <span>Service ClusterIP</span>
-              <strong className="font-mono">{selectedItem.clusterIP}</strong>
+              <strong className="font-mono">{selectedItemView.clusterIP}</strong>
               <span>Cluster domain</span>
               <strong className="font-mono">{clusterDomain}</strong>
               <span>Protocol</span>
-              <strong>{selectedItem.protocol}</strong>
+              <strong>{selectedItemView.protocol}</strong>
               <span>Ports</span>
               <strong className="font-mono">
-                {selectedItem.ports.join(", ")}
+                {selectedItemView.ports.join(", ")}
               </strong>
               <span>Ready endpoints</span>
               <strong>
-                {selectedItem.readyEndpoints} / {selectedItem.totalEndpoints}
+                {selectedItemView.readyEndpoints} / {selectedItemView.totalEndpoints}
               </strong>
               <span>Workload</span>
-              <strong>{selectedItem.workload}</strong>
+              <strong>{selectedItemView.workload}</strong>
               <span>Pods</span>
-              <strong>{selectedItem.pods}</strong>
+              <strong>{selectedItemView.pods}</strong>
               <span>Last deployed</span>
               <time
-                dateTime={selectedItem.lastDeployedAt}
+                dateTime={selectedItemView.lastDeployedAt}
                 className="font-medium tabular-nums"
-                title={selectedItem.lastDeployedAt}
+                title={selectedItemView.lastDeployedAt}
               >
-                {formatUtcTimestamp(selectedItem.lastDeployedAt)}
+                {formatUtcTimestamp(selectedItemView.lastDeployedAt)}
               </time>
               <span>Discovered from</span>
-              <strong>{selectedItem.source}</strong>
+              <strong>{selectedItemView.source}</strong>
               <span>Captured</span>
-              <strong>{capturedAt}</strong>
+              <strong>{isLive ? `Live · ${capturedAt}` : capturedAt}</strong>
             </div>
 
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => copyClusterDns(selectedItem)}
+                onClick={() => copyClusterDns(selectedItemView)}
               >
-                {copiedId === selectedItem.id ? (
+                {copiedId === selectedItemView.id ? (
                   <CheckIcon data-icon="inline-start" />
                 ) : (
                   <CopyIcon data-icon="inline-start" />
                 )}
-                {copiedId === selectedItem.id
+                {copiedId === selectedItemView.id
                   ? "Copied"
                   : "Copy cluster DNS"}
               </Button>
-              {selectedItem.href && (
+              {selectedItemView.href && (
                 <Button
                   render={
                     <a
-                      href={selectedItem.href}
+                      href={selectedItemView.href}
                       target="_blank"
                       rel="noopener noreferrer"
                     />
                   }
                   nativeButton={false}
                 >
-                  Open {selectedItem.name}
+                  Open {selectedItemView.name}
                   <ExternalLinkIcon data-icon="inline-end" />
                 </Button>
               )}
