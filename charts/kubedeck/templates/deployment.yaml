@@ -73,6 +73,17 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.admin.existingSecret }}
                   key: {{ .Values.admin.secretKeys.password }}
+            {{- with .Values.agent.url }}
+            - name: KUBEDECK_AGENT_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.agent.existingSecret }}
+            - name: KUBEDECK_AGENT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . | quote }}
+                  key: {{ $.Values.agent.tokenKey | quote }}
+            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

@@ -15,14 +15,19 @@ import {
   Globe2Icon,
   KeyRoundIcon,
   LockKeyholeIcon,
+  PlusIcon,
+  RefreshCwIcon,
   NetworkIcon,
   PencilLineIcon,
   RadioTowerIcon,
   RocketIcon,
+  SaveIcon,
   ServerIcon,
   ServerCogIcon,
   Settings2Icon,
   ShieldCheckIcon,
+  TestTube2Icon,
+  Trash2Icon,
   UsersIcon,
   WorkflowIcon,
 } from "lucide-react"
@@ -50,8 +55,10 @@ import {
   FieldContent,
   FieldDescription,
   FieldGroup,
+  FieldLabel,
   FieldTitle,
 } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -78,6 +85,25 @@ type Preferences = {
   serviceNotifications: boolean
   nodeNotifications: boolean
   warningNotificationsOnly: boolean
+}
+
+type DNSAlias = {
+  hostname: string
+  service: string
+  namespace: string
+}
+
+type DNSConfigState = {
+  enabled: boolean
+  available: boolean
+  namespace: string
+  configMapName: string
+  overrideKey: string
+  resourceVersion?: string
+  aliases: DNSAlias[]
+  rendered?: string
+  updatedAt?: string
+  dryRun?: boolean
 }
 
 const preferenceKeys: Record<keyof Preferences, string> = {
@@ -137,6 +163,13 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
     nodeNotifications: true,
     warningNotificationsOnly: false,
   })
+  const [dnsConfig, setDNSConfig] = React.useState<DNSConfigState | null>(null)
+  const [dnsAliases, setDNSAliases] = React.useState<DNSAlias[]>([])
+  const [dnsPreview, setDNSPreview] = React.useState("")
+  const [dnsError, setDNSError] = React.useState("")
+  const [dnsAction, setDNSAction] = React.useState<
+    "loading" | "preview" | "save" | ""
+  >("loading")
 
   React.useEffect(() => {
     const next = {
@@ -173,6 +206,39 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
     return () => window.cancelAnimationFrame(frame)
   }, [])
 
+  const loadDNSConfig = React.useCallback(async () => {
+    setDNSAction("loading")
+    setDNSError("")
+    try {
+      const response = await fetch("/api/cluster/dns/config", {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      })
+      const payload = (await response.json()) as DNSConfigState & {
+        error?: string
+      }
+      if (!response.ok) {
+        throw new Error(payload.error || "CoreDNS configuration is unavailable.")
+      }
+      setDNSConfig(payload)
+      setDNSAliases(payload.aliases ?? [])
+      setDNSPreview(payload.rendered ?? "")
+    } catch (error) {
+      setDNSError(
+        error instanceof Error
+          ? error.message
+          : "CoreDNS configuration is unavailable."
+      )
+    } finally {
+      setDNSAction("")
+    }
+  }, [])
+
+  React.useEffect(() => {
+    const frame = window.requestAnimationFrame(() => void loadDNSConfig())
+    return () => window.cancelAnimationFrame(frame)
+  }, [loadDNSConfig])
+
   function updatePreference(key: keyof Preferences, value: boolean) {
     const next = { ...preferences, [key]: value }
     setPreferences(next)
@@ -186,6 +252,83 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
     window.dispatchEvent(
       new CustomEvent("kubedeck:preferences", { detail: next })
     )
+  }
+
+  function updateDNSAlias(
+    index: number,
+    field: keyof DNSAlias,
+    value: string
+  ) {
+    setDNSAliases((current) =>
+      current.map((alias, aliasIndex) =>
+        aliasIndex === index ? { ...alias, [field]: value } : alias
+      )
+    )
+    setDNSPreview("")
+  }
+
+  function addDNSAlias() {
+    setDNSAliases((current) => [
+      ...current,
+      { hostname: "", service: "", namespace: "default" },
+    ])
+    setDNSPreview("")
+  }
+
+  function removeDNSAlias(index: number) {
+    setDNSAliases((current) =>
+      current.filter((_, aliasIndex) => aliasIndex !== index)
+    )
+    setDNSPreview("")
+  }
+
+  async function submitDNSAliases(dryRun: boolean) {
+    if (!dnsConfig?.resourceVersion) return
+    if (
+      dnsAliases.some(
+        (alias) =>
+          !alias.hostname.trim() ||
+          !alias.service.trim() ||
+          !alias.namespace.trim()
+      )
+    ) {
+      setDNSError("Complete the hostname, Service, and namespace for every alias.")
+      return
+    }
+
+    setDNSAction(dryRun ? "preview" : "save")
+    setDNSError("")
+    try {
+      const response = await fetch("/api/cluster/dns/config", {
+        method: "PUT",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resourceVersion: dnsConfig.resourceVersion,
+          aliases: dnsAliases,
+          dryRun,
+        }),
+      })
+      const payload = (await response.json()) as DNSConfigState & {
+        error?: string
+      }
+      if (!response.ok) {
+        throw new Error(payload.error || "CoreDNS update failed.")
+      }
+      setDNSPreview(payload.rendered ?? "")
+      if (!dryRun) {
+        setDNSConfig(payload)
+        setDNSAliases(payload.aliases ?? [])
+      }
+    } catch (error) {
+      setDNSError(
+        error instanceof Error ? error.message : "CoreDNS update failed."
+      )
+    } finally {
+      setDNSAction("")
+    }
   }
 
   const initials =
@@ -387,6 +530,251 @@ export default function SettingsClient({ admin }: { admin: SettingsAdmin }) {
                 <strong className="font-mono">10.43.0.10</strong>
                 <span>Pod DNS policy</span>
                 <strong>ClusterFirst</strong>
+              </CardContent>
+            </Card>
+
+            <Card className="settings-card settings-card--wide">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <NetworkIcon />
+                  CoreDNS service aliases
+                </CardTitle>
+                <CardDescription>
+                  Give an existing Kubernetes Service a memorable internal DNS
+                  name. KubeDeck validates and previews every CoreDNS rewrite
+                  before it is applied.
+                </CardDescription>
+                <CardAction className="flex items-center gap-2">
+                  <Badge
+                    variant={
+                      dnsConfig?.enabled && dnsConfig.available
+                        ? "secondary"
+                        : "outline"
+                    }
+                  >
+                    {dnsAction === "loading"
+                      ? "Checking agent"
+                      : dnsConfig?.enabled && dnsConfig.available
+                        ? "Write access ready"
+                        : "Read-only"}
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => void loadDNSConfig()}
+                    disabled={dnsAction !== ""}
+                    aria-label="Reload CoreDNS configuration"
+                    title="Reload CoreDNS configuration"
+                  >
+                    <RefreshCwIcon
+                      className={dnsAction === "loading" ? "animate-spin" : ""}
+                    />
+                  </Button>
+                </CardAction>
+              </CardHeader>
+              <CardContent className="settings-dns-manager">
+                {dnsError ? (
+                  <Alert variant="destructive">
+                    <NetworkIcon />
+                    <AlertTitle>CoreDNS configuration needs attention</AlertTitle>
+                    <AlertDescription>{dnsError}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {dnsConfig && !dnsConfig.enabled && dnsAction !== "loading" ? (
+                  <Alert className="border-primary/25 bg-primary/5">
+                    <LockKeyholeIcon />
+                    <AlertTitle>DNS writes are disabled</AlertTitle>
+                    <AlertDescription>
+                      Enable <code>dnsManagement.enabled</code> in the
+                      KubeDeck Agent chart and configure its bearer-token
+                      Secret. Discovery remains read-only until then.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {dnsConfig?.enabled && !dnsConfig.available ? (
+                  <Alert className="border-amber-400/25 bg-amber-400/5">
+                    <ServerCogIcon />
+                    <AlertTitle>Custom ConfigMap is missing</AlertTitle>
+                    <AlertDescription>
+                      Create{" "}
+                      <code>
+                        {dnsConfig.namespace}/{dnsConfig.configMapName}
+                      </code>{" "}
+                      or enable <code>dnsManagement.createConfigMap</code> in
+                      the agent chart.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {dnsConfig?.enabled && dnsConfig.available ? (
+                  <>
+                    <div className="settings-dns-meta">
+                      <span>
+                        ConfigMap
+                        <strong>
+                          {dnsConfig.namespace}/{dnsConfig.configMapName}
+                        </strong>
+                      </span>
+                      <span>
+                        Managed key
+                        <strong>{dnsConfig.overrideKey}</strong>
+                      </span>
+                      <span>
+                        Version
+                        <strong>{dnsConfig.resourceVersion}</strong>
+                      </span>
+                    </div>
+
+                    <div className="settings-dns-aliases">
+                      <div className="settings-dns-alias-header" aria-hidden="true">
+                        <span>Internal hostname</span>
+                        <span>Service</span>
+                        <span>Namespace</span>
+                        <span />
+                      </div>
+                      {dnsAliases.length === 0 ? (
+                        <div className="settings-dns-empty">
+                          <NetworkIcon />
+                          <span>
+                            <strong>No custom aliases</strong>
+                            <small>
+                              Native <code>service.namespace.svc.cluster.local</code>{" "}
+                              names continue to work.
+                            </small>
+                          </span>
+                        </div>
+                      ) : (
+                        dnsAliases.map((alias, index) => (
+                          <div
+                            className="settings-dns-alias-row"
+                            key={index}
+                          >
+                            <Field>
+                              <FieldLabel
+                                className="sr-only"
+                                htmlFor={`dns-hostname-${index}`}
+                              >
+                                Internal hostname
+                              </FieldLabel>
+                              <Input
+                                id={`dns-hostname-${index}`}
+                                value={alias.hostname}
+                                onChange={(event) =>
+                                  updateDNSAlias(
+                                    index,
+                                    "hostname",
+                                    event.target.value
+                                  )
+                                }
+                                placeholder="grafana.home.arpa"
+                                autoComplete="off"
+                                spellCheck={false}
+                              />
+                            </Field>
+                            <Field>
+                              <FieldLabel
+                                className="sr-only"
+                                htmlFor={`dns-service-${index}`}
+                              >
+                                Kubernetes Service
+                              </FieldLabel>
+                              <Input
+                                id={`dns-service-${index}`}
+                                value={alias.service}
+                                onChange={(event) =>
+                                  updateDNSAlias(
+                                    index,
+                                    "service",
+                                    event.target.value
+                                  )
+                                }
+                                placeholder="grafana"
+                                autoComplete="off"
+                                spellCheck={false}
+                              />
+                            </Field>
+                            <Field>
+                              <FieldLabel
+                                className="sr-only"
+                                htmlFor={`dns-namespace-${index}`}
+                              >
+                                Kubernetes namespace
+                              </FieldLabel>
+                              <Input
+                                id={`dns-namespace-${index}`}
+                                value={alias.namespace}
+                                onChange={(event) =>
+                                  updateDNSAlias(
+                                    index,
+                                    "namespace",
+                                    event.target.value
+                                  )
+                                }
+                                placeholder="monitoring"
+                                autoComplete="off"
+                                spellCheck={false}
+                              />
+                            </Field>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeDNSAlias(index)}
+                              aria-label={`Remove ${alias.hostname || "new"} DNS alias`}
+                              title="Remove alias"
+                            >
+                              <Trash2Icon />
+                            </Button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="settings-dns-actions">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={addDNSAlias}
+                        disabled={dnsAction !== ""}
+                      >
+                        <PlusIcon data-icon="inline-start" />
+                        Add alias
+                      </Button>
+                      <span className="settings-dns-actions__end">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => void submitDNSAliases(true)}
+                          disabled={dnsAction !== ""}
+                        >
+                          <TestTube2Icon data-icon="inline-start" />
+                          {dnsAction === "preview" ? "Validating…" : "Validate"}
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => void submitDNSAliases(false)}
+                          disabled={dnsAction !== ""}
+                        >
+                          <SaveIcon data-icon="inline-start" />
+                          {dnsAction === "save" ? "Applying…" : "Apply aliases"}
+                        </Button>
+                      </span>
+                    </div>
+
+                    {dnsPreview ? (
+                      <div className="settings-dns-preview">
+                        <span>
+                          <TestTube2Icon />
+                          Generated CoreDNS override
+                        </span>
+                        <pre>{dnsPreview}</pre>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
               </CardContent>
             </Card>
 

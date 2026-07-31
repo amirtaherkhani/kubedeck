@@ -1,0 +1,11 @@
+{{- if and .Values.dnsManagement.enabled .Values.dnsManagement.createConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ required "dnsManagement.configMapName is required" .Values.dnsManagement.configMapName }}
+  namespace: {{ required "dnsManagement.namespace is required" .Values.dnsManagement.namespace }}
+  labels:
+    {{- include "kubedeck-agent.labels" . | nindent 4 }}
+    app.kubernetes.io/component: coredns-customization
+data: {}
+{{- end }}

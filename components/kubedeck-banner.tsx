@@ -46,16 +46,17 @@ export function KubeDeckBanner({
         KubeDeck — Your Kubernetes ecosystem, one click away.
       </h1>
       <p id={descriptionId} className="sr-only">
-        Multi-cluster access across all Kubernetes nodes and global services.
+        Kubernetes services and nodes connected through a global cluster
+        topology.
       </p>
       <Image
         className="kubedeck-banner-image"
         src="/kubedeck-banner.png"
         alt=""
-        width={1731}
-        height={909}
+        width={2172}
+        height={724}
         priority={priority}
-        sizes="(max-width: 900px) 100vw, 70vw"
+        sizes="(max-width: 900px) 100vw, (max-width: 1800px) 90vw, 72vw"
         unoptimized
       />
       {liveGraph ? (

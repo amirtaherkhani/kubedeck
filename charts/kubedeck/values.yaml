@@ -60,6 +60,11 @@ admin:
     email: KUBEDECK_ADMIN_EMAIL
     password: KUBEDECK_ADMIN_PASSWORD
 
+agent:
+  url: http://kubedeck-agent:8080
+  existingSecret: ""
+  tokenKey: token
+
 persistence:
   enabled: true
   storageClass: ""

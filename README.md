@@ -41,16 +41,17 @@ Talos, MicroK8s, kind, managed Kubernetes, and other conformant clusters.
 
 KubeDeck is currently an early `v0.1` foundation.
 
-The repository includes the complete dashboard experience, responsive
-liquid-glass interface, authentication, Kubernetes-oriented catalog,
-multi-node review, notifications, settings, container runtime, and Helm chart.
-The catalog and node telemetry currently use explicit illustrative snapshot
-data so that the interface and operating model can be evaluated safely.
+The repository includes the dashboard, responsive liquid-glass interface,
+authentication, Kubernetes catalog, multi-node review, notifications, settings,
+Go cluster agent, container runtimes, and separate Helm charts for the app and
+agent. The agent now provides live Kubernetes API discovery, resource metrics,
+reconnecting SSE updates, and opt-in CoreDNS service-alias management.
 
-Live read-only Kubernetes API discovery, metrics collection, and multi-cluster
-connectors are the next integration layer. The current chart deliberately does
-not grant the application access to the Kubernetes API or claim that example
-status values are live.
+The dashboard catalog and node charts still present an explicitly labeled
+illustrative fallback while their UI data adapter is completed. Live snapshots
+are available through the authenticated `/api/cluster/snapshot` and
+`/api/cluster/events` server-side proxies; the CoreDNS settings editor already
+uses the live agent contract.
 
 ## Highlights
 
@@ -78,6 +79,9 @@ status values are live.
 - Responsive KubeDeck banner, live topology animation, reduced-motion support,
   and multi-size brand assets
 - OCI container build and Helm deployment with persistent local D1 storage
+- Go `client-go` cluster agent with informer caches and SSE streaming
+- Protected CoreDNS alias editor with validation, dry-run preview, and
+  optimistic concurrency
 
 ## Interface
 
@@ -104,10 +108,12 @@ flowchart LR
     Ingress --> App["KubeDeck Worker runtime"]
     App --> Auth["Admin authentication"]
     Auth --> D1["Persistent local D1 database"]
-    App --> Catalog["Kubernetes catalog snapshot"]
+    App --> Proxy["Authenticated cluster proxy"]
     App --> UI["Dashboard, graphs, notifications, settings"]
-    Collector["Planned read-only cluster collector"] -. "future discovery" .-> App
-    Kubernetes["Kubernetes API and metrics"] -. "future RBAC-scoped access" .-> Collector
+    Proxy --> Agent["KubeDeck Go agent"]
+    Agent --> Kubernetes["Kubernetes API and Metrics API"]
+    Agent --> SSE["Snapshot and SSE stream"]
+    Agent -. "opt-in scoped write" .-> CoreDNS["CoreDNS custom ConfigMap"]
 ```
 
 The current Helm release runs one application replica because its embedded D1
@@ -124,6 +130,18 @@ backend can enable horizontally scaled application replicas.
 - Motion and Recharts
 - TypeScript and Tailwind CSS
 - Docker/OCI and Helm
+- Go 1.26, `client-go`, Kubernetes Metrics API, and CoreDNS Caddyfile parser
+
+## Repository layout
+
+```text
+agent/                    Go Kubernetes discovery and CoreDNS agent
+app/                      KubeDeck App Router pages and API proxies
+charts/kubedeck/          Dashboard Helm chart
+charts/kubedeck-agent/    Agent, RBAC, SSE, and CoreDNS Helm chart
+components/               Dashboard and shadcn UI components
+tests/                    Rendered app and authenticated proxy tests
+```
 
 ## Local development
 
@@ -150,6 +168,17 @@ npm run lint
 npm test
 npm run db:generate
 ```
+
+Agent checks:
+
+```bash
+cd agent
+go test -race ./...
+go vet ./...
+```
+
+The agent package choices, environment variables, API contract, and CoreDNS
+safety model are documented in [`agent/README.md`](agent/README.md).
 
 ## Administrator setup
 
@@ -206,7 +235,8 @@ docker buildx build \
 
 ## Install with Helm
 
-The chart is located at `charts/kubedeck`.
+The app and agent charts are located at `charts/kubedeck` and
+`charts/kubedeck-agent`.
 
 Create the namespace and administrator Secret:
 
@@ -214,6 +244,8 @@ Create the namespace and administrator Secret:
 kubectl create namespace kubedeck
 kubectl -n kubedeck create secret generic kubedeck-admin \
   --from-env-file=.env.admin
+kubectl -n kubedeck create secret generic kubedeck-agent-auth \
+  --from-literal=token='replace-with-a-long-random-token'
 ```
 
 Example `.env.admin`:
@@ -228,10 +260,22 @@ KUBEDECK_ADMIN_PASSWORD=replace-with-a-long-random-password
 Install without an Ingress:
 
 ```bash
+helm upgrade --install kubedeck-agent ./charts/kubedeck-agent \
+  --namespace kubedeck \
+  --set image.repository=ghcr.io/your-user/kubedeck-agent \
+  --set image.tag=0.1.0 \
+  --set auth.existingSecret=kubedeck-agent-auth \
+  --wait
+```
+
+Then install the app:
+
+```bash
 helm upgrade --install kubedeck ./charts/kubedeck \
   --namespace kubedeck \
   --set image.repository=ghcr.io/your-user/kubedeck \
   --set image.tag=0.1.0 \
+  --set agent.existingSecret=kubedeck-agent-auth \
   --set ingress.enabled=false \
   --wait
 ```
@@ -279,6 +323,25 @@ helm upgrade --install kubedeck ./charts/kubedeck \
 redirect Ingress. Leave it disabled when using another ingress controller and
 configure that controller's HTTPS redirect mechanism instead.
 
+### CoreDNS service aliases
+
+CoreDNS writes are disabled by default. On K3s, enable the dedicated custom
+ConfigMap integration when installing the agent:
+
+```bash
+helm upgrade --install kubedeck-agent ./charts/kubedeck-agent \
+  --namespace kubedeck \
+  --set image.repository=ghcr.io/your-user/kubedeck-agent \
+  --set image.tag=0.1.0 \
+  --set auth.existingSecret=kubedeck-agent-auth \
+  --set dnsManagement.enabled=true \
+  --wait
+```
+
+The optional Role can update only `kube-system/coredns-custom`; it cannot write
+other ConfigMaps, workloads, Secrets, or node proxy APIs. KubeDeck manages only
+the `kubedeck.override` key and refuses to overwrite unrecognized content.
+
 ## Helm behavior
 
 - Requires an immutable `image.tag`
@@ -289,6 +352,7 @@ configure that controller's HTTPS redirect mechanism instead.
 - Disables automatic ServiceAccount token mounting
 - Includes startup, readiness, and liveness probes
 - Loads administrator values from an existing Kubernetes Secret
+- Connects to the agent through an internal URL and server-side bearer token
 - Supports custom storage classes, resources, node selectors, affinity,
   tolerations, labels, annotations, and extra environment values
 
@@ -298,16 +362,20 @@ configure that controller's HTTPS redirect mechanism instead.
 - The example Helm chart never contains administrator credentials.
 - Kubernetes credentials should be supplied through a Secret.
 - The current ServiceAccount has no Kubernetes API token.
+- The separate agent ServiceAccount has read-only discovery permissions.
+- Optional CoreDNS management uses a namespaced Role restricted to one custom
+  ConfigMap and requires authenticated agent requests.
 - HTTPS should be enabled before using authentication outside local development.
-- Live discovery should use a separate least-privilege, read-only identity.
-- Do not grant write access to workloads, Secrets, or cluster administration APIs
-  solely for dashboard discovery.
+- Do not grant write access to workloads, Secrets, or cluster administration
+  APIs solely for dashboard discovery.
 
 ## Roadmap
 
-- [ ] Read-only Service, Ingress, EndpointSlice, Deployment, StatefulSet, Pod,
-      Namespace, and Node discovery
-- [ ] Kubernetes watch-based status updates
+- [x] Read-only Service, Ingress, EndpointSlice, Deployment, StatefulSet, Pod,
+      Namespace, and Node discovery agent
+- [x] Kubernetes watch-based snapshot and SSE updates
+- [x] Opt-in CoreDNS Service alias management
+- [ ] Bind every dashboard catalog and chart view to live agent snapshots
 - [ ] Prometheus and metrics-server resource histories
 - [ ] Multi-cluster connection management
 - [ ] Configurable classification rules and annotations

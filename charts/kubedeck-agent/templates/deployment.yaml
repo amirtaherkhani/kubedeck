@@ -1,0 +1,112 @@
+{{- if not .Values.image.tag }}
+{{- fail "image.tag is required and must be an immutable deployment tag." }}
+{{- end }}
+{{- if and .Values.dnsManagement.enabled (not .Values.auth.existingSecret) }}
+{{- fail "auth.existingSecret is required when dnsManagement.enabled=true." }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kubedeck-agent.fullname" . }}
+  labels:
+    {{- include "kubedeck-agent.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kubedeck-agent.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kubedeck-agent.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "kubedeck-agent.serviceAccountName" . }}
+      automountServiceAccountToken: true
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: kubedeck-agent
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: KUBEDECK_AGENT_LISTEN_ADDRESS
+              value: {{ .Values.agent.listenAddress | quote }}
+            - name: KUBEDECK_CLUSTER_ID
+              value: {{ required "cluster.id is required" .Values.cluster.id | quote }}
+            - name: KUBEDECK_CLUSTER_NAME
+              value: {{ required "cluster.name is required" .Values.cluster.name | quote }}
+            - name: KUBEDECK_CLUSTER_DOMAIN
+              value: {{ required "cluster.domain is required" .Values.cluster.domain | quote }}
+            - name: KUBEDECK_METRICS_INTERVAL
+              value: {{ .Values.agent.metricsInterval | quote }}
+            - name: KUBEDECK_REFRESH_DEBOUNCE
+              value: {{ .Values.agent.refreshDebounce | quote }}
+            - name: KUBEDECK_SSE_HEARTBEAT
+              value: {{ .Values.agent.sseHeartbeat | quote }}
+            - name: KUBEDECK_SSE_HISTORY
+              value: {{ .Values.agent.sseHistory | quote }}
+            - name: KUBEDECK_EVENT_LIMIT
+              value: {{ .Values.agent.eventLimit | quote }}
+            - name: KUBEDECK_DNS_MANAGEMENT_ENABLED
+              value: {{ .Values.dnsManagement.enabled | quote }}
+            - name: KUBEDECK_COREDNS_NAMESPACE
+              value: {{ required "dnsManagement.namespace is required" .Values.dnsManagement.namespace | quote }}
+            - name: KUBEDECK_COREDNS_CUSTOM_CONFIGMAP
+              value: {{ required "dnsManagement.configMapName is required" .Values.dnsManagement.configMapName | quote }}
+            - name: KUBEDECK_COREDNS_OVERRIDE_KEY
+              value: {{ required "dnsManagement.overrideKey is required" .Values.dnsManagement.overrideKey | quote }}
+            {{- with .Values.auth.existingSecret }}
+            - name: KUBEDECK_AGENT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . | quote }}
+                  key: {{ $.Values.auth.tokenKey | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
