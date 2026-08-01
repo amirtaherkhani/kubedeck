@@ -2,8 +2,8 @@ apiVersion: v2
 name: kubedeck
 description: Kubernetes-native homelab homepage, service launchpad, and cluster dashboard.
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.1.1
+appVersion: "0.1.1"
 home: https://github.com/amirtaherkhani/kubedeck
 icon: https://raw.githubusercontent.com/amirtaherkhani/kubedeck/main/public/brand/kubedeck-mark.svg
 sources:

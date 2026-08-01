@@ -48,6 +48,7 @@ Always keep this order:
 9. Deploy `kubedeck-agent` first and wait for readiness.
 10. Deploy `kubedeck` and wait for readiness.
 11. Verify workloads, endpoints, pod images, and recent logs.
+12. Verify an authenticated dashboard request can proxy a live agent snapshot.
 
 Do not reverse the deployment order. The dashboard proxies cluster requests to
 the agent and should roll out only after the agent is ready.
@@ -127,6 +128,7 @@ Do not report success from image builds alone. Report:
 - every owned Deployment rollout and Ready pod;
 - Service EndpointSlices;
 - recent logs for both components;
+- authenticated dashboard-to-agent snapshot status and live object counts;
 - whether the agent auth Secret was reused or created;
 - any unavailable check or failure.
 

@@ -41,5 +41,11 @@ fi
 if [ -n "${KUBEDECK_ADMIN_PASSWORD:-}" ]; then
   set -- "$@" --var "KUBEDECK_ADMIN_PASSWORD:${KUBEDECK_ADMIN_PASSWORD}"
 fi
+if [ -n "${KUBEDECK_AGENT_URL:-}" ]; then
+  set -- "$@" --var "KUBEDECK_AGENT_URL:${KUBEDECK_AGENT_URL}"
+fi
+if [ -n "${KUBEDECK_AGENT_TOKEN:-}" ]; then
+  set -- "$@" --var "KUBEDECK_AGENT_TOKEN:${KUBEDECK_AGENT_TOKEN}"
+fi
 
 exec "$@"

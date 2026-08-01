@@ -39,7 +39,7 @@ Talos, MicroK8s, kind, managed Kubernetes, and other conformant clusters.
 
 ## Project status
 
-KubeDeck is currently an early `v0.1` foundation.
+KubeDeck `v0.1.1` is an early, Kubernetes-native foundation.
 
 The repository includes the dashboard, responsive liquid-glass interface,
 authentication, Kubernetes catalog, multi-node review, notifications, settings,
@@ -228,9 +228,24 @@ cluster:
 ```bash
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  --tag ghcr.io/your-user/kubedeck:0.1.0 \
+  --tag ghcr.io/your-user/kubedeck:0.1.1 \
   --push .
 ```
+
+## Verified release deployment
+
+The repository release workflow validates the dashboard, Go agent, and both
+Helm charts; builds immutable images from the verified remote commit; deploys
+the agent before the dashboard; and runs an authenticated dashboard-to-agent
+snapshot smoke test before reporting success:
+
+```bash
+bash .agents/skills/kubedeck-build-deploy/scripts/deploy.sh --branch main
+```
+
+The runtime forwards `KUBEDECK_AGENT_URL` and `KUBEDECK_AGENT_TOKEN` into the
+local Wrangler Worker as server-only bindings. The bearer token is never sent
+to browser code.
 
 ## Install with Helm
 
@@ -262,7 +277,7 @@ Install without an Ingress:
 helm upgrade --install kubedeck-agent ./charts/kubedeck-agent \
   --namespace kubedeck \
   --set image.repository=ghcr.io/your-user/kubedeck-agent \
-  --set image.tag=0.1.0 \
+  --set image.tag=0.1.1 \
   --set auth.existingSecret=kubedeck-agent-auth \
   --wait
 ```
@@ -273,7 +288,7 @@ Then install the app:
 helm upgrade --install kubedeck ./charts/kubedeck \
   --namespace kubedeck \
   --set image.repository=ghcr.io/your-user/kubedeck \
-  --set image.tag=0.1.0 \
+  --set image.tag=0.1.1 \
   --set agent.existingSecret=kubedeck-agent-auth \
   --set ingress.enabled=false \
   --wait
@@ -292,7 +307,7 @@ Create a values file for your domain:
 ```yaml
 image:
   repository: ghcr.io/your-user/kubedeck
-  tag: 0.1.0
+  tag: 0.1.1
 
 ingress:
   enabled: true
@@ -331,7 +346,7 @@ ConfigMap integration when installing the agent:
 helm upgrade --install kubedeck-agent ./charts/kubedeck-agent \
   --namespace kubedeck \
   --set image.repository=ghcr.io/your-user/kubedeck-agent \
-  --set image.tag=0.1.0 \
+  --set image.tag=0.1.1 \
   --set auth.existingSecret=kubedeck-agent-auth \
   --set dnsManagement.enabled=true \
   --wait
