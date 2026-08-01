@@ -170,8 +170,8 @@ type Service struct {
 	Status         string            `json:"status"`
 	ClusterDNS     string            `json:"clusterDNS"`
 	ClusterIP      string            `json:"clusterIP,omitempty"`
-	ExternalIPs    []string          `json:"externalIPs,omitempty"`
-	ExternalURLs   []string          `json:"externalURLs,omitempty"`
+	ExternalIPs    []string          `json:"externalIPs"`
+	ExternalURLs   []string          `json:"externalURLs"`
 	Ports          []Port            `json:"ports"`
 	Selector       map[string]string `json:"selector,omitempty"`
 	ReadyEndpoints int               `json:"readyEndpoints"`

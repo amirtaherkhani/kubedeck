@@ -9,6 +9,8 @@ All notable KubeDeck changes are documented in this file.
 - Forward the in-cluster agent URL and bearer token into the Wrangler Worker
   runtime so authenticated dashboard snapshot, SSE, and DNS proxy routes can
   reach `kubedeck-agent`.
+- Preserve empty service endpoint arrays in the agent contract and tolerate
+  older snapshots that omitted them, so live catalog routes render reliably.
 
 ### Changed
 

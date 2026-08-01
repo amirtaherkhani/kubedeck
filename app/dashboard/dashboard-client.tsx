@@ -1247,11 +1247,13 @@ function sortItems(items: CatalogItem[], sortMode: SortMode) {
 function buildLiveCatalogItems(snapshot: ClusterSnapshot): CatalogItem[] {
   return snapshot.services.map((service) => {
     const category = normalizeClusterCategory(service.category)
-    const href = service.externalURLs[0]
+    const externalURLs = service.externalURLs ?? []
+    const servicePorts = service.ports ?? []
+    const href = externalURLs[0]
     const externalDomain = href ? externalAddress(href) : undefined
-    const ports = service.ports.map(formatServicePort)
+    const ports = servicePorts.map(formatServicePort)
     const protocols = new Set(
-      service.ports.map((port) => port.protocol.toUpperCase())
+      servicePorts.map((port) => port.protocol.toUpperCase())
     )
     if (href) protocols.add(href.toLowerCase().startsWith("https:") ? "HTTPS" : "HTTP")
     const workload = service.workloads?.[0]

@@ -107,8 +107,8 @@ function createAgentSnapshot() {
       readyPods: 1,
       workloads: 1,
       readyWorkloads: 1,
-      services: 1,
-      readyServices: 1,
+      services: 2,
+      readyServices: 2,
       ingresses: 1,
       persistentVolumes: 0,
       warningEvents: 0,
@@ -199,6 +199,33 @@ function createAgentSnapshot() {
         ],
         lastDeployedAt: "2026-07-31T11:00:00Z",
         uptimeSeconds: 3600,
+      },
+      {
+        uid: "service-release-runner",
+        namespace: "deployments",
+        name: "release-runner",
+        category: "deployments",
+        type: "ClusterIP",
+        status: "ready",
+        clusterDNS: "release-runner.deployments.svc.cluster.local",
+        clusterIP: "10.43.1.21",
+        ports: [
+          {
+            name: "http",
+            protocol: "TCP",
+            port: 8080,
+            targetPort: "8080",
+          },
+        ],
+        readyEndpoints: 1,
+        totalEndpoints: 1,
+        readyPods: 1,
+        totalPods: 1,
+        workloads: [
+          { kind: "Deployment", namespace: "deployments", name: "release-runner" },
+        ],
+        lastDeployedAt: "2026-07-31T11:30:00Z",
+        uptimeSeconds: 1800,
       },
     ],
     ingresses: [],
@@ -597,6 +624,13 @@ test("proxies authenticated cluster snapshots and SSE without exposing the agent
   assert.match(catalogHtml, /payments-api\.apps\.svc\.cluster\.local/);
   assert.doesNotMatch(catalogHtml, /Homelab API/);
 
+  const deploymentsCatalog = await runtime.request(
+    "/dashboard/catalog/deployments",
+    { headers: { cookie: loginCookie } },
+  );
+  assert.equal(deploymentsCatalog.status, 200);
+  assert.match(await deploymentsCatalog.text(), /Release runner/);
+
   assert.ok(
     requests.every(
       (request) => request.authorization === "Bearer internal-agent-token",
@@ -679,6 +713,8 @@ test("forwards the cluster agent configuration into the Wrangler runtime", async
   );
   assert.match(deployScript, /verify_dashboard_agent_proxy/);
   assert.match(deployScript, /dashboardAgentProxy: "ok"/);
+  assert.match(deployScript, /deploymentsCatalog: "ok"/);
+  assert.match(deployScript, /\/dashboard\/catalog\/deployments/);
 });
 
 test("keeps the v0.1.1 package and Helm versions aligned", async () => {
