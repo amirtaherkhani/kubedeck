@@ -473,8 +473,20 @@ if (snapshot.schemaVersion !== "kubedeck.io/v1alpha1") {
   throw new Error(`unexpected snapshot schema: ${snapshot.schemaVersion}`);
 }
 
+const deploymentsPage = await fetch(`${baseURL}/dashboard/catalog/deployments`, {
+  headers: { cookie },
+});
+if (!deploymentsPage.ok) {
+  throw new Error(`deployments catalog failed with HTTP ${deploymentsPage.status}`);
+}
+
+const deployments = Array.isArray(snapshot.services)
+  ? snapshot.services.filter((service) => service.category === "deployments")
+  : [];
 console.log(JSON.stringify({
   dashboardAgentProxy: "ok",
+  deploymentsCatalog: "ok",
+  deploymentCount: deployments.length,
   clusterId: snapshot.cluster?.id,
   nodes: snapshot.nodes?.length ?? 0,
   services: snapshot.services?.length ?? 0,

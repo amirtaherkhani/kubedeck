@@ -41,6 +41,11 @@ func TestSnapshotRequiresBearerToken(t *testing.T) {
 		snapshot: model.Snapshot{
 			SchemaVersion: model.SchemaVersion,
 			Cluster:       model.Cluster{ID: "homelab"},
+			Services: []model.Service{{
+				Name:         "internal-service",
+				ExternalIPs:  []string{},
+				ExternalURLs: []string{},
+			}},
 		},
 	}
 	server := New(
@@ -68,6 +73,11 @@ func TestSnapshotRequiresBearerToken(t *testing.T) {
 	}
 	if !strings.Contains(response.Body.String(), model.SchemaVersion) {
 		t.Fatalf("snapshot response does not contain schema version: %s", response.Body)
+	}
+	for _, expected := range []string{`"externalIPs":[]`, `"externalURLs":[]`} {
+		if !strings.Contains(response.Body.String(), expected) {
+			t.Fatalf("snapshot response does not preserve empty service array %s: %s", expected, response.Body)
+		}
 	}
 }
 
