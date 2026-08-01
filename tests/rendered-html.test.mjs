@@ -657,6 +657,48 @@ test("keeps browser setup available for incomplete backend environment values", 
   assert.equal(await runtime.getAdminRecord(), null);
 });
 
+test("forwards the cluster agent configuration into the Wrangler runtime", async () => {
+  const [entrypoint, deployScript] = await Promise.all([
+    readFile(new URL("../docker-entrypoint.sh", import.meta.url), "utf8"),
+    readFile(
+      new URL(
+        "../.agents/skills/kubedeck-build-deploy/scripts/deploy.sh",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(
+    entrypoint,
+    /--var "KUBEDECK_AGENT_URL:\$\{KUBEDECK_AGENT_URL\}"/,
+  );
+  assert.match(
+    entrypoint,
+    /--var "KUBEDECK_AGENT_TOKEN:\$\{KUBEDECK_AGENT_TOKEN\}"/,
+  );
+  assert.match(deployScript, /verify_dashboard_agent_proxy/);
+  assert.match(deployScript, /dashboardAgentProxy: "ok"/);
+});
+
+test("keeps the v0.1.1 package and Helm versions aligned", async () => {
+  const [packageSource, dashboardChart, agentChart] = await Promise.all([
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../charts/kubedeck/Chart.yaml", import.meta.url), "utf8"),
+    readFile(
+      new URL("../charts/kubedeck-agent/Chart.yaml", import.meta.url),
+      "utf8",
+    ),
+  ]);
+  const releaseVersion = JSON.parse(packageSource).version;
+
+  assert.equal(releaseVersion, "0.1.1");
+  for (const chart of [dashboardChart, agentChart]) {
+    assert.match(chart, new RegExp(`^version: ${releaseVersion}$`, "m"));
+    assert.match(chart, new RegExp(`^appVersion: "${releaseVersion}"$`, "m"));
+  }
+});
+
 test("ships the admin schema, migration, and finished product assets", async () => {
   const [
     loginPage,

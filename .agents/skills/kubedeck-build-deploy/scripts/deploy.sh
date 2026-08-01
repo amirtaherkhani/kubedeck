@@ -59,7 +59,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-for command_name in git kubectl helm nerdctl rdctl npm go curl openssl sort sed grep tr cut mktemp; do
+for command_name in git kubectl helm nerdctl rdctl node npm go curl openssl sort sed grep tr cut mktemp; do
   require_command "$command_name"
 done
 
@@ -127,6 +127,23 @@ remote_sha="$(git rev-parse "refs/remotes/origin/${branch}")"
   die "Local HEAD ($commit_sha) does not exactly match origin/$branch ($remote_sha)"
 [[ -z "$(git status --porcelain=v1 --untracked-files=all)" ]] ||
   die "The checkout changed during branch preparation"
+
+release_version="$(node -p "require('./package.json').version")"
+[[ "$release_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]] ||
+  die "package.json version is not a supported release version: $release_version"
+
+app_chart_version="$(sed -n 's/^version:[[:space:]]*//p' charts/kubedeck/Chart.yaml)"
+app_chart_app_version="$(sed -n 's/^appVersion:[[:space:]]*//p' charts/kubedeck/Chart.yaml | tr -d '"')"
+agent_chart_version="$(sed -n 's/^version:[[:space:]]*//p' charts/kubedeck-agent/Chart.yaml)"
+agent_chart_app_version="$(sed -n 's/^appVersion:[[:space:]]*//p' charts/kubedeck-agent/Chart.yaml | tr -d '"')"
+for chart_version in \
+  "$app_chart_version" \
+  "$app_chart_app_version" \
+  "$agent_chart_version" \
+  "$agent_chart_app_version"; do
+  [[ "$chart_version" == "$release_version" ]] ||
+    die "package.json and Helm chart versions must all match; expected $release_version, found $chart_version"
+done
 
 short_sha="$(git rev-parse --short=12 HEAD)"
 branch_slug="$(
@@ -214,6 +231,7 @@ build_git_tree() {
         platform="$1"
         image="$2"
         revision="$3"
+        version="$4"
         build_dir="$(mktemp -d /tmp/kubedeck-build.XXXXXX)"
 
         cleanup() {
@@ -229,9 +247,10 @@ build_git_tree() {
         sudo nerdctl build \
           --platform "$platform" \
           --label "org.opencontainers.image.revision=${revision}" \
+          --label "org.opencontainers.image.version=${version}" \
           --tag "$image" \
           "$build_dir"
-      ' sh "$target_platform" "$image" "$commit_sha"
+      ' sh "$target_platform" "$image" "$commit_sha" "$release_version"
     )
 }
 
@@ -416,6 +435,54 @@ verify_endpoints() {
   done <<<"$services"
 }
 
+verify_dashboard_agent_proxy() {
+  log "Verifying authenticated dashboard-to-agent snapshot proxy"
+  kubectl --context "$context" --namespace "$namespace" exec -i \
+    "deployment/${app_release}" -- node --input-type=module - <<'NODE'
+const baseURL = "http://127.0.0.1:3000";
+const email = process.env.KUBEDECK_ADMIN_EMAIL;
+const password = process.env.KUBEDECK_ADMIN_PASSWORD;
+
+if (!email || !password) {
+  throw new Error("dashboard admin credentials are unavailable in the runtime");
+}
+
+const login = await fetch(`${baseURL}/api/auth/login`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ email, password }),
+});
+if (!login.ok) {
+  throw new Error(`dashboard login failed with HTTP ${login.status}`);
+}
+
+const cookie = login.headers.get("set-cookie")?.split(";", 1)[0];
+if (!cookie) {
+  throw new Error("dashboard login did not return a session cookie");
+}
+
+const response = await fetch(`${baseURL}/api/cluster/snapshot`, {
+  headers: { accept: "application/json", cookie },
+});
+if (!response.ok) {
+  throw new Error(`dashboard agent proxy failed with HTTP ${response.status}`);
+}
+
+const snapshot = await response.json();
+if (snapshot.schemaVersion !== "kubedeck.io/v1alpha1") {
+  throw new Error(`unexpected snapshot schema: ${snapshot.schemaVersion}`);
+}
+
+console.log(JSON.stringify({
+  dashboardAgentProxy: "ok",
+  clusterId: snapshot.cluster?.id,
+  nodes: snapshot.nodes?.length ?? 0,
+  services: snapshot.services?.length ?? 0,
+  workloads: snapshot.workloads?.length ?? 0,
+}));
+NODE
+}
+
 log "Verifying both releases"
 verify_release "$agent_release"
 verify_release "$app_release"
@@ -437,6 +504,8 @@ agent_runtime_image="$(
 [[ "$agent_runtime_image" == "$agent_image" ]] ||
   die "Agent runtime image mismatch: expected $agent_image, found $agent_runtime_image"
 
+verify_dashboard_agent_proxy
+
 log "Recent kubedeck-agent logs"
 kubectl --context "$context" --namespace "$namespace" logs \
   -l "app.kubernetes.io/instance=${agent_release}" \
@@ -452,6 +521,7 @@ kubectl --context "$context" --namespace "$namespace" logs \
 log "Deployment complete"
 printf 'Branch: %s\n' "$branch"
 printf 'Commit: %s\n' "$commit_sha"
+printf 'Release version: %s\n' "$release_version"
 printf 'Context: %s\n' "$context"
 printf 'Namespace: %s\n' "$namespace"
 printf 'Dashboard image: %s\n' "$app_image"
