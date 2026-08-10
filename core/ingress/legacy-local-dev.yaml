@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-dev-legacy-redirect
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: local-dev-legacy-redirect
+    app.kubernetes.io/component: ingress-compatibility
+    app.kubernetes.io/part-of: home-lab
+spec:
+  selector:
+    app.kubernetes.io/name: local-dev-legacy-redirect
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: legacy-local-dev-redirect
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: local-dev-legacy-redirect
+    app.kubernetes.io/component: ingress-compatibility
+    app.kubernetes.io/part-of: home-lab
+spec:
+  redirectRegex:
+    regex: ^https?://([^./]+)\.dev\.local(?::\d+)?/(.*)
+    replacement: https://${1}.local.dev/${2}
+    permanent: true
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: local-dev-legacy-redirect
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: local-dev-legacy-redirect
+    app.kubernetes.io/component: ingress-compatibility
+    app.kubernetes.io/part-of: home-lab
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: kube-system-legacy-local-dev-redirect@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - secretName: legacy-dev-tls
+      hosts:
+        - '*.dev.local'
+  rules:
+    - host: '*.dev.local'
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: local-dev-legacy-redirect
+                port:
+                  name: http

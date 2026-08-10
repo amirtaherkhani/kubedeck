@@ -1,0 +1,55 @@
+{{- if .Values.mailpit.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "platform-storage.mailpitName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.mailpitLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "platform-storage.mailpitLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "platform-storage.labels" . | nindent 8 }}
+        {{- include "platform-storage.mailpitLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: mailpit
+          image: "{{ .Values.mailpit.image.repository }}:{{ .Values.mailpit.image.tag }}"
+          imagePullPolicy: {{ .Values.mailpit.image.pullPolicy }}
+          env:
+            - name: MP_DATABASE
+              value: /data/mailpit.db
+          ports:
+            - name: smtp
+              containerPort: {{ .Values.mailpit.service.smtpPort }}
+            - name: http
+              containerPort: {{ .Values.mailpit.uiService.targetPort }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.mailpit.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "platform-storage.mailpitName" . }}
+{{- end }}

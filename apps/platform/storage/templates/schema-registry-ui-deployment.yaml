@@ -1,0 +1,44 @@
+{{- if and .Values.kafka.enabled .Values.schemaRegistry.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "platform-storage.schemaRegistryUiName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.schemaRegistryUiLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "platform-storage.schemaRegistryUiLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "platform-storage.labels" . | nindent 8 }}
+        {{- include "platform-storage.schemaRegistryUiLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: schema-registry-ui
+          image: "{{ .Values.schemaRegistry.uiImage.repository }}:{{ .Values.schemaRegistry.uiImage.tag }}"
+          imagePullPolicy: {{ .Values.schemaRegistry.uiImage.pullPolicy }}
+          env:
+            - name: REGISTRY_API_URL
+              value: "https://{{ .Values.schemaRegistry.uiIngress.host }}/apis/registry/v3"
+          ports:
+            - name: http
+              containerPort: {{ .Values.schemaRegistry.uiService.targetPort }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.schemaRegistry.uiResources | nindent 12 }}
+{{- end }}

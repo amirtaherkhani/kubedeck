@@ -1,0 +1,30 @@
+{{- if and .Values.nats.enabled .Values.natsUi.enabled .Values.natsUi.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "platform-storage.natsUiName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.natsUiLabels" . | nindent 4 }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-{{ include "platform-storage.natsUiName" . }}-basic-auth@kubernetescrd
+spec:
+  ingressClassName: {{ .Values.natsUi.ingress.className }}
+  {{- if .Values.natsUi.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.natsUi.ingress.host }}
+      secretName: {{ .Values.natsUi.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.natsUi.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "platform-storage.natsUiName" . }}
+                port:
+                  number: {{ .Values.natsUi.service.port }}
+{{- end }}

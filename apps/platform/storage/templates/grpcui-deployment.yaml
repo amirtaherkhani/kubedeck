@@ -1,0 +1,59 @@
+{{- if .Values.grpcui.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "platform-storage.grpcuiName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.grpcuiLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "platform-storage.grpcuiLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "platform-storage.labels" . | nindent 8 }}
+        {{- include "platform-storage.grpcuiLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: grpcui
+          image: "{{ .Values.grpcui.image.repository }}:{{ .Values.grpcui.image.tag }}"
+          imagePullPolicy: {{ .Values.grpcui.image.pullPolicy }}
+          args:
+            - -connect-fail-fast={{ .Values.grpcui.target.connectFailFast }}
+            {{- if .Values.grpcui.target.plaintext }}
+            - -plaintext
+            {{- end }}
+            - -import-path
+            - /proto
+            - -proto
+            - placeholder.proto
+            - {{ .Values.grpcui.target.address | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.grpcui.service.targetPort }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.grpcui.resources | nindent 12 }}
+          volumeMounts:
+            - name: placeholder-proto
+              mountPath: /proto
+              readOnly: true
+      volumes:
+        - name: placeholder-proto
+          configMap:
+            name: {{ include "platform-storage.grpcuiName" . }}-placeholder-proto
+{{- end }}

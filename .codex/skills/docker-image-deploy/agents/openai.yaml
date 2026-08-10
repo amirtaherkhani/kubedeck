@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docker Image Deploy"
+  short_description: "Build, push, deploy, and prune local registry images safely"
+  default_prompt: "Use $docker-image-deploy to build and deploy this service image to the local registry, verify the rollout, and keep only the newest image version."

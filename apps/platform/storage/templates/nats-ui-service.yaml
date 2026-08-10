@@ -1,0 +1,17 @@
+{{- if and .Values.nats.enabled .Values.natsUi.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "platform-storage.natsUiName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.natsUiLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.natsUi.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.natsUi.service.port }}
+      targetPort: http
+  selector:
+    {{- include "platform-storage.natsUiLabels" . | nindent 4 }}
+{{- end }}

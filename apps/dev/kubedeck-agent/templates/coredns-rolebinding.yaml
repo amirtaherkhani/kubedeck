@@ -1,0 +1,17 @@
+{{- if and .Values.rbac.create .Values.dnsManagement.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "kubedeck-agent.fullname" . }}-coredns
+  namespace: {{ required "dnsManagement.namespace is required" .Values.dnsManagement.namespace }}
+  labels:
+    {{- include "kubedeck-agent.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "kubedeck-agent.fullname" . }}-coredns
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "kubedeck-agent.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -1,0 +1,81 @@
+{{- if .Values.nats.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "platform-storage.natsName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.natsLabels" . | nindent 4 }}
+data:
+  nats-server.conf: |
+    server_name: $POD_NAME
+    port: {{ .Values.nats.service.clientPort }}
+    http_port: {{ .Values.nats.service.monitoringPort }}
+    pid_file: "/var/run/nats/nats-server.pid"
+    lame_duck_duration: {{ .Values.nats.lameDuckDuration | quote }}
+    lame_duck_grace_period: {{ .Values.nats.lameDuckGracePeriod | quote }}
+
+    {{- if .Values.nats.jetstream.enabled }}
+    jetstream {
+      store_dir: {{ .Values.nats.jetstream.storeDir | quote }}
+      max_memory_store: {{ .Values.nats.jetstream.maxMemoryStore }}
+      max_file_store: {{ .Values.nats.jetstream.maxFileStore }}
+      request_queue_limit: {{ .Values.nats.jetstream.requestQueueLimit }}
+      strict: true
+    }
+    {{- end }}
+
+    {{- if .Values.nats.cluster.enabled }}
+    cluster {
+      name: {{ .Values.nats.cluster.name | quote }}
+      listen: "0.0.0.0:{{ .Values.nats.cluster.routePort }}"
+      cluster_advertise: $CLUSTER_ADVERTISE
+      connect_retries: {{ .Values.nats.cluster.connectRetries }}
+      pool_size: {{ .Values.nats.cluster.poolSize }}
+      no_advertise: {{ .Values.nats.cluster.noAdvertise }}
+
+      authorization {
+        user: $NATS_CLUSTER_USERNAME
+        password: $NATS_CLUSTER_PASSWORD
+        timeout: 2
+      }
+
+      routes = [
+        {{- range $index := until (int .Values.nats.replicaCount) }}
+        $NATS_ROUTE_{{ $index }}
+        {{- end }}
+      ]
+    }
+    {{- end }}
+
+    authorization {
+      users = [
+        { user: $NATS_ADMIN_USERNAME, password: $NATS_ADMIN_PASSWORD },
+        { user: $NATS_USERNAME, password: $NATS_PASSWORD },
+        {
+          user: $NATS_FINANCE_USERNAME
+          password: $NATS_FINANCE_PASSWORD
+          permissions: {
+            publish: {
+              allow: [
+                "vv.finance.internal.>",
+                "vv.finance.internal-dlq.>",
+                "$JS.API.INFO",
+                "$JS.API.STREAM.INFO.VV_FINANCE_INTERNAL_EVENTS",
+                "$JS.API.STREAM.INFO.VV_FINANCE_INTERNAL_EVENTS_DLQ",
+                "$JS.API.STREAM.MSG.GET.VV_FINANCE_INTERNAL_EVENTS_DLQ",
+                "$JS.API.CONSUMER.INFO.VV_FINANCE_INTERNAL_EVENTS.*",
+                "$JS.API.CONSUMER.CREATE.VV_FINANCE_INTERNAL_EVENTS.>",
+                "$JS.API.CONSUMER.DURABLE.CREATE.VV_FINANCE_INTERNAL_EVENTS.>",
+                "$JS.API.CONSUMER.MSG.NEXT.VV_FINANCE_INTERNAL_EVENTS.>",
+                "$JS.ACK.VV_FINANCE_INTERNAL_EVENTS.>"
+              ]
+            }
+            subscribe: {
+              allow: ["_INBOX.>"]
+            }
+          }
+        }
+      ]
+    }
+{{- end }}

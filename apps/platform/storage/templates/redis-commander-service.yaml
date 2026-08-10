@@ -1,0 +1,17 @@
+{{- if and .Values.redis.enabled .Values.redisCommander.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "platform-storage.redisCommanderName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.redisCommanderLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.redisCommander.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.redisCommander.service.port }}
+      targetPort: http
+  selector:
+    {{- include "platform-storage.redisCommanderLabels" . | nindent 4 }}
+{{- end }}

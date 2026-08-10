@@ -1,0 +1,10 @@
+KubeDeck is available at:
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+
+The initial administrator is loaded from Secret:
+  {{ .Values.admin.existingSecret }}
+
+KubeDeck stores its local D1 database in:
+  {{ include "kubedeck.fullname" . }}-data

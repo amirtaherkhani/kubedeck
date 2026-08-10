@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k6-tests
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k6-web-dashboard
+  namespace: k6-tests
+spec:
+  selector:
+    app: k6
+    k6_cr: k6-web-dashboard
+    runner: "true"
+  ports:
+    - name: http
+      port: 5665
+      targetPort: 5665
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: k6-web-dashboard
+  namespace: k6-tests
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: k6-live.local.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: k6-web-dashboard
+                port:
+                  name: http
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-web-dashboard-script
+  namespace: k6-tests
+data:
+  test.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+
+    export const options = {
+      vus: 1,
+      // Deliberately small, interactive smoke run for the temporary web UI.
+      duration: '5m',
+      thresholds: {
+        http_req_failed: ['rate<0.05'],
+        http_req_duration: ['p(95)<1000'],
+      },
+    };
+
+    const targetUrl = __ENV.TARGET_URL || 'http://grafana.observability.svc.cluster.local/api/health';
+    const project = __ENV.PROJECT || 'platform-web-dashboard';
+
+    export default function () {
+      const response = http.get(targetUrl, {
+        tags: {
+          project,
+        },
+      });
+
+      check(response, {
+        'status is 200': (r) => r.status === 200,
+      });
+
+      sleep(1);
+    }
+---
+apiVersion: k6.io/v1alpha1
+kind: TestRun
+metadata:
+  name: k6-web-dashboard
+  namespace: k6-tests
+spec:
+  parallelism: 1
+  cleanup: post
+  arguments: "-o experimental-prometheus-rw"
+  ports:
+    - name: web-dashboard
+      containerPort: 5665
+      protocol: TCP
+  script:
+    configMap:
+      name: k6-web-dashboard-script
+      file: test.js
+  runner:
+    env:
+      - name: K6_WEB_DASHBOARD
+        value: "true"
+      - name: K6_WEB_DASHBOARD_HOST
+        value: 0.0.0.0
+      - name: K6_WEB_DASHBOARD_PORT
+        value: "5665"
+      - name: K6_WEB_DASHBOARD_PERIOD
+        value: 5s
+      - name: K6_PROMETHEUS_RW_SERVER_URL
+        value: http://monitoring-kube-prometheus-prometheus.monitoring:9090/api/v1/write
+      - name: K6_PROMETHEUS_RW_TREND_STATS
+        value: p(95),p(99),min,max,avg
+      - name: TARGET_URL
+        value: http://grafana.observability.svc.cluster.local/api/health
+      - name: PROJECT
+        value: platform-web-dashboard

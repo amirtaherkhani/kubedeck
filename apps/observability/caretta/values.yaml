@@ -1,0 +1,19 @@
+enableDnsResolving: true
+pollIntervalSeconds: 5
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 384Mi
+
+victoria-metrics-single:
+  server:
+    fullnameOverride: caretta-vm
+    persistentVolume:
+      enabled: false
+
+grafana:
+  enabled: false

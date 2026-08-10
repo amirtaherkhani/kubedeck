@@ -1,6 +1,7 @@
 # macOS and local tooling
 .DS_Store
 .playwright-mcp/
+.codegraph
 *.log
 *.bak
 

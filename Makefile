@@ -1,0 +1,60 @@
+RELEASE ?= all
+
+.PHONY: core-validate core-apply macos-dns macos-trust-tls infisical-bootstrap infisical-admin-bootstrap helm-inventory helm-repos helm-status helm-validate helm-apply helm-values helm-remove helm-lint nats-ha-test tempo-smoke
+
+core-validate:
+	kubectl apply --dry-run=server -f core/namespaces/namespaces.yaml
+	kubectl apply --dry-run=server -f core/dns/coredns-custom.yaml
+	kubectl apply --dry-run=server -f core/dns/service.yaml
+	kubectl apply --dry-run=server -f core/ingress/tlsstore.yaml
+	kubectl apply --dry-run=server -f core/ingress/legacy-local-dev.yaml
+	kubectl apply --dry-run=server -f core/ingress/traefik-helmchartconfig.yaml
+	kubectl apply --dry-run=server -f core/tls/clusterissuer.yaml
+	kubectl apply --dry-run=server -f core/tls/certificates.yaml
+
+core-apply:
+	./scripts/core-bootstrap.sh
+
+macos-dns:
+	./core/host/macos/configure-local-dev-resolver.sh
+
+macos-trust-tls:
+	./core/host/macos/trust-local-dev-tls.sh
+
+infisical-bootstrap:
+	./scripts/infisical-bootstrap.sh
+
+infisical-admin-bootstrap:
+	./scripts/infisical-admin-bootstrap.sh
+
+helm-inventory:
+	./scripts/platform-helm.sh inventory
+
+helm-repos:
+	./scripts/platform-helm.sh repos
+
+helm-status:
+	./scripts/platform-helm.sh status
+
+helm-validate:
+	./scripts/platform-helm.sh validate "$(RELEASE)"
+
+helm-apply:
+	./scripts/platform-helm.sh apply "$(RELEASE)"
+
+helm-values:
+	@test "$(RELEASE)" != "all" || (echo "Set RELEASE to one managed release." && exit 1)
+	./scripts/platform-helm.sh values "$(RELEASE)"
+
+helm-lint:
+	helm lint apps/dev/kubedeck apps/dev/kubedeck-agent apps/dev/n8n apps/platform/storage apps/observability/grafana
+
+helm-remove:
+	@test "$(RELEASE)" != "all" || (echo "Set RELEASE to one managed release." && exit 1)
+	CONFIRM_UNINSTALL="$(CONFIRM_UNINSTALL)" ./scripts/platform-helm.sh remove "$(RELEASE)"
+
+nats-ha-test:
+	./scripts/test-nats-ha.sh
+
+tempo-smoke:
+	./scripts/tempo-smoke.sh

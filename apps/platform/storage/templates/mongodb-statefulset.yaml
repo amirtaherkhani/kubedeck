@@ -1,0 +1,102 @@
+{{- if .Values.mongodb.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "platform-storage.mongodbName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.mongodbLabels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "platform-storage.mongodbName" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "platform-storage.mongodbLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/mongodb-secret.yaml") . | sha256sum }}
+        checksum/init: {{ include (print $.Template.BasePath "/mongodb-init-configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "platform-storage.labels" . | nindent 8 }}
+        {{- include "platform-storage.mongodbLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: mongodb
+          image: "{{ .Values.mongodb.image.repository }}:{{ .Values.mongodb.image.tag }}"
+          imagePullPolicy: {{ .Values.mongodb.image.pullPolicy }}
+          ports:
+            - name: mongodb
+              containerPort: {{ .Values.mongodb.service.port }}
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "platform-storage.mongodbName" . }}
+                  key: MONGODB_MONGO_INITDB_ROOT_USERNAME
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "platform-storage.mongodbName" . }}
+                  key: MONGODB_MONGO_INITDB_ROOT_PASSWORD
+            - name: MONGO_INITDB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "platform-storage.mongodbName" . }}
+                  key: MONGODB_MONGO_INITDB_DATABASE
+            - name: MONGODB_APP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "platform-storage.mongodbName" . }}
+                  key: MONGODB_APP_USERNAME
+            - name: MONGODB_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "platform-storage.mongodbName" . }}
+                  key: MONGODB_APP_PASSWORD
+            - name: MONGODB_APP_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "platform-storage.mongodbName" . }}
+                  key: MONGODB_APP_DATABASE
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mongosh --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval 'db.adminCommand("ping").ok'
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - mongosh --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval 'db.adminCommand("ping").ok'
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.mongodb.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+      volumes:
+        - name: init
+          configMap:
+            name: {{ include "platform-storage.mongodbName" . }}-init
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: {{ .Values.mongodb.persistence.storageClass | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.mongodb.persistence.size | quote }}
+{{- end }}

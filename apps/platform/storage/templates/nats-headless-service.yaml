@@ -1,0 +1,24 @@
+{{- if and .Values.nats.enabled .Values.nats.cluster.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "platform-storage.natsHeadlessName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.natsLabels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - name: client
+      port: {{ .Values.nats.service.clientPort }}
+      targetPort: client
+    - name: cluster
+      port: {{ .Values.nats.cluster.routePort }}
+      targetPort: cluster
+    - name: monitoring
+      port: {{ .Values.nats.service.monitoringPort }}
+      targetPort: monitoring
+  selector:
+    {{- include "platform-storage.natsLabels" . | nindent 4 }}
+{{- end }}

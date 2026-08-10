@@ -1,0 +1,25 @@
+{{- if and .Values.nats.enabled .Values.nats.prometheusExporter.enabled .Values.nats.prometheusExporter.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "platform-storage.natsMetricsName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- with .Values.nats.prometheusExporter.serviceMonitor.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  jobLabel: app.kubernetes.io/name
+  selector:
+    matchLabels:
+      {{- include "platform-storage.natsMetricsLabels" . | nindent 6 }}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ .Values.nats.prometheusExporter.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.nats.prometheusExporter.serviceMonitor.scrapeTimeout }}
+      relabelings:
+        - sourceLabels:
+            - __meta_kubernetes_pod_name
+          targetLabel: pod
+{{- end }}
