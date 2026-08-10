@@ -39,7 +39,6 @@ done
 
 kubectl apply -f core/ingress/tlsstore.yaml
 kubectl apply -f core/ingress/traefik-helmchartconfig.yaml
-kubectl apply -f core/ingress/legacy-local-dev.yaml
 kubectl rollout status deployment/traefik --namespace kube-system --timeout=180s
 
 echo "Core Rancher, CoreDNS, cert-manager, Traefik, and local HTTPS configuration is ready."
