@@ -19,7 +19,8 @@ scripts/                      safe validation and operation helpers
 - Local domains: `*.local.dev`.
 - Web access: HTTPS through Traefik and `local-dev-tls`.
 - Namespaces: `platform-system`, `platform-storage`, `platform-secrets`,
-  `observability`, `observability-tests`, and `development-tools`.
+  `observability`, `observability-tests`, `vero-vault-finance-load-test`, and
+  `development-tools`.
 - Configuration source: Infisical for secret and non-secret environment values.
 - Telemetry: Prometheus metrics, Alloy/Loki logs, Alloy/Tempo traces, and
   Grafana dashboards where the service supports them.

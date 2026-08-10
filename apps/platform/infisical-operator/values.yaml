@@ -16,6 +16,7 @@ scopedNamespaces:
   - platform-storage
   - observability
   - observability-tests
+  - vero-vault-finance-load-test
   - development-tools
   - ai-tools
 
