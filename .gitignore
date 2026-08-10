@@ -1,0 +1,31 @@
+# macOS and local tooling
+.DS_Store
+.playwright-mcp/
+*.log
+*.bak
+
+# Local environment and credential material
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.kubeconfig
+kubeconfig*
+values.local.yaml
+values.secret.yaml
+secrets.local.yaml
+
+# Generated build and chart artifacts
+node_modules/
+dist/
+coverage/
+__pycache__/
+*.pyc
+*.tgz
+
+# Local debugging evidence
+.debug-journal.md
