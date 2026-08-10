@@ -54,14 +54,14 @@ make helm-apply RELEASE=n8n
 ## Access
 
 ```text
-http://n8n.local.dev
+https://n8n.local.dev
 ```
 
 ## Verify
 
 ```sh
 kubectl get pods,svc,ingress,servicemonitor -n n8n
-curl -fsS http://n8n.local.dev/healthz
-curl -fsS http://n8n.local.dev/healthz/readiness
-curl -fsS http://n8n.local.dev/metrics | head
+curl -fsS https://n8n.local.dev/healthz
+curl -fsS https://n8n.local.dev/healthz/readiness
+curl -fsS https://n8n.local.dev/metrics | head
 ```
