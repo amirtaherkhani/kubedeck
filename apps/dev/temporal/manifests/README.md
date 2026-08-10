@@ -3,7 +3,7 @@
 This deploys the official Temporal Helm chart with:
 
 - Temporal server services in the `temporal` namespace
-- Temporal Web UI exposed at `http://temporal.local.dev`
+- Temporal Web UI exposed at `https://temporal.local.dev`
 - Temporal frontend exposed by LoadBalancer on port `7233`
 - SQL persistence backed by the existing `storage/postgresql` service
 
@@ -69,7 +69,7 @@ temporal.local.dev:7233
 Temporal Web UI:
 
 ```text
-http://temporal.local.dev
+https://temporal.local.dev
 ```
 
 ## Verify
