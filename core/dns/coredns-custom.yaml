@@ -18,15 +18,5 @@ data:
       }
       forward . /etc/resolv.conf
     }
-  legacy-dev-local.server: |
-    dev.local:53 {
-      errors
-      cache 30
-      template IN A dev.local {
-        match ^(([^.]+)\.)+dev\.local\.$
-        answer "{{ .Name }} 30 IN A 192.168.64.14"
-      }
-      forward . /etc/resolv.conf
-    }
   kubedeck.override: |
     # KubeDeck Agent may extend this block with managed service aliases.

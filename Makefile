@@ -7,7 +7,6 @@ core-validate:
 	kubectl apply --dry-run=server -f core/dns/coredns-custom.yaml
 	kubectl apply --dry-run=server -f core/dns/service.yaml
 	kubectl apply --dry-run=server -f core/ingress/tlsstore.yaml
-	kubectl apply --dry-run=server -f core/ingress/legacy-local-dev.yaml
 	kubectl apply --dry-run=server -f core/ingress/traefik-helmchartconfig.yaml
 	kubectl apply --dry-run=server -f core/tls/clusterissuer.yaml
 	kubectl apply --dry-run=server -f core/tls/certificates.yaml

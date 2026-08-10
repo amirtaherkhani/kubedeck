@@ -19,5 +19,5 @@ sudo security add-trusted-cert \
   -k /Library/Keychains/System.keychain \
   "${CERT_FILE}"
 
-echo "macOS now trusts the shared Home Lab CA for *.local.dev and legacy *.dev.local URLs."
+echo "macOS now trusts the shared Home Lab CA for *.local.dev URLs."
 echo "Restart Chrome, Safari, or other browsers to reload the trust store."
