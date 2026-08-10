@@ -19,6 +19,15 @@ This repository manages the local Rancher Desktop Kubernetes home lab.
 13. Every Helm chart and service values file must declare explicit chart metadata and immutable image metadata: chart `version`, `appVersion`, `description`, `home`/`sources` where applicable, recommended Kubernetes labels/annotations, and a non-`latest` image `tag`. Image repository and tag overrides must also be represented in the Infisical configuration for the service.
 14. Deploy services individually in dependency order. Before each release, verify its Infisical-backed Secret/ConfigMap objects exist and are reconciled by the Infisical Secrets Operator; after each release, verify rollout, probes, Service/Ingress, HTTPS, DNS, persistence, and supported metrics/logs/traces.
 
+## Change, merge, version, and deploy workflow
+
+15. Start every repository change on a dedicated branch named `agent/<description>`; do not make change commits directly on `main`.
+16. Before merge, run the relevant validation gates and review the complete diff. Preserve unrelated work and do not merge a branch with failing or missing required checks.
+17. Merge completed branches through the repository's pull-request policy, push the resulting `main`, and remove the merged local and remote branches. Keep the repository's automatic branch deletion after merge enabled.
+18. After a successful merge, create and push an annotated semantic-version tag and a matching GitHub release when the change affects project behavior, infrastructure, deployment configuration, or repository workflow. Use a patch version for compatible maintenance or rule changes.
+19. Deploy again only when the merged change affects rendered Kubernetes resources, Helm values, images, runtime configuration, or service behavior. For documentation-only or repository-rule changes, do not restart workloads; still run repository validation and report that deployment was not required.
+20. For every deployment, verify the `rancher-desktop` context and `Ready` node first, then run Helm lint/template and server-side dry-run, verify Infisical reconciliation, deploy in dependency order, and confirm rollout, probes, Service/Ingress, HTTPS, DNS, persistence, and supported observability.
+
 ## Validation gates
 
 - Render Helm charts with `helm lint` and `helm template`.
