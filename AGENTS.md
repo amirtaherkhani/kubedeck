@@ -27,6 +27,7 @@ This repository manages the local Rancher Desktop Kubernetes home lab.
 18. After a successful merge, create and push an annotated semantic-version tag and a matching GitHub release when the change affects project behavior, infrastructure, deployment configuration, or repository workflow. Use a patch version for compatible maintenance or rule changes.
 19. Deploy again only when the merged change affects rendered Kubernetes resources, Helm values, images, runtime configuration, or service behavior. For documentation-only or repository-rule changes, do not restart workloads; still run repository validation and report that deployment was not required.
 20. For every deployment, verify the `rancher-desktop` context and `Ready` node first, then run Helm lint/template and server-side dry-run, verify Infisical reconciliation, deploy in dependency order, and confirm rollout, probes, Service/Ingress, HTTPS, DNS, persistence, and supported observability.
+21. Deliver every successful change in this order: build and test on the dedicated branch; push the branch and merge it through GitHub; push the merged `main`; create and push the required annotated version from that merged commit; then build the versioned artifact and deploy it to Kubernetes when the change affects runtime resources. Never deploy source that has not passed validation and been pushed to merged `main`.
 
 ## Validation gates
 
