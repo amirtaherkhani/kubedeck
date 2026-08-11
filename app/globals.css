@@ -227,8 +227,7 @@
 
 .kubedeck-logo {
   --logo-edge: oklch(1 0 0 / 0.26);
-  --logo-frame-end: oklch(0.1 0.04 251 / 0.86);
-  --logo-frame-start: oklch(0.28 0.08 244 / 0.62);
+  --logo-frame-fill: oklch(0.16 0.05 251 / 0.94);
   --logo-highlight: oklch(1 0 0 / 0.3);
   --logo-mark-end: oklch(0.61 0.19 254);
   --logo-mark-highlight: oklch(1 0 0 / 0.56);
@@ -243,10 +242,8 @@
   padding: 0.2rem;
   border: 1px solid color-mix(in oklch, var(--logo-edge), transparent 22%);
   border-radius: 0.95rem;
-  background: linear-gradient(145deg, var(--logo-frame-start), var(--logo-frame-end));
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklch, var(--logo-highlight), transparent 18%),
-    0 0.55rem 1.25rem color-mix(in oklch, var(--logo-shadow), transparent 28%);
+  background: var(--logo-frame-fill);
+  box-shadow: 0 0.55rem 1.25rem color-mix(in oklch, var(--logo-shadow), transparent 28%);
 }
 
 .kubedeck-logo svg {
@@ -306,8 +303,7 @@
 
 .kubedeck-logo--light {
   --logo-edge: oklch(0.32 0.06 244 / 0.2);
-  --logo-frame-end: oklch(0.83 0.03 242 / 0.72);
-  --logo-frame-start: oklch(1 0 0 / 0.94);
+  --logo-frame-fill: oklch(0.96 0.02 242 / 0.98);
   --logo-highlight: oklch(1 0 0 / 0.72);
   --logo-mark-end: oklch(0.46 0.17 255);
   --logo-mark-highlight: oklch(1 0 0 / 0.86);
@@ -319,8 +315,7 @@
 
 .kubedeck-logo--clear {
   --logo-edge: oklch(1 0 0 / 0.5);
-  --logo-frame-end: oklch(1 0 0 / 0.1);
-  --logo-frame-start: oklch(1 0 0 / 0.28);
+  --logo-frame-fill: oklch(1 0 0 / 0.16);
   --logo-highlight: oklch(1 0 0 / 0.46);
   --logo-mark-end: oklch(0.7 0.17 252);
   --logo-mark-highlight: oklch(1 0 0 / 0.8);
