@@ -20,6 +20,7 @@ Environment overrides:
   KUBEDECK_AGENT_RELEASE       Agent Helm release (default: kubedeck-agent)
   KUBEDECK_ADMIN_SECRET        Existing dashboard admin Secret
   KUBEDECK_AGENT_AUTH_SECRET   Shared agent token Secret
+  KUBEDECK_AGENT_TOKEN_KEY     Key in the shared agent token Secret (default: token)
   KUBEDECK_VALUES_FILE         Optional dashboard Helm values file
   KUBEDECK_AGENT_VALUES_FILE   Optional agent Helm values file
   KUBEDECK_AGENT_URL           In-cluster agent URL
@@ -90,6 +91,7 @@ app_release="${KUBEDECK_APP_RELEASE:-kubedeck}"
 agent_release="${KUBEDECK_AGENT_RELEASE:-kubedeck-agent}"
 admin_secret="${KUBEDECK_ADMIN_SECRET:-kubedeck-admin}"
 agent_auth_secret="${KUBEDECK_AGENT_AUTH_SECRET:-kubedeck-agent-auth}"
+agent_token_key="${KUBEDECK_AGENT_TOKEN_KEY:-token}"
 helm_timeout="${KUBEDECK_HELM_TIMEOUT:-10m}"
 target_platform="${KUBEDECK_TARGET_PLATFORM:-}"
 app_values_file="${KUBEDECK_VALUES_FILE:-}"
@@ -295,12 +297,12 @@ if kubectl --context "$context" --namespace "$namespace" get secret "$agent_auth
     kubectl --context "$context" --namespace "$namespace" get secret "$agent_auth_secret" \
       -o go-template='{{range $key, $value := .data}}{{$key}}{{"\n"}}{{end}}'
   )"
-  printf '%s\n' "$agent_keys" | grep -Fxq token ||
-    die "Agent auth Secret '$namespace/$agent_auth_secret' is missing key 'token'"
+  printf '%s\n' "$agent_keys" | grep -Fxq "$agent_token_key" ||
+    die "Agent auth Secret '$namespace/$agent_auth_secret' is missing key '$agent_token_key'"
 else
   agent_token="$(openssl rand -hex 32)"
   kubectl --context "$context" --namespace "$namespace" create secret generic "$agent_auth_secret" \
-    --from-literal="token=${agent_token}" >/dev/null
+    --from-literal="${agent_token_key}=${agent_token}" >/dev/null
   unset agent_token
   agent_secret_action="created"
 fi
@@ -367,6 +369,7 @@ helm "${agent_helm_command[@]}" \
   --set-string "image.repository=${agent_repository}" \
   --set-string "image.tag=${image_tag}" \
   --set-string "auth.existingSecret=${agent_auth_secret}" \
+  --set-string "auth.tokenKey=${agent_token_key}" \
   "$helm_failure_flag" \
   --wait \
   --timeout "$helm_timeout"
@@ -378,6 +381,7 @@ helm "${app_helm_command[@]}" \
   --set-string "admin.existingSecret=${admin_secret}" \
   --set-string "agent.url=${agent_url}" \
   --set-string "agent.existingSecret=${agent_auth_secret}" \
+  --set-string "agent.tokenKey=${agent_token_key}" \
   "$helm_failure_flag" \
   --wait \
   --timeout "$helm_timeout"
