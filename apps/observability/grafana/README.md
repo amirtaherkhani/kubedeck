@@ -14,5 +14,9 @@ Primary home-lab observability UI.
 Dashboard ConfigMaps are discovered across namespaces using the Grafana sidecar.
 Stable datasource UIDs are `prometheus`, `loki`, `tempo`, and `alertmanager`.
 
+The Platform / Observability dashboard limits its Kubernetes log pod filter to
+pods currently reported by Prometheus as `Running`; Loki history is retained
+for the configured backend retention period.
+
 The local Grafana admin credential is stored in Infisical/Kubernetes Secret and
 must never be committed to this repository.

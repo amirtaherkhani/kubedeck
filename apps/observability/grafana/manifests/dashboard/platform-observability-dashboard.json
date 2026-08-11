@@ -539,7 +539,7 @@
           },
           "direction": "backward",
           "editorMode": "code",
-          "expr": "{namespace=~\"$namespace\"}",
+          "expr": "{namespace=~\"$namespace\", pod=~\"$pod\"}",
           "queryType": "range",
           "refId": "A"
         }
@@ -633,7 +633,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum by (namespace) (count_over_time({namespace=~\"$namespace\"}[$__interval]))",
+          "expr": "sum by (namespace) (count_over_time({namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval]))",
           "legendFormat": "{{namespace}}",
           "queryType": "range",
           "refId": "A"
@@ -708,6 +708,34 @@
         },
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "query_result(kube_pod_status_phase{namespace=~\"$namespace\", phase=\"Running\"} == 1)",
+        "description": "Filter logs to pods currently in the Kubernetes Running phase.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Running pod",
+        "multi": true,
+        "name": "pod",
+        "options": [],
+        "query": {
+          "query": "query_result(kube_pod_status_phase{namespace=~\"$namespace\", phase=\"Running\"} == 1)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "/pod=\\\"([^\\\"]+)\\\"/",
         "skipUrlSync": false,
         "sort": 1,
         "type": "query"
