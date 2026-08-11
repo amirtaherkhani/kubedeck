@@ -4,6 +4,7 @@ RELEASE ?= all
 
 core-validate:
 	kubectl apply --dry-run=server -f core/namespaces/namespaces.yaml
+	kubectl apply --dry-run=server -f core/nodes/inotify-capacity.yaml
 	kubectl apply --dry-run=server -f core/dns/coredns-custom.yaml
 	kubectl apply --dry-run=server -f core/dns/service.yaml
 	kubectl apply --dry-run=server -f core/ingress/tlsstore.yaml
