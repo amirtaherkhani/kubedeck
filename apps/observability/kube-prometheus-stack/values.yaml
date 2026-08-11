@@ -4,6 +4,7 @@ prometheus:
       registry: docker.io
       repository: prom/prometheus
       tag: "v3.13.1"
+    retention: 10d
     # Required for k6's experimental-prometheus-rw output.
     enableRemoteWriteReceiver: true
     # Port 9100 is Rancher Desktop's Linux VM exporter. This target is the
