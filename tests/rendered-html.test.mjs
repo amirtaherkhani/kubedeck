@@ -168,7 +168,26 @@ function createAgentSnapshot() {
         unschedulable: false,
       },
     ],
-    pods: [],
+    pods: [
+      {
+        uid: "pod-payments",
+        namespace: "apps",
+        name: "payments-api-abc123",
+        nodeName: "live-node-01",
+        phase: "Running",
+        status: "ready",
+        ready: true,
+        restarts: 0,
+        createdAt: "2026-07-31T11:00:00Z",
+        containers: [],
+        usage: {
+          cpuMilli: 20,
+          memoryBytes: 134217728,
+          metricsAvailable: true,
+        },
+        labels: { app: "payments-api" },
+      },
+    ],
     workloads: [],
     services: [
       {
@@ -182,6 +201,7 @@ function createAgentSnapshot() {
         clusterIP: "10.43.1.20",
         externalIPs: [],
         externalURLs: ["https://payments.example.test/"],
+        selector: { app: "payments-api" },
         ports: [
           {
             name: "http",
@@ -228,7 +248,27 @@ function createAgentSnapshot() {
         uptimeSeconds: 1800,
       },
     ],
-    ingresses: [],
+    ingresses: [
+      {
+        uid: "ingress-payments",
+        namespace: "apps",
+        name: "payments-api",
+        className: "traefik",
+        routes: [
+          {
+            host: "payments.example.test",
+            path: "/",
+            pathType: "Prefix",
+            serviceName: "payments-api",
+            servicePort: "http",
+            url: "https://payments.example.test/",
+          },
+        ],
+        tlsHosts: ["payments.example.test"],
+        addresses: ["10.0.0.10"],
+        createdAt: "2026-07-31T11:00:00Z",
+      },
+    ],
     volumes: [],
     events: [],
   };
@@ -614,6 +654,10 @@ test("proxies authenticated cluster snapshots and SSE without exposing the agent
   const dnsHtml = await dns.text();
   assert.match(dnsHtml, /CoreDNS ready/);
   assert.match(dnsHtml, /1\/1 endpoints ready/);
+  assert.match(dnsHtml, /Ingress reach by node/);
+  assert.match(dnsHtml, /Ingress totals per Kubernetes node/);
+  assert.match(dnsHtml, /payments\.example\.test/);
+  assert.match(dnsHtml, /1 total ingresses/);
 
   const catalog = await runtime.request(
     "/dashboard/catalog/web-applications",

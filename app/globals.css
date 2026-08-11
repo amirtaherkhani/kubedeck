@@ -417,6 +417,7 @@
 .resource-meter,
 .stat-strip,
 .dns-panel,
+.dns-ingress-card,
 .sticky-toolbar,
 .resource-card,
 [data-slot="dialog-content"],
@@ -2849,6 +2850,100 @@
   grid-column: 1 / -1;
 }
 
+.dns-ingress-card {
+  margin-top: 1rem;
+  scroll-margin-top: 7rem;
+}
+
+.dns-ingress-card [data-slot="card-description"] {
+  max-width: 48rem;
+  margin-top: 0.25rem;
+  line-height: 1.55;
+}
+
+.dns-ingress-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  background: var(--border);
+}
+
+.dns-ingress-summary > div {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  background: color-mix(in oklch, var(--background), transparent 12%);
+}
+
+.dns-ingress-summary dt {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dns-ingress-summary dd {
+  color: var(--foreground);
+  font-size: 1rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.dns-ingress-card [data-slot="table-head"] {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ingress-node-identity,
+.ingress-host-cell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.ingress-node-identity > span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ingress-node-identity strong {
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.ingress-node-identity small,
+.ingress-host-cell small {
+  max-width: 17rem;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ingress-host-cell {
+  min-width: 12rem;
+  white-space: normal;
+}
+
+.dns-ingress-empty {
+  min-height: 12rem;
+  border: 1px dashed var(--border);
+  background: color-mix(in oklch, var(--muted), transparent 72%);
+}
+
 .category-index {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -3809,6 +3904,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .dns-ingress-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .dashboard-wordmark {
     display: none;
   }
@@ -3952,6 +4051,21 @@
 
   .dns-facts .dns-search-path {
     grid-column: auto;
+  }
+
+  .dns-ingress-card [data-slot="card-header"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dns-ingress-card [data-slot="card-action"] {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+    margin-top: 0.5rem;
+  }
+
+  .dns-ingress-summary {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .category-index {

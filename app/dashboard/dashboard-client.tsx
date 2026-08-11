@@ -132,6 +132,7 @@ import {
 } from "@/lib/kubedeck-monitoring"
 import {
   buildLiveNodes,
+  buildNodeIngressSummaries,
   buildResourceTrend,
   formatDuration,
   humanize,
@@ -2004,6 +2005,31 @@ export default function DashboardClient({
   const nodeResources = snapshot
     ? buildLiveNodeResources(snapshot)
     : fallbackNodeResources
+  const nodeIngressSummaries = React.useMemo(
+    () => (snapshot ? buildNodeIngressSummaries(snapshot) : []),
+    [snapshot]
+  )
+  const ingressOverview = React.useMemo(() => {
+    if (!snapshot) {
+      return { ingresses: 0, routes: 0, hosts: 0, servingNodes: 0 }
+    }
+
+    return {
+      ingresses: snapshot.ingresses.length,
+      routes: snapshot.ingresses.reduce(
+        (total, ingress) => total + ingress.routes.length,
+        0
+      ),
+      hosts: new Set(
+        snapshot.ingresses.flatMap((ingress) =>
+          ingress.routes.map((route) => route.host).filter(Boolean)
+        )
+      ).size,
+      servingNodes: nodeIngressSummaries.filter(
+        (node) => node.ingressCount > 0
+      ).length,
+    }
+  }, [nodeIngressSummaries, snapshot])
   const clusterDomain = snapshot?.dns.clusterDomain || fallbackClusterDomain
   const capturedAt = snapshot
     ? formatUtcTimestamp(snapshot.generatedAt)
@@ -2462,73 +2488,227 @@ export default function DashboardClient({
           ) : null}
 
           {view === "dns" ? (
-            <section className="dns-panel" aria-labelledby="dns-title">
-          <div className="dns-intro">
-            <span className="resource-icon" aria-hidden="true">
-              <ServerCogIcon />
-            </span>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 id="dns-title" className="text-lg font-semibold">
-                  Cluster DNS profile
-                </h2>
-                <Badge variant={snapshot?.dns.ready ? "secondary" : "outline"}>
-                  {snapshot
-                    ? snapshot.dns.ready
-                      ? `${snapshot.dns.provider} ready`
-                      : `${snapshot.dns.provider} needs attention`
-                    : "CoreDNS preview"}
-                </Badge>
-              </div>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Resolver and search domains for the active cluster scope.
-              </p>
-            </div>
-          </div>
-          <div className="dns-facts">
-            <div>
-              <span>DNS service</span>
-              <strong className="font-mono">
-                {snapshot?.dns.serviceDNS ||
-                  "kube-dns.kube-system.svc.cluster.local"}
-              </strong>
-              <small>
-                {snapshot
-                  ? `${snapshot.dns.provider} · ${snapshot.dns.readyEndpoints ?? 0}/${snapshot.dns.totalEndpoints ?? 0} endpoints ready`
-                  : "CoreDNS · preview"}
-              </small>
-            </div>
-            <div>
-              <span>DNS Service IP</span>
-              <strong className="font-mono">
-                {snapshot?.dns.serviceIP || "10.43.0.10"}
-              </strong>
-              <small>
-                {(snapshot?.dns.ports || []).length > 0
-                  ? snapshot?.dns.ports
-                      .map((port) => `${port.port} ${port.protocol}`)
-                      .join(" · ")
-                  : "53 UDP/TCP · metrics 9153"}
-              </small>
-            </div>
-            <div>
-              <span>Base domain</span>
-              <strong className="font-mono">{clusterDomain}</strong>
-              <small>Reported by kubedeck-agent</small>
-            </div>
-            <div className="dns-search-path">
-              <span>Pod search path</span>
-              <strong className="font-mono">
-                {(snapshot?.dns.searchPath || [
-                  `<namespace>.svc.${clusterDomain}`,
-                  `svc.${clusterDomain}`,
-                  clusterDomain,
-                ]).join(" → ")}
-              </strong>
-              <small>Active Kubernetes resolver search path</small>
-            </div>
-          </div>
-            </section>
+            <>
+              <section className="dns-panel" aria-labelledby="dns-title">
+                <div className="dns-intro">
+                  <span className="resource-icon" aria-hidden="true">
+                    <ServerCogIcon />
+                  </span>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 id="dns-title" className="text-lg font-semibold">
+                        Cluster DNS profile
+                      </h2>
+                      <Badge
+                        variant={snapshot?.dns.ready ? "secondary" : "outline"}
+                      >
+                        {snapshot
+                          ? snapshot.dns.ready
+                            ? `${snapshot.dns.provider} ready`
+                            : `${snapshot.dns.provider} needs attention`
+                          : "CoreDNS preview"}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      Resolver and search domains for the active cluster scope.
+                    </p>
+                  </div>
+                </div>
+                <div className="dns-facts">
+                  <div>
+                    <span>DNS service</span>
+                    <strong className="font-mono">
+                      {snapshot?.dns.serviceDNS ||
+                        "kube-dns.kube-system.svc.cluster.local"}
+                    </strong>
+                    <small>
+                      {snapshot
+                        ? `${snapshot.dns.provider} · ${snapshot.dns.readyEndpoints ?? 0}/${snapshot.dns.totalEndpoints ?? 0} endpoints ready`
+                        : "CoreDNS · preview"}
+                    </small>
+                  </div>
+                  <div>
+                    <span>DNS Service IP</span>
+                    <strong className="font-mono">
+                      {snapshot?.dns.serviceIP || "10.43.0.10"}
+                    </strong>
+                    <small>
+                      {(snapshot?.dns.ports || []).length > 0
+                        ? snapshot?.dns.ports
+                            .map((port) => `${port.port} ${port.protocol}`)
+                            .join(" · ")
+                        : "53 UDP/TCP · metrics 9153"}
+                    </small>
+                  </div>
+                  <div>
+                    <span>Base domain</span>
+                    <strong className="font-mono">{clusterDomain}</strong>
+                    <small>Reported by kubedeck-agent</small>
+                  </div>
+                  <div className="dns-search-path">
+                    <span>Pod search path</span>
+                    <strong className="font-mono">
+                      {(snapshot?.dns.searchPath || [
+                        `<namespace>.svc.${clusterDomain}`,
+                        `svc.${clusterDomain}`,
+                        clusterDomain,
+                      ]).join(" → ")}
+                    </strong>
+                    <small>Active Kubernetes resolver search path</small>
+                  </div>
+                </div>
+              </section>
+
+              <Card className="dns-ingress-card" aria-labelledby="dns-ingress-title">
+                <CardHeader>
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="resource-icon" aria-hidden="true">
+                      <GitBranchIcon />
+                    </span>
+                    <div className="min-w-0">
+                      <CardTitle id="dns-ingress-title">
+                        Ingress reach by node
+                      </CardTitle>
+                      <CardDescription>
+                        Ingress resources mapped through Service selectors to
+                        the backend pods scheduled on each node.
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <CardAction>
+                    <Badge variant={snapshot ? "secondary" : "outline"}>
+                      {snapshot
+                        ? `${ingressOverview.ingresses} total ingresses`
+                        : "Live data required"}
+                    </Badge>
+                  </CardAction>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  {snapshot ? (
+                    <>
+                      <dl
+                        className="dns-ingress-summary"
+                        aria-label="Cluster ingress totals"
+                      >
+                        <div>
+                          <dt>Ingresses</dt>
+                          <dd>{ingressOverview.ingresses}</dd>
+                        </div>
+                        <div>
+                          <dt>Routes</dt>
+                          <dd>{ingressOverview.routes}</dd>
+                        </div>
+                        <div>
+                          <dt>DNS hosts</dt>
+                          <dd>{ingressOverview.hosts}</dd>
+                        </div>
+                        <div>
+                          <dt>Serving nodes</dt>
+                          <dd>
+                            {ingressOverview.servingNodes} / {snapshot.nodes.length}
+                          </dd>
+                        </div>
+                      </dl>
+
+                      {snapshot.ingresses.length > 0 ? (
+                        <Table aria-label="Ingress totals per Kubernetes node">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Node</TableHead>
+                              <TableHead>Ingresses</TableHead>
+                              <TableHead>Routes</TableHead>
+                              <TableHead>DNS hosts</TableHead>
+                              <TableHead>Backend services</TableHead>
+                              <TableHead>Ready backend pods</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {nodeIngressSummaries.map((node) => (
+                              <TableRow key={node.name}>
+                                <TableCell>
+                                  <div className="ingress-node-identity">
+                                    <span>
+                                      <strong>{node.name}</strong>
+                                      <Badge
+                                        variant={node.ready ? "secondary" : "outline"}
+                                      >
+                                        {node.ready ? "Ready" : "Attention"}
+                                      </Badge>
+                                    </span>
+                                    <small>{humanize(node.role)}</small>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="tabular-nums">
+                                  {node.ingressCount}
+                                </TableCell>
+                                <TableCell className="tabular-nums">
+                                  {node.routeCount}
+                                </TableCell>
+                                <TableCell className="ingress-host-cell">
+                                  <strong className="tabular-nums">
+                                    {node.hosts.length}
+                                  </strong>
+                                  <small title={node.hosts.join(", ")}>
+                                    {node.hosts.length > 0
+                                      ? node.hosts.slice(0, 2).join(" · ")
+                                      : "No routed hosts"}
+                                  </small>
+                                </TableCell>
+                                <TableCell className="tabular-nums">
+                                  {node.serviceCount}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      node.totalBackendPods > 0 &&
+                                      node.readyBackendPods === node.totalBackendPods
+                                        ? "secondary"
+                                        : "outline"
+                                    }
+                                  >
+                                    {node.readyBackendPods} / {node.totalBackendPods}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                          <TableCaption>
+                            An ingress can appear on more than one node when its
+                            selected backend pods are distributed across nodes.
+                          </TableCaption>
+                        </Table>
+                      ) : (
+                        <Empty className="dns-ingress-empty">
+                          <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                              <Globe2Icon />
+                            </EmptyMedia>
+                            <EmptyTitle>No ingress routes discovered</EmptyTitle>
+                            <EmptyDescription>
+                              The agent is live, but this cluster has no Ingress
+                              resources to map to nodes.
+                            </EmptyDescription>
+                          </EmptyHeader>
+                        </Empty>
+                      )}
+                    </>
+                  ) : (
+                    <Empty className="dns-ingress-empty">
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <NetworkIcon />
+                        </EmptyMedia>
+                        <EmptyTitle>Live ingress placement unavailable</EmptyTitle>
+                        <EmptyDescription>
+                          Connect kubedeck-agent to calculate per-node ingress
+                          reach from live Services and pods.
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
+                  )}
+                </CardContent>
+              </Card>
+            </>
           ) : null}
 
           {view === "catalog" ? (

@@ -4,6 +4,7 @@ import test from "node:test"
 import {
   appendSnapshotHistory,
   buildLiveNodes,
+  buildNodeIngressSummaries,
   buildResourceTrend,
   formatDuration,
   humanize,
@@ -157,6 +158,115 @@ test("validates the complete top-level agent snapshot contract", () => {
   assert.throws(
     () => parseClusterSnapshot({ schemaVersion: "kubedeck.io/v1alpha1" }),
     /cluster identity/
+  )
+})
+
+test("maps ingress routes to the nodes running their selected backend pods", () => {
+  const live = snapshot()
+  live.pods = [
+    {
+      uid: "pod-control-plane",
+      namespace: "apps",
+      name: "api-control-plane",
+      nodeName: "control-plane-01",
+      phase: "Running",
+      status: "ready",
+      ready: true,
+      restarts: 0,
+      createdAt: live.generatedAt,
+      containers: [],
+      usage: { cpuMilli: 0, memoryBytes: 0, metricsAvailable: false },
+      labels: { app: "api" },
+    },
+    {
+      uid: "pod-worker",
+      namespace: "apps",
+      name: "api-worker",
+      nodeName: "worker-pressure",
+      phase: "Running",
+      status: "attention",
+      ready: false,
+      restarts: 1,
+      createdAt: live.generatedAt,
+      containers: [],
+      usage: { cpuMilli: 0, memoryBytes: 0, metricsAvailable: false },
+      labels: { app: "api" },
+    },
+  ]
+  live.services = [
+    {
+      uid: "service-api",
+      namespace: "apps",
+      name: "api",
+      category: "web-applications",
+      type: "ClusterIP",
+      status: "ready",
+      clusterDNS: "api.apps.svc.cluster.local",
+      externalIPs: [],
+      externalURLs: ["https://api.example.test"],
+      ports: [{ protocol: "TCP", port: 80 }],
+      selector: { app: "api" },
+      readyEndpoints: 1,
+      totalEndpoints: 2,
+      readyPods: 1,
+      totalPods: 2,
+      workloads: [],
+      uptimeSeconds: 3600,
+    },
+  ]
+  live.ingresses = [
+    {
+      uid: "ingress-api",
+      namespace: "apps",
+      name: "api",
+      routes: [
+        {
+          host: "api.example.test",
+          path: "/",
+          serviceName: "api",
+          servicePort: "80",
+        },
+        {
+          host: "api.internal.test",
+          path: "/internal",
+          serviceName: "api",
+          servicePort: "80",
+        },
+      ],
+      createdAt: live.generatedAt,
+    },
+  ]
+
+  assert.deepEqual(
+    buildNodeIngressSummaries(live).map((node) => ({
+      name: node.name,
+      ingressCount: node.ingressCount,
+      routeCount: node.routeCount,
+      serviceCount: node.serviceCount,
+      readyBackendPods: node.readyBackendPods,
+      totalBackendPods: node.totalBackendPods,
+      hosts: node.hosts,
+    })),
+    [
+      {
+        name: "control-plane-01",
+        ingressCount: 1,
+        routeCount: 2,
+        serviceCount: 1,
+        readyBackendPods: 1,
+        totalBackendPods: 1,
+        hosts: ["api.example.test", "api.internal.test"],
+      },
+      {
+        name: "worker-pressure",
+        ingressCount: 1,
+        routeCount: 2,
+        serviceCount: 1,
+        readyBackendPods: 0,
+        totalBackendPods: 1,
+        hosts: ["api.example.test", "api.internal.test"],
+      },
+    ]
   )
 })
 

@@ -259,6 +259,18 @@ export type LiveNodeView = {
   metricsAvailable: boolean
 }
 
+export type NodeIngressSummary = {
+  name: string
+  role: string
+  ready: boolean
+  ingressCount: number
+  routeCount: number
+  serviceCount: number
+  readyBackendPods: number
+  totalBackendPods: number
+  hosts: string[]
+}
+
 export type ResourceTrendPoint = {
   time: string
   cpu: number
@@ -376,6 +388,82 @@ export function buildLiveNodes(
         ? "Unschedulable"
         : humanize(pressure?.reason || pressure?.type || node.status),
       metricsAvailable: node.usage.metricsAvailable,
+    }
+  })
+}
+
+export function buildNodeIngressSummaries(
+  snapshot: ClusterSnapshot
+): NodeIngressSummary[] {
+  const summaries = new Map(
+    snapshot.nodes.map((node) => [
+      node.name,
+      {
+        name: node.name,
+        role: node.role,
+        ready: node.ready,
+        ingressIds: new Set<string>(),
+        routeIds: new Set<string>(),
+        serviceIds: new Set<string>(),
+        backendPodIds: new Set<string>(),
+        readyBackendPodIds: new Set<string>(),
+        hosts: new Set<string>(),
+      },
+    ])
+  )
+  const services = new Map(
+    snapshot.services.map((service) => [
+      `${service.namespace}/${service.name}`,
+      service,
+    ])
+  )
+
+  for (const ingress of snapshot.ingresses) {
+    const ingressId =
+      ingress.uid || `${ingress.namespace}/${ingress.name}`
+
+    ingress.routes.forEach((route, routeIndex) => {
+      const service = services.get(
+        `${ingress.namespace}/${route.serviceName}`
+      )
+      const selector = Object.entries(service?.selector ?? {})
+      if (!service || selector.length === 0) return
+
+      const backendPods = snapshot.pods.filter(
+        (pod) =>
+          pod.namespace === service.namespace &&
+          Boolean(pod.nodeName) &&
+          selector.every(([key, value]) => pod.labels?.[key] === value)
+      )
+      const routeId = `${ingressId}/${routeIndex}`
+      const serviceId = `${service.namespace}/${service.name}`
+
+      for (const pod of backendPods) {
+        const summary = pod.nodeName ? summaries.get(pod.nodeName) : undefined
+        if (!summary) continue
+
+        summary.ingressIds.add(ingressId)
+        summary.routeIds.add(routeId)
+        summary.serviceIds.add(serviceId)
+        summary.backendPodIds.add(pod.uid)
+        if (pod.ready) summary.readyBackendPodIds.add(pod.uid)
+        if (route.host) summary.hosts.add(route.host)
+      }
+    })
+  }
+
+  return snapshot.nodes.map((node) => {
+    const summary = summaries.get(node.name)!
+    return {
+      name: summary.name,
+      role: summary.role,
+      ready: summary.ready,
+      ingressCount: summary.ingressIds.size,
+      routeCount: summary.routeIds.size,
+      serviceCount: summary.serviceIds.size,
+      readyBackendPods: summary.readyBackendPodIds.size,
+      totalBackendPods: summary.backendPodIds.size,
+      hosts: [...summary.hosts].sort(),
     }
   })
 }
