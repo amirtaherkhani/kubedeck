@@ -65,6 +65,15 @@ agent:
   existingSecret: ""
   tokenKey: token
 
+infisical:
+  enabled: false
+  hostAPI: http://infisical-backend.platform-secrets.svc.cluster.local:8080/api
+  credentialsSecretName: infisical-universal-auth
+  credentialsSecretNamespace: platform-secrets
+  projectSlug: home-lab
+  envSlug: local
+  secretsPath: /apps/development-tools/kubedeck
+
 persistence:
   enabled: true
   storageClass: ""

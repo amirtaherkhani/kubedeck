@@ -21,6 +21,7 @@ Environment overrides:
   KUBEDECK_ADMIN_SECRET        Existing dashboard admin Secret
   KUBEDECK_AGENT_AUTH_SECRET   Shared agent token Secret
   KUBEDECK_AGENT_TOKEN_KEY     Key in the shared agent token Secret (default: token)
+  KUBEDECK_INFISICAL_ENABLED   Render InfisicalSecret resources (default: false)
   KUBEDECK_VALUES_FILE         Optional dashboard Helm values file
   KUBEDECK_AGENT_VALUES_FILE   Optional agent Helm values file
   KUBEDECK_AGENT_URL           In-cluster agent URL
@@ -92,6 +93,7 @@ agent_release="${KUBEDECK_AGENT_RELEASE:-kubedeck-agent}"
 admin_secret="${KUBEDECK_ADMIN_SECRET:-kubedeck-admin}"
 agent_auth_secret="${KUBEDECK_AGENT_AUTH_SECRET:-kubedeck-agent-auth}"
 agent_token_key="${KUBEDECK_AGENT_TOKEN_KEY:-token}"
+infisical_enabled="${KUBEDECK_INFISICAL_ENABLED:-false}"
 helm_timeout="${KUBEDECK_HELM_TIMEOUT:-10m}"
 target_platform="${KUBEDECK_TARGET_PLATFORM:-}"
 app_values_file="${KUBEDECK_VALUES_FILE:-}"
@@ -362,6 +364,10 @@ if [[ -n "$app_values_file" ]]; then
 fi
 if [[ -n "$agent_values_file" ]]; then
   agent_helm_command+=(-f "$agent_values_file")
+fi
+if [[ "$infisical_enabled" == "true" ]]; then
+  app_helm_command+=(--set-string "infisical.enabled=true")
+  agent_helm_command+=(--set-string "infisical.enabled=true")
 fi
 
 log "Deploying $agent_release"
