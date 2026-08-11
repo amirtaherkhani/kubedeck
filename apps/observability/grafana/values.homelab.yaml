@@ -18,6 +18,8 @@ testFramework:
 plugins:
   - camptocamp-prometheus-alertmanager-datasource@2.3.1
 
+shadowBundledPlugins: true
+
 service:
   enabled: true
   type: ClusterIP
