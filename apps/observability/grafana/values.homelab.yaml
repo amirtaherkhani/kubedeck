@@ -15,11 +15,6 @@ enableServiceLinks: false
 testFramework:
   enabled: false
 
-plugins:
-  - camptocamp-prometheus-alertmanager-datasource@2.3.1
-
-shadowBundledPlugins: true
-
 service:
   enabled: true
   type: ClusterIP
@@ -125,8 +120,6 @@ datasources:
         orgId: 1
       - name: Tempo
         orgId: 1
-      - name: Alertmanager
-        orgId: 1
     datasources:
       - name: Prometheus
         uid: prometheus
@@ -181,16 +174,6 @@ datasources:
                 value: namespace
               - key: k8s.pod.name
                 value: pod
-
-      - name: Alertmanager
-        uid: alertmanager
-        type: alertmanager
-        access: proxy
-        url: http://monitoring-kube-prometheus-alertmanager.observability.svc.cluster.local:9093
-        editable: false
-        jsonData:
-          implementation: prometheus
-          handleGrafanaManagedAlerts: false
 
 sidecar:
   image:
