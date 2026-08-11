@@ -887,7 +887,8 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(bannerComponent, /liveGraph/);
   assert.match(bannerComponent, /kubedeck-live-link/);
   assert.match(bannerComponent, /kubedeck-live-beacon/);
-  assert.match(logoComponent, /src="\/brand\/kubedeck-mark\.svg"/);
+  assert.match(logoComponent, /KubeDeckLogoVariant = "light" \| "dark" \| "clear"/);
+  assert.match(logoComponent, /data-logo-variant=\{variant\}/);
   assert.match(notificationsComponent, /Services and Kubernetes nodes/);
   assert.match(notificationsComponent, /kubedeck-notify-services/);
   assert.match(notificationsComponent, /kubedeck-notify-nodes/);
@@ -967,7 +968,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
   );
   assert.equal(bannerImage.readUInt32BE(16), 2172);
   assert.equal(bannerImage.readUInt32BE(20), 724);
-  assert.match(logoSvg, /<title id="title">KubeDeck KB logo<\/title>/);
+  assert.match(logoSvg, /<title id="title">KubeDeck Liquid Glass logo<\/title>/);
   assert.match(logoSvg, /fill-rule="evenodd"/);
   assert.match(logoSvg, /linearGradient id="monogram"/);
   for (const [asset, size] of [
