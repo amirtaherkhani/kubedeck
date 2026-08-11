@@ -13,11 +13,22 @@ This repository manages the local Rancher Desktop Kubernetes home lab.
 7. Enable observability for every supported service: Prometheus metrics, ServiceMonitor, Alloy/Loki logs, Alloy/Tempo traces, health probes, Grafana datasource configuration, dashboards, and alerts where supported.
 8. Add Kubernetes recommended labels and annotations to generated resources. Pin chart versions and image tags; do not use `latest`.
 9. Every service directory has a concise `README.md` covering purpose, ownership, namespace, source/image, domain, HTTPS, UI, ports, storage, dependencies, configuration, observability, deployment, and verification.
-10. Use the repository-local `$docker-image-deploy` skill for custom images; keep one verified current version per local registry repository.
+10. Use the repository-local `$docker-image-deploy` skill for custom images; keep one verified current version per local registry repository. Rancher Desktop `nerdctl`/containerd is the primary build path. Docker CLI is optional and must not block deployment when the image is verified in the local registry and Kubernetes runtime checks pass.
 11. Personal/company applications remain in their own repositories. This repository provides orchestration references and deployment configuration only.
 12. When a service or web UI requires an administrator account, use the standard local identity: username `admin`, first name `admin`, family name `admin`, and email `admin@local.dev`. The administrator password is always generated or supplied through Infisical and must never be committed to Git or embedded in Helm values.
 13. Every Helm chart and service values file must declare explicit chart metadata and immutable image metadata: chart `version`, `appVersion`, `description`, `home`/`sources` where applicable, recommended Kubernetes labels/annotations, and a non-`latest` image `tag`. Image repository and tag overrides must also be represented in the Infisical configuration for the service.
 14. Deploy services individually in dependency order. Before each release, verify its Infisical-backed Secret/ConfigMap objects exist and are reconciled by the Infisical Secrets Operator; after each release, verify rollout, probes, Service/Ingress, HTTPS, DNS, persistence, and supported metrics/logs/traces.
+
+## Infisical ownership and external-project access
+
+- `my-home-lab` administers the Infisical organization and projects: project creation, environment/folder layout, machine identities, roles, audit, and revocation. It is not an application's runtime identity.
+- Every external project gets its own Infisical project and Universal Auth machine identity per agent or workload. Never reuse administrator, Finance, home-lab, or another project's credentials.
+- Humans use named Infisical accounts. AI agents and automation use project-scoped machine identities with short-lived tokens. Do not give agents organization-admin access or give humans shared machine credentials.
+- Use `viewer` for read-only agents, `member` for agents that must add/edit/delete project secrets, and `admin` only for a designated project owner.
+- Use stable project scopes and uppercase service-prefixed keys. For example, `vero-finance` uses `/finance` and keys such as `FINANCE_DATABASE_URL`; other Vero applications do not reuse its credentials.
+- Kubernetes uses an Infisical Secrets Operator `credentialsRef` belonging to the same project identity. Verify `ReadyToSyncSecrets=True`; an existing managed Secret is not proof of current authorization.
+- External agents use `scripts/infisical-agent-access.sh`, Keychain-backed credentials, and `infisical run`. They must not read arbitrary Kubernetes Secrets, use the admin token, export secrets to files, or put tokens in prompts, logs, CI artifacts, or Git.
+- Record project, environment/path, principal, role, reason, rotation/expiry plan, and verification for every access change. Revoke access when an agent, human, project, or task ends.
 
 ## Change, merge, version, and deploy workflow
 
