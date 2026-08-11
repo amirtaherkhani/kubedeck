@@ -1,9 +1,11 @@
 # Infisical access for local AI agents
 
-Use one Infisical Universal Auth machine identity per external project. Give
-that identity only the project role and folders it needs. Do not use the
-Infisical administrator account, a shared service token, or credentials from a
-different project.
+`my-home-lab` is the Infisical organization and project administrator. Every
+home-lab service and external project stores its configuration in Infisical,
+but runtime access is project-scoped. Give each project its own environments,
+paths, machine identities, and human memberships. Never use the Infisical
+administrator account, a shared service token, or credentials from another
+project as a runtime identity.
 
 The helper stores each project's `clientId` and `clientSecret` in macOS
 Keychain, mints a short-lived token for each command, and writes only
@@ -73,9 +75,27 @@ secret files, client secrets, and access tokens out of Git and agent logs.
 ## Access model
 
 Each project should have its own machine identity, Universal Auth client
-secret, Keychain profile, and Infisical project membership. Use the `viewer`
-role for read-only agents and `member` only when an agent must edit project
-secrets. Organization admin access is not required.
+secret, Keychain profile, and Infisical project membership. Use named human
+accounts for people and machine identities for agents/workloads:
+
+- `viewer`: read-only agent or observer.
+- `member`: agent that must add, edit, or delete project secrets.
+- `admin`: designated project owner only.
+
+Use the narrowest project, environment, and folder scope. For example,
+`vero-finance` owns `/finance`; other Vero projects must not reuse its
+credentials. Secret keys are uppercase and service-prefixed, such as
+`FINANCE_DATABASE_URL`.
+
+`my-home-lab` provisions and audits access, but an application receives only
+its project identity. Kubernetes uses a project-specific Infisical Secrets
+Operator `credentialsRef` in `platform-secrets`. External projects use the
+Keychain-backed helper and `infisical run`.
+
+Every access request must state project, environment/path, principal type,
+role, read/write need, duration, and rotation plan. The administrator returns
+the profile and scope, never a credential. Revoke access when the agent,
+human, project, or task ends.
 
 For Kubernetes workloads, continue using the Infisical Secrets Operator and a
 project-scoped identity Secret in `platform-secrets`. This helper is for
