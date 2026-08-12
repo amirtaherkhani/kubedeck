@@ -23,7 +23,7 @@ or another project's client secret.
 
 Prefer the narrowest path and environment scope. Home-lab services use the
 `home-lab` project and a service path such as
-`/apps/development-tools/paperclip`. External deployments use their own
+`/apps/development-tools/<service>`. External deployments use their own
 project; a folder is not a substitute for project membership.
 
 ## Required workflow
