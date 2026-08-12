@@ -61,6 +61,8 @@ spec:
               value: default
             - name: PAPERCLIP_CONFIG
               value: /paperclip/instances/default/config.json
+            - name: CODEX_HOME
+              value: /var/run/paperclip-codex
             - name: PAPERCLIP_SECRETS_MASTER_KEY_FILE
               value: /paperclip/secrets/master.key
             - name: DATABASE_URL
@@ -113,12 +115,6 @@ spec:
                 secretKeyRef:
                   name: {{ include "paperclip.fullname" . }}-runtime
                   key: PAPERCLIP_AUTH_DISABLE_SIGN_UP
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "paperclip.fullname" . }}-runtime
-                  key: OPENAI_API_KEY
-                  optional: true
           {{- if .Values.startupProbe.enabled }}
           startupProbe:
             httpGet:
@@ -165,6 +161,9 @@ spec:
             - name: secrets
               mountPath: /paperclip/secrets
               readOnly: true
+            - name: codex-auth
+              mountPath: /var/run/paperclip-codex
+              readOnly: true
       volumes:
         - name: data
           {{- if .Values.persistence.enabled }}
@@ -179,6 +178,13 @@ spec:
             items:
               - key: PAPERCLIP_SECRETS_MASTER_KEY
                 path: master.key
+        - name: codex-auth
+          secret:
+            secretName: {{ include "paperclip.fullname" . }}-runtime
+            defaultMode: 0400
+            items:
+              - key: CODEX_AUTH_JSON
+                path: auth.json
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

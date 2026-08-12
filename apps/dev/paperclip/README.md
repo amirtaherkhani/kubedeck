@@ -33,7 +33,7 @@ PAPERCLIP_DEPLOYMENT_EXPOSURE
 PAPERCLIP_AUTH_DISABLE_SIGN_UP
 PAPERCLIP_SECRETS_PROVIDER
 PAPERCLIP_TELEMETRY_DISABLED
-OPENAI_API_KEY
+PAPERCLIP_CODEX_AUTH_JSON
 ```
 
 The chart maps these keys into a managed Secret named `paperclip-runtime`; it does not contain secret values. `PAPERCLIP_DATABASE_URL` must target the existing `postgresql.platform-storage.svc.cluster.local:5432` service. Use the existing platform PostgreSQL database and credentials; do not add another PostgreSQL release or StatefulSet for Paperclip.
@@ -49,7 +49,7 @@ in Git, or inject bootstrap-only credentials into the long-running pod.
 
 ## Codex configuration
 
-The Paperclip image installs the upstream local Codex adapter and the Codex CLI. ACP runs in the Paperclip server process, so its credential must be present in the server's Infisical-backed `OPENAI_API_KEY` environment. A `/login` in a separate Codex or chat session does not authenticate the Paperclip server. If the key is absent, the Paperclip UI may work while ACP remains unavailable; add the key to Infisical and restart the deployment after reconciliation. Do not place an OpenAI token in this repository, a Helm value, or a Kubernetes manifest. Agent work is persisted under the Paperclip PVC at `/paperclip`.
+The Paperclip image installs the upstream local Codex adapter and the Codex CLI. ACP runs in the Paperclip server process, so its credential must be visible to that server. The local setup stores the existing Codex login JSON as `PAPERCLIP_CODEX_AUTH_JSON` in Infisical; the chart mounts it only as `/var/run/paperclip-codex/auth.json` and sets `CODEX_HOME` to that directory. A `/login` in a separate Codex or chat session does not authenticate the Paperclip server unless its auth metadata is explicitly provisioned to the server. Do not place credentials in this repository, Helm values, or Kubernetes manifests. Agent work is persisted under the Paperclip PVC at `/paperclip`.
 
 ## Deployment and verification
 

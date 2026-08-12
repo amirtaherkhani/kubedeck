@@ -36,7 +36,7 @@ managedSecret:
     - PAPERCLIP_AUTH_DISABLE_SIGN_UP
     - PAPERCLIP_SECRETS_PROVIDER
     - PAPERCLIP_TELEMETRY_DISABLED
-    - OPENAI_API_KEY
+    - PAPERCLIP_CODEX_AUTH_JSON
 
 bootstrap:
   supported: true
@@ -59,4 +59,4 @@ database:
 
 rotation:
   machineIdentity: Rotate clientSecret according to the Infisical access policy.
-  applicationSecrets: Rotate BETTER_AUTH_SECRET, PAPERCLIP_TOOL_ACTION_SIGNING_SECRET, PAPERCLIP_SECRETS_MASTER_KEY, and OPENAI_API_KEY through the home-lab Infisical project before restarting Paperclip.
+  applicationSecrets: Rotate BETTER_AUTH_SECRET, PAPERCLIP_TOOL_ACTION_SIGNING_SECRET, PAPERCLIP_SECRETS_MASTER_KEY, and PAPERCLIP_CODEX_AUTH_JSON through the home-lab Infisical project before restarting Paperclip.
