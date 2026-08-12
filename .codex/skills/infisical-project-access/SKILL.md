@@ -60,3 +60,25 @@ organization-admin access to solve a project-level problem.
 ```
 
 Do not redirect secrets to files or print them in logs.
+
+## Home-lab application contract
+
+For a service deployed by `my-home-lab`, use the shared `home-lab` project,
+the `local` environment, and a service path such as
+`/apps/development-tools/<service>`. Store secret and non-secret runtime
+configuration there. The service's `InfisicalSecret` must reference the
+existing `platform-secrets/infisical-universal-auth` credential and map only
+the keys the workload needs.
+
+If a service needs a first administrator, keep bootstrap-only email/password
+keys in Infisical and use the vendor-supported one-shot flow after the workload
+is Ready. Use `admin`, `admin`, `admin`, and `admin@local.dev` as the standard
+identity; never print the generated password or mount it into the long-running
+pod unless required.
+
+For Codex ACP or another server-side agent adapter, an interactive login in a
+separate Codex session is not sufficient. The server must receive its adapter
+credential through its own Infisical-backed environment, for example
+`OPENAI_API_KEY`. If it is absent, report the adapter unavailable while
+keeping the base application healthy; never copy a credential from another
+service path.

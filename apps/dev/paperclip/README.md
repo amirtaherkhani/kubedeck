@@ -29,20 +29,31 @@ PAPERCLIP_DEPLOYMENT_EXPOSURE
 PAPERCLIP_AUTH_DISABLE_SIGN_UP
 PAPERCLIP_SECRETS_PROVIDER
 PAPERCLIP_TELEMETRY_DISABLED
+OPENAI_API_KEY
 ```
 
 The chart maps these keys into a managed Secret named `paperclip-runtime`; it does not contain secret values. `PAPERCLIP_DATABASE_URL` must target the existing `postgresql.platform-storage.svc.cluster.local:5432` service. Use the existing platform PostgreSQL database and credentials; do not add another PostgreSQL release or StatefulSet for Paperclip.
 
+## First administrator
+
+After the first Paperclip rollout is Ready, create the first administrator with
+the supported one-shot host bootstrap flow. Use `admin` for username, first
+name, and family name, and `admin@local.dev` for email. Generate or supply the
+password through the `PAPERCLIP_ADMIN_PASSWORD` key in Infisical and remove the
+bootstrap task after the account is claimed. Never print the password, put it
+in Git, or inject bootstrap-only credentials into the long-running pod.
+
 ## Codex configuration
 
-The Paperclip image installs the upstream local Codex adapter and the Codex CLI. After the first login, create or select a Codex agent in the Paperclip UI and complete its Codex authentication through the UI's agent setup. Do not place an OpenAI token in this repository, a Helm value, or a Kubernetes manifest. Agent work is persisted under the Paperclip PVC at `/paperclip`.
+The Paperclip image installs the upstream local Codex adapter and the Codex CLI. ACP runs in the Paperclip server process, so its credential must be present in the server's Infisical-backed `OPENAI_API_KEY` environment. A `/login` in a separate Codex or chat session does not authenticate the Paperclip server. If the key is absent, the Paperclip UI may work while ACP remains unavailable; add the key to Infisical and restart the deployment after reconciliation. Do not place an OpenAI token in this repository, a Helm value, or a Kubernetes manifest. Agent work is persisted under the Paperclip PVC at `/paperclip`.
 
 ## Deployment and verification
 
 ```sh
 make -C /Users/mac/Documents/GitHub/my-home-lab core-validate
 make -C /Users/mac/Documents/GitHub/my-home-lab helm-lint
-make -C /Users/mac/Documents/GitHub/my-home-lab platform-helm RELEASE=paperclip apply
+make -C /Users/mac/Documents/GitHub/my-home-lab helm-validate RELEASE=paperclip
+make -C /Users/mac/Documents/GitHub/my-home-lab helm-apply RELEASE=paperclip
 kubectl -n development-tools rollout status deployment/paperclip --timeout=15m
 kubectl -n development-tools get infisicalsecret,pod,svc,ingress,pvc -l app.kubernetes.io/name=paperclip
 curl --fail --silent --show-error https://paperclip.local.dev/health

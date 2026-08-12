@@ -113,6 +113,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "paperclip.fullname" . }}-runtime
                   key: PAPERCLIP_AUTH_DISABLE_SIGN_UP
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "paperclip.fullname" . }}-runtime
+                  key: OPENAI_API_KEY
+                  optional: true
           {{- if .Values.startupProbe.enabled }}
           startupProbe:
             httpGet:
