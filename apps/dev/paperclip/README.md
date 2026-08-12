@@ -14,6 +14,10 @@ Paperclip is the private local AI-agent orchestration service. This chart runs t
 
 Paperclip is deployed and managed by `my-home-lab`, so it uses the shared Infisical project `home-lab`, environment `local`, and path `/apps/development-tools/paperclip`. The chart uses the existing Kubernetes credential Secret `infisical-universal-auth` in `platform-secrets`; it contains only the home-lab Infisical Universal Auth `clientId` and `clientSecret` keys. External GitHub source ownership does not change this deployment boundary.
 
+Paperclip is intentionally single-environment in this home lab. Only the
+Infisical `local` environment is supported; staging and production releases,
+extra values files, and multi-environment deployment modes are disabled.
+
 The complete non-secret requirement is recorded in [`infisical.requirements.yaml`](infisical.requirements.yaml). The `/apps/development-tools/paperclip` path and required keys belong in the existing `home-lab` / `local` project. Do not create a second Paperclip project or credential Secret for this deployment.
 
 Create these keys in the home-lab Infisical path. Values are intentionally not stored in Git:

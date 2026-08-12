@@ -4,6 +4,12 @@ project:
   environment: local
   secretsPath: /apps/development-tools/paperclip
 
+environmentPolicy:
+  mode: single
+  allowedEnvironment: local
+  staging: disabled
+  production: disabled
+
 machineIdentity:
   name: home-lab-kubernetes
   type: universal-auth
