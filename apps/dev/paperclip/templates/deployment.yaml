@@ -118,6 +118,9 @@ spec:
             httpGet:
               path: {{ .Values.startupProbe.path }}
               port: http
+              httpHeaders:
+                - name: Host
+                  value: {{ (index .Values.ingress.hosts 0).host | quote }}
             failureThreshold: {{ .Values.startupProbe.failureThreshold }}
             periodSeconds: {{ .Values.startupProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
@@ -127,6 +130,9 @@ spec:
             httpGet:
               path: {{ .Values.readinessProbe.path }}
               port: http
+              httpHeaders:
+                - name: Host
+                  value: {{ (index .Values.ingress.hosts 0).host | quote }}
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
@@ -137,6 +143,9 @@ spec:
             httpGet:
               path: {{ .Values.livenessProbe.path }}
               port: http
+              httpHeaders:
+                - name: Host
+                  value: {{ (index .Values.ingress.hosts 0).host | quote }}
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
