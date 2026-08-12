@@ -5,18 +5,6 @@ image:
   tag: "v0.1.0"
   pullPolicy: IfNotPresent
 
-postgres:
-  image: postgres:17.5-alpine
-  storageClass: local-path
-  size: 5Gi
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 1000m
-      memory: 1Gi
-
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
@@ -45,12 +33,6 @@ securityContext:
   runAsGroup: 1000
   runAsNonRoot: true
   runAsUser: 1000
-
-postgresSecurityContext:
-  fsGroup: 999
-  fsGroupChangePolicy: OnRootMismatch
-  seccompProfile:
-    type: RuntimeDefault
 
 service:
   type: ClusterIP

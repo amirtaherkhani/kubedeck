@@ -1,0 +1,43 @@
+project:
+  slug: paperclip
+  displayName: Paperclip
+  environment: local
+  secretsPath: /apps/development-tools/paperclip
+
+machineIdentity:
+  name: paperclip-kubernetes
+  type: universal-auth
+  role: viewer
+  purpose: Kubernetes workload secret synchronization only
+  credentialsSecret:
+    name: paperclip-infisical-universal-auth
+    namespace: platform-secrets
+    keys:
+      - clientId
+      - clientSecret
+
+managedSecret:
+  name: paperclip-runtime
+  namespace: development-tools
+  sourceKeys:
+    - PAPERCLIP_DATABASE_URL
+    - PAPERCLIP_BETTER_AUTH_SECRET
+    - PAPERCLIP_TOOL_ACTION_SIGNING_SECRET
+    - PAPERCLIP_SECRETS_MASTER_KEY
+    - PAPERCLIP_PUBLIC_URL
+    - PAPERCLIP_DEPLOYMENT_MODE
+    - PAPERCLIP_DEPLOYMENT_EXPOSURE
+    - PAPERCLIP_AUTH_DISABLE_SIGN_UP
+    - PAPERCLIP_SECRETS_PROVIDER
+    - PAPERCLIP_TELEMETRY_DISABLED
+
+database:
+  engine: postgresql
+  service: postgresql.platform-storage.svc.cluster.local
+  port: 5432
+  connectionStringKey: PAPERCLIP_DATABASE_URL
+  note: Use the existing platform-storage PostgreSQL instance; do not provision a Paperclip database StatefulSet.
+
+rotation:
+  machineIdentity: Rotate clientSecret according to the Infisical access policy.
+  applicationSecrets: Rotate BETTER_AUTH_SECRET, PAPERCLIP_TOOL_ACTION_SIGNING_SECRET, and PAPERCLIP_SECRETS_MASTER_KEY through Infisical before restarting Paperclip.

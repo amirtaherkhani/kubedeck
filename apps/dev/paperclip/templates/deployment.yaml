@@ -61,20 +61,8 @@ spec:
               value: default
             - name: PAPERCLIP_CONFIG
               value: /paperclip/instances/default/config.json
-            - name: PAPERCLIP_PUBLIC_URL
-              value: https://paperclip.local.dev
-            - name: BETTER_AUTH_URL
-              value: https://paperclip.local.dev
-            - name: PAPERCLIP_DEPLOYMENT_MODE
-              value: authenticated
-            - name: PAPERCLIP_DEPLOYMENT_EXPOSURE
-              value: private
-            - name: PAPERCLIP_SECRETS_PROVIDER
-              value: local_encrypted
             - name: PAPERCLIP_SECRETS_MASTER_KEY_FILE
               value: /paperclip/secrets/master.key
-            - name: PAPERCLIP_TELEMETRY_DISABLED
-              value: "true"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -90,6 +78,36 @@ spec:
                 secretKeyRef:
                   name: {{ include "paperclip.fullname" . }}-runtime
                   key: PAPERCLIP_TOOL_ACTION_SIGNING_SECRET
+            - name: PAPERCLIP_PUBLIC_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "paperclip.fullname" . }}-runtime
+                  key: PAPERCLIP_PUBLIC_URL
+            - name: BETTER_AUTH_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "paperclip.fullname" . }}-runtime
+                  key: BETTER_AUTH_URL
+            - name: PAPERCLIP_DEPLOYMENT_MODE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "paperclip.fullname" . }}-runtime
+                  key: PAPERCLIP_DEPLOYMENT_MODE
+            - name: PAPERCLIP_DEPLOYMENT_EXPOSURE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "paperclip.fullname" . }}-runtime
+                  key: PAPERCLIP_DEPLOYMENT_EXPOSURE
+            - name: PAPERCLIP_SECRETS_PROVIDER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "paperclip.fullname" . }}-runtime
+                  key: PAPERCLIP_SECRETS_PROVIDER
+            - name: PAPERCLIP_TELEMETRY_DISABLED
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "paperclip.fullname" . }}-runtime
+                  key: PAPERCLIP_TELEMETRY_DISABLED
             - name: PAPERCLIP_AUTH_DISABLE_SIGN_UP
               valueFrom:
                 secretKeyRef:
