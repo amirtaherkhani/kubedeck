@@ -7,7 +7,7 @@ Paperclip is the private local AI-agent orchestration service. This chart runs t
 - Owner: home-lab platform operations
 - Namespace: `development-tools`
 - Source: [paperclipai/paperclip](https://github.com/paperclipai/paperclip)
-- Image: local immutable build `localhost:5001/homelab/dev/paperclip:v0.1.0`
+- Image: local immutable build `localhost:5001/homelab/dev/paperclip:v0.1.1`
 - Dependencies: `platform-secrets` Infisical, `platform-storage/postgresql`, `development-tools` namespace, `local-path` storage, Traefik `local-dev-tls`
 
 ## Runtime configuration
