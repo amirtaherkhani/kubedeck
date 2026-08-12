@@ -79,14 +79,14 @@ resources:
 
 startupProbe:
   enabled: true
-  path: /health
+  path: /api/health
   failureThreshold: 36
   periodSeconds: 5
   timeoutSeconds: 5
 
 readinessProbe:
   enabled: true
-  path: /health
+  path: /api/health
   initialDelaySeconds: 5
   periodSeconds: 10
   timeoutSeconds: 5
@@ -94,7 +94,7 @@ readinessProbe:
 
 livenessProbe:
   enabled: true
-  path: /health
+  path: /api/health
   initialDelaySeconds: 30
   periodSeconds: 30
   timeoutSeconds: 5
