@@ -1,0 +1,125 @@
+replicaCount: 1
+
+image:
+  repository: localhost:5001/homelab/dev/paperclip
+  tag: "v0.1.0"
+  pullPolicy: IfNotPresent
+
+postgres:
+  image: postgres:17.5-alpine
+  storageClass: local-path
+  size: 5Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  runAsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+postgresSecurityContext:
+  fsGroup: 999
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3100
+
+ingress:
+  enabled: true
+  className: traefik
+  forceHttps: true
+  annotations: {}
+  hosts:
+    - host: paperclip.local.dev
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: local-dev-tls
+      hosts:
+        - paperclip.local.dev
+
+infisical:
+  credentialsSecretName: paperclip-infisical-universal-auth
+  credentialsSecretNamespace: platform-secrets
+  projectSlug: paperclip
+  envSlug: local
+  secretsPath: /apps/development-tools/paperclip
+
+persistence:
+  enabled: true
+  storageClass: local-path
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+
+startupProbe:
+  enabled: true
+  path: /health
+  failureThreshold: 36
+  periodSeconds: 5
+  timeoutSeconds: 5
+
+readinessProbe:
+  enabled: true
+  path: /health
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+
+livenessProbe:
+  enabled: true
+  path: /health
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+terminationGracePeriodSeconds: 30
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

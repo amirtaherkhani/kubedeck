@@ -1,0 +1,14 @@
+apiVersion: v2
+name: paperclip
+description: Private Paperclip AI orchestration server with local Codex agent support.
+home: https://paperclip.local.dev
+keywords:
+  - ai
+  - agents
+  - codex
+  - orchestration
+sources:
+  - https://github.com/paperclipai/paperclip
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
