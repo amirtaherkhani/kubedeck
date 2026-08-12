@@ -1,16 +1,16 @@
 project:
-  slug: paperclip
-  displayName: Paperclip
+  slug: home-lab
+  displayName: home-lab
   environment: local
   secretsPath: /apps/development-tools/paperclip
 
 machineIdentity:
-  name: paperclip-kubernetes
+  name: home-lab-kubernetes
   type: universal-auth
   role: viewer
-  purpose: Kubernetes workload secret synchronization only
+  purpose: Home-lab Kubernetes workload secret synchronization
   credentialsSecret:
-    name: paperclip-infisical-universal-auth
+    name: infisical-universal-auth
     namespace: platform-secrets
     keys:
       - clientId
@@ -40,4 +40,4 @@ database:
 
 rotation:
   machineIdentity: Rotate clientSecret according to the Infisical access policy.
-  applicationSecrets: Rotate BETTER_AUTH_SECRET, PAPERCLIP_TOOL_ACTION_SIGNING_SECRET, and PAPERCLIP_SECRETS_MASTER_KEY through Infisical before restarting Paperclip.
+  applicationSecrets: Rotate BETTER_AUTH_SECRET, PAPERCLIP_TOOL_ACTION_SIGNING_SECRET, and PAPERCLIP_SECRETS_MASTER_KEY through the home-lab Infisical project before restarting Paperclip.

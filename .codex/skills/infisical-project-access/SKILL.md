@@ -5,9 +5,11 @@ description: Use when configuring Infisical access for a home-lab service, exter
 
 # Infisical Project Access
 
-`my-home-lab` administers the Infisical organization and projects; it is not a
-runtime identity. Each project has its own environments, paths, machine
-identities, client secrets, and access audit.
+`my-home-lab` administers the Infisical organization and the shared `home-lab`
+project. Applications deployed by this repository use that project with
+service-specific paths and the home-lab Kubernetes identity. Projects
+deployed outside this repository retain their own environments, paths,
+machine identities, client secrets, and access audit.
 
 Use named human accounts for people. Use one Universal Auth machine identity
 per agent or workload. Never share the administrator token, a human password,
@@ -19,9 +21,10 @@ or another project's client secret.
 - `member`: agent that must create, edit, or delete project secrets.
 - `admin`: designated project owner only.
 
-Prefer the narrowest project, environment, and folder scope. For Vero, use the
-`vero-finance` project and `/finance` folder for Finance secrets; a folder is
-not a substitute for project membership.
+Prefer the narrowest path and environment scope. Home-lab services use the
+`home-lab` project and a service path such as
+`/apps/development-tools/paperclip`. External deployments use their own
+project; a folder is not a substitute for project membership.
 
 ## Required workflow
 
@@ -34,8 +37,9 @@ not a substitute for project membership.
 4. Use `scripts/infisical-agent-access.sh` for external repositories. It writes
    only non-secret `.infisical.json` metadata and runs commands with a
    short-lived token.
-5. For Kubernetes, use an Infisical Secrets Operator resource with a
-   project-specific `credentialsRef`.
+5. For Kubernetes, use an Infisical Secrets Operator resource with the
+   home-lab `credentialsRef` for services deployed by this repository, or the
+   external project's credential for deployments outside it.
 6. Verify login, project access, `ReadyToSyncSecrets=True`, and the target
    workload before reporting success.
 7. Record the principal, role, scope, and verification; revoke and rotate when

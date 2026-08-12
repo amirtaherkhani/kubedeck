@@ -55,9 +55,9 @@ ingress:
         - paperclip.local.dev
 
 infisical:
-  credentialsSecretName: paperclip-infisical-universal-auth
+  credentialsSecretName: infisical-universal-auth
   credentialsSecretNamespace: platform-secrets
-  projectSlug: paperclip
+  projectSlug: home-lab
   envSlug: local
   secretsPath: /apps/development-tools/paperclip
 

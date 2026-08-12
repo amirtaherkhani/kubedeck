@@ -12,11 +12,11 @@ Paperclip is the private local AI-agent orchestration service. This chart runs t
 
 ## Runtime configuration
 
-Paperclip is an external project and must use its own Infisical project and Universal Auth machine identity. Create the project slug `paperclip`, environment `local`, and path `/apps/development-tools/paperclip`, then create the Kubernetes credential Secret named `paperclip-infisical-universal-auth` in `platform-secrets` with only the Infisical Universal Auth `clientId` and `clientSecret` keys. The identity must be limited to this project/path and must not reuse the home-lab credential.
+Paperclip is deployed and managed by `my-home-lab`, so it uses the shared Infisical project `home-lab`, environment `local`, and path `/apps/development-tools/paperclip`. The chart uses the existing Kubernetes credential Secret `infisical-universal-auth` in `platform-secrets`; it contains only the home-lab Infisical Universal Auth `clientId` and `clientSecret` keys. External GitHub source ownership does not change this deployment boundary.
 
-The complete non-secret requirement is recorded in [`infisical.requirements.yaml`](infisical.requirements.yaml). Create the `paperclip` project, its `local` environment, the `/apps/development-tools/paperclip` path, and the viewer Universal Auth identity described there. Store the identity credentials only in the `paperclip-infisical-universal-auth` Secret in `platform-secrets`.
+The complete non-secret requirement is recorded in [`infisical.requirements.yaml`](infisical.requirements.yaml). The `/apps/development-tools/paperclip` path and required keys belong in the existing `home-lab` / `local` project. Do not create a second Paperclip project or credential Secret for this deployment.
 
-Create these keys in the Paperclip Infisical path. Values are intentionally not stored in Git:
+Create these keys in the home-lab Infisical path. Values are intentionally not stored in Git:
 
 ```text
 PAPERCLIP_DATABASE_URL

@@ -21,8 +21,8 @@ This repository manages the local Rancher Desktop Kubernetes home lab.
 
 ## Infisical ownership and external-project access
 
-- `my-home-lab` administers the Infisical organization and projects: project creation, environment/folder layout, machine identities, roles, audit, and revocation. It is not an application's runtime identity.
-- Every external project gets its own Infisical project and Universal Auth machine identity per agent or workload. Never reuse administrator, Finance, home-lab, or another project's credentials.
+- `my-home-lab` administers the Infisical organization and the shared `home-lab` project: project creation, environment/folder layout, machine identities, roles, audit, and revocation. Every application deployed by this repository uses the `home-lab` project with its service-specific path; the source repository's GitHub location does not change that deployment ownership.
+- Projects deployed outside this repository keep their own Infisical project and Universal Auth machine identity. Never reuse administrator, Finance, home-lab, or another project's credentials across those external deployments.
 - Humans use named Infisical accounts. AI agents and automation use project-scoped machine identities with short-lived tokens. Do not give agents organization-admin access or give humans shared machine credentials.
 - Use `viewer` for read-only agents, `member` for agents that must add/edit/delete project secrets, and `admin` only for a designated project owner.
 - Use stable project scopes and uppercase service-prefixed keys. For example, `vero-finance` uses `/finance` and keys such as `FINANCE_DATABASE_URL`; other Vero applications do not reuse its credentials.
