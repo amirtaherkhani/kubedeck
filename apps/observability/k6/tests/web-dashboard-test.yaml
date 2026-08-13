@@ -96,6 +96,7 @@ spec:
       name: k6-web-dashboard-script
       file: test.js
   runner:
+    image: grafana/k6:2.0.0
     env:
       - name: K6_WEB_DASHBOARD
         value: "true"
@@ -106,7 +107,7 @@ spec:
       - name: K6_WEB_DASHBOARD_PERIOD
         value: 5s
       - name: K6_PROMETHEUS_RW_SERVER_URL
-        value: http://monitoring-kube-prometheus-prometheus.monitoring:9090/api/v1/write
+        value: http://monitoring-kube-prometheus-prometheus.observability.svc.cluster.local:9090/api/v1/write
       - name: K6_PROMETHEUS_RW_TREND_STATS
         value: p(95),p(99),min,max,avg
       - name: TARGET_URL
