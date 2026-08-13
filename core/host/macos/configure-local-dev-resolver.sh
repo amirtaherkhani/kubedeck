@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-readonly DNS_SERVER="${HOME_LAB_DNS_SERVER:-192.168.64.14}"
+readonly DNS_SERVER="${HOME_LAB_DNS_SERVER:-192.168.1.100}"
 readonly RESOLVER_DIR="/etc/resolver"
 
 sudo mkdir -p "${RESOLVER_DIR}"

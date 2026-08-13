@@ -14,7 +14,7 @@ data:
       cache 30
       template IN A local.dev {
         match ^(([^.]+)\.)+local\.dev\.$
-        answer "{{ .Name }} 30 IN A 192.168.64.14"
+        answer "{{ .Name }} 30 IN A 192.168.1.100"
       }
       forward . /etc/resolv.conf
     }

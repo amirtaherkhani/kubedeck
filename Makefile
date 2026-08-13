@@ -16,6 +16,7 @@ core-apply:
 	./scripts/core-bootstrap.sh
 
 macos-dns:
+	./core/host/macos/configure-local-dev-dns-forwarding.sh
 	./core/host/macos/configure-local-dev-resolver.sh
 
 macos-trust-tls:

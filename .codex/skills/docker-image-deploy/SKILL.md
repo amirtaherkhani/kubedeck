@@ -40,13 +40,15 @@ Do not commit the environment-specific tag as a hard-coded runtime value.
    port. Build for Rancher Desktop's node architecture, normally `linux/arm64`:
 
    ```bash
-   docker buildx build --platform linux/arm64 \
+   nerdctl build --platform linux/arm64 \
      -t localhost:5001/homelab/<category>/<service>:v<major>.<minor>.<patch> \
-     --load <source-directory>
-   docker push localhost:5001/homelab/<category>/<service>:v<major>.<minor>.<patch>
+     <source-directory>
+   nerdctl push localhost:5001/homelab/<category>/<service>:v<major>.<minor>.<patch>
    ```
 
-   Use `nerdctl` when Docker is unavailable and preserve the same image name.
+   Rancher Desktop's `nerdctl`/containerd path is authoritative. Use Docker
+   `buildx` and `docker push` only when `nerdctl` cannot access the source or
+   local registry; a missing or stopped Docker daemon is not itself a failure.
 5. Verify that the new `v<major>.<minor>.<patch>` manifest and digest exist in
    the local registry. Do not continue if the new version is missing.
 6. Resolve the exact previous tag and digest, then delete the old registry tag.

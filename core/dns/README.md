@@ -12,9 +12,13 @@ hostname inventory. New services are not complete until their DNS entry,
 Traefik Ingress, and TLS host are documented together.
 
 The cluster wildcard is configured by `coredns-custom.yaml` and resolves
-`*.local.dev` to the Rancher Desktop Traefik address `192.168.64.14`.
-`home-lab-dns` LoadBalancer exposes CoreDNS on `192.168.64.14:53` so macOS can
-query the same records through a local resolver.
+`*.local.dev` to the macOS host address `192.168.1.100`, where Rancher Desktop
+forwards the Traefik HTTP and HTTPS ports. The `home-lab-dns` LoadBalancer
+exposes CoreDNS on the Rancher Desktop node address `192.168.1.183:53`; the
+Homebrew `dnsmasq` listener presents the `local.dev` zone on
+`192.168.1.100:53` and forwards that zone to CoreDNS.
 
-Configure the macOS scoped resolver with `make macos-dns`. This requires the
-user's macOS administrator password because it writes `/etc/resolver/local.dev`.
+Configure the macOS DNS listener and scoped resolver with `make macos-dns`.
+This requires the user's macOS administrator password because it updates the
+Homebrew `dnsmasq` configuration, reloads its launch service, and writes
+`/etc/resolver/local.dev`.
