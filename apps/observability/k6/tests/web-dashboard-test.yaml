@@ -27,20 +27,9 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - k6-dashboard.local.dev
         - k6-live.local.dev
       secretName: local-dev-tls
   rules:
-    - host: k6-dashboard.local.dev
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: k6-web-dashboard
-                port:
-                  name: http
     - host: k6-live.local.dev
       http:
         paths:
