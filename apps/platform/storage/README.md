@@ -44,8 +44,11 @@ Finance client to configure a dedicated `inboxPrefix` first.
 
 The development durable-source test identity is separate from the Finance
 runtime identity. It is synchronized with `NATS_FINANCE_TEST_USERNAME` and
-`NATS_FINANCE_TEST_PASSWORD`; its JetStream API permissions are limited to
+`NATS_FINANCE_TEST_PASSWORD`; its publish permissions are limited to the
+dedicated `vv.finance.test.internal.>` and
+`vv.finance.test.internal-dlq.>` trees, and its JetStream API permissions are limited to
 `VV_FINANCE_INTERNAL_EVENTS_TEST` and
 `VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ`. The external Finance runner receives
-the corresponding five-key contract from its own Infisical project at
+the corresponding seven-key contract, including its two test subject-prefix
+values, from its own Infisical project at
 `/finance/test-internal-events`.

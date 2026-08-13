@@ -82,8 +82,8 @@ data:
           permissions: {
             publish: {
               allow: [
-                "vv.finance.internal.>",
-                "vv.finance.internal-dlq.>",
+                "vv.finance.test.internal.>",
+                "vv.finance.test.internal-dlq.>",
                 "$JS.API.INFO",
                 "$JS.API.STREAM.CREATE.VV_FINANCE_INTERNAL_EVENTS_TEST",
                 "$JS.API.STREAM.UPDATE.VV_FINANCE_INTERNAL_EVENTS_TEST",
