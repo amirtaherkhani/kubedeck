@@ -21,14 +21,24 @@ This repository manages the local Rancher Desktop Kubernetes home lab.
 
 ## Infisical ownership and external-project access
 
-- `my-home-lab` administers the Infisical organization and projects: project creation, environment/folder layout, machine identities, roles, audit, and revocation. It is not an application's runtime identity.
-- Every external project gets its own Infisical project and Universal Auth machine identity per agent or workload. Never reuse administrator, Finance, home-lab, or another project's credentials.
+- `my-home-lab` administers the Infisical organization and the shared `home-lab` project: project creation, environment/folder layout, machine identities, roles, audit, and revocation. Every application deployed by this repository uses the `home-lab` project with its service-specific path; the source repository's GitHub location does not change that deployment ownership.
+- Projects deployed outside this repository keep their own Infisical project and Universal Auth machine identity. Never reuse administrator, Finance, home-lab, or another project's credentials across those external deployments.
 - Humans use named Infisical accounts. AI agents and automation use project-scoped machine identities with short-lived tokens. Do not give agents organization-admin access or give humans shared machine credentials.
 - Use `viewer` for read-only agents, `member` for agents that must add/edit/delete project secrets, and `admin` only for a designated project owner.
 - Use stable project scopes and uppercase service-prefixed keys. For example, `vero-finance` uses `/finance` and keys such as `FINANCE_DATABASE_URL`; other Vero applications do not reuse its credentials.
 - Kubernetes uses an Infisical Secrets Operator `credentialsRef` belonging to the same project identity. Verify `ReadyToSyncSecrets=True`; an existing managed Secret is not proof of current authorization.
 - External agents use `scripts/infisical-agent-access.sh`, Keychain-backed credentials, and `infisical run`. They must not read arbitrary Kubernetes Secrets, use the admin token, export secrets to files, or put tokens in prompts, logs, CI artifacts, or Git.
 - Record project, environment/path, principal, role, reason, rotation/expiry plan, and verification for every access change. Revoke access when an agent, human, project, or task ends.
+
+## Application deployment contract
+
+- A service deployed by this repository uses the shared `home-lab` Infisical project under a service-specific path, even when its source code lives in an external GitHub repository. External projects deployed outside this repository keep their own Infisical project.
+- Before adding a dependency, inspect the live platform Services and Helm inventory. Reuse compatible platform PostgreSQL, Redis/Valkey, RabbitMQ, MinIO, NATS, storage class, TLS, DNS, and observability components; do not provision a duplicate database when the platform database can provide a dedicated schema or database.
+- A new app must have a service README, Infisical requirements file, immutable image metadata, namespace, `*.local.dev` HTTPS route, health probes, persistence decision, dependency list, and verification commands. Runtime configuration includes non-secrets as well as secrets.
+- If an app needs a first administrator, automate the supported bootstrap after the first Ready rollout with the standard `admin` / `admin` / `admin@local.dev` identity. Generate or retrieve the password only through Infisical, use a one-shot task with the app's persistent volume when necessary, remove it after success, and verify the account/health state without reporting the password.
+- If a server-side agent adapter reports missing credentials, configure the adapter environment in the server workload through Infisical. A separate Codex/chat `/login` does not authenticate that server. Keep the app healthy without claiming the adapter is ready until its own credential is present and verified.
+- For deployment failures, continue the bounded diagnose-fix-verify loop until rollout, probes, dependencies, Infisical reconciliation, HTTPS, DNS, persistence, and supported observability are healthy. Stop only for a missing credential, required decision, unavailable authority, or unsafe/destructive action.
+- Keep Loki and Prometheus time-based retention at 10 days and use dashboard filters for currently Running pods. Do not manually delete historical pod-hash streams or metric series as routine cleanup.
 
 ## Change, merge, version, and deploy workflow
 

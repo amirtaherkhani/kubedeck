@@ -15,3 +15,56 @@ Use this workflow for every change in this repository.
 6. Validate with Helm lint/template and Kubernetes server-side dry-run. Use live Grafana as the source of truth for dashboard and datasource claims when its MCP is available.
 7. Document the service in its local `README.md`; report unavailable integrations explicitly instead of implying they are enabled.
 8. For custom local images, use `$docker-image-deploy` and keep only the verified current image version in the local registry.
+
+## Application onboarding contract
+
+- Inspect and reuse existing platform dependencies before adding PostgreSQL,
+  Redis/Valkey, RabbitMQ, MinIO, NATS, storage, TLS, DNS, or observability.
+  Do not create a second database when the platform database is compatible;
+  use a dedicated schema or database on the existing service.
+- Define the namespace, `*.local.dev` HTTPS route, ports, storage, dependency
+  order, health endpoints, observability, and Infisical path before writing
+  manifests. Put non-secret runtime configuration in Infisical too.
+- A service README and `infisical.requirements.yaml` must document ownership,
+  source/image, dependencies, runtime keys, admin bootstrap, deployment, and
+  verification. Keep only structure and safe defaults in Git.
+
+## First administrator and agent credentials
+
+- Use the standard local identity: username `admin`, first name `admin`, family
+  name `admin`, email `admin@local.dev`. Generate or supply its password only
+  through Infisical.
+- After the first rollout is Ready, use the vendor-supported idempotent admin
+  bootstrap command or a one-shot Kubernetes host task with the app's runtime
+  configuration and persistent volume. Remove the task after success and
+  verify login/health without printing the password.
+- A login in a separate Codex or chat session does not authenticate a server-
+  side agent adapter. Adapter credentials must be visible in the server
+  workload's own Infisical-backed environment; report the adapter unavailable
+  until its credential is present and verified.
+
+## Delivery and recovery loop
+
+- Validate with Helm lint/template and Kubernetes server-side dry-run. Check
+  Infisical scope and `ReadyToSyncSecrets=True`, selectors, RBAC, Services,
+  Ingress TLS, PVCs, and dependency readiness.
+- Deliver from `agent/<description>`: build/test, push, merge by PR, push
+  merged `main`, create the annotated semantic version/release when runtime
+  or deployment configuration changed, then deploy the merged version. Remove
+  merged local and remote branches.
+- Deploy individually in dependency order through `helm-validate` and
+  `helm-apply`/`scripts/platform-helm.sh`. If a release fails, inspect events,
+  logs, probes, image pulls, dependencies, and Infisical reconciliation; apply
+  the smallest safe fix and retry until rollout, health, and HTTPS are good.
+  Stop only for a missing credential, required decision, unavailable external
+  authority, or unsafe/destructive action.
+
+## Data and image safety
+
+- Keep Loki and Prometheus on the documented time-based retention policy
+  (currently 10 days) and filter dashboards to currently Running pods. Do not
+  manually delete old pod-hash streams or metric series as routine cleanup.
+- For custom images use `$docker-image-deploy`, Rancher Desktop
+  `nerdctl`/containerd, immutable version tags, and one verified current tag
+  per local registry repository. Do not run load tests, production traffic, or
+  destructive cleanup as deployment verification without current approval.

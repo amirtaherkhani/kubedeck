@@ -5,9 +5,11 @@ description: Use when configuring Infisical access for a home-lab service, exter
 
 # Infisical Project Access
 
-`my-home-lab` administers the Infisical organization and projects; it is not a
-runtime identity. Each project has its own environments, paths, machine
-identities, client secrets, and access audit.
+`my-home-lab` administers the Infisical organization and the shared `home-lab`
+project. Applications deployed by this repository use that project with
+service-specific paths and the home-lab Kubernetes identity. Projects
+deployed outside this repository retain their own environments, paths,
+machine identities, client secrets, and access audit.
 
 Use named human accounts for people. Use one Universal Auth machine identity
 per agent or workload. Never share the administrator token, a human password,
@@ -19,9 +21,10 @@ or another project's client secret.
 - `member`: agent that must create, edit, or delete project secrets.
 - `admin`: designated project owner only.
 
-Prefer the narrowest project, environment, and folder scope. For Vero, use the
-`vero-finance` project and `/finance` folder for Finance secrets; a folder is
-not a substitute for project membership.
+Prefer the narrowest path and environment scope. Home-lab services use the
+`home-lab` project and a service path such as
+`/apps/development-tools/<service>`. External deployments use their own
+project; a folder is not a substitute for project membership.
 
 ## Required workflow
 
@@ -34,8 +37,9 @@ not a substitute for project membership.
 4. Use `scripts/infisical-agent-access.sh` for external repositories. It writes
    only non-secret `.infisical.json` metadata and runs commands with a
    short-lived token.
-5. For Kubernetes, use an Infisical Secrets Operator resource with a
-   project-specific `credentialsRef`.
+5. For Kubernetes, use an Infisical Secrets Operator resource with the
+   home-lab `credentialsRef` for services deployed by this repository, or the
+   external project's credential for deployments outside it.
 6. Verify login, project access, `ReadyToSyncSecrets=True`, and the target
    workload before reporting success.
 7. Record the principal, role, scope, and verification; revoke and rotate when
@@ -56,3 +60,25 @@ organization-admin access to solve a project-level problem.
 ```
 
 Do not redirect secrets to files or print them in logs.
+
+## Home-lab application contract
+
+For a service deployed by `my-home-lab`, use the shared `home-lab` project,
+the `local` environment, and a service path such as
+`/apps/development-tools/<service>`. Store secret and non-secret runtime
+configuration there. The service's `InfisicalSecret` must reference the
+existing `platform-secrets/infisical-universal-auth` credential and map only
+the keys the workload needs.
+
+If a service needs a first administrator, keep bootstrap-only email/password
+keys in Infisical and use the vendor-supported one-shot flow after the workload
+is Ready. Use `admin`, `admin`, `admin`, and `admin@local.dev` as the standard
+identity; never print the generated password or mount it into the long-running
+pod unless required.
+
+For Codex ACP or another server-side agent adapter, an interactive login in a
+separate Codex session is not sufficient. The server must receive its adapter
+credential through its own Infisical-backed environment, for example
+`OPENAI_API_KEY`. If it is absent, report the adapter unavailable while
+keeping the base application healthy; never copy a credential from another
+service path.

@@ -1,11 +1,11 @@
 # Infisical access for local AI agents
 
-`my-home-lab` is the Infisical organization and project administrator. Every
-home-lab service and external project stores its configuration in Infisical,
-but runtime access is project-scoped. Give each project its own environments,
-paths, machine identities, and human memberships. Never use the Infisical
-administrator account, a shared service token, or credentials from another
-project as a runtime identity.
+`my-home-lab` is the Infisical organization administrator and owns the shared
+`home-lab` project. Every service deployed by this repository stores its
+configuration in that project under a service-specific path. Projects deployed
+outside this repository retain separate projects, identities, and memberships.
+Never use the Infisical administrator account, a shared service token, or an
+external project's credentials as a home-lab runtime identity.
 
 The helper stores each project's `clientId` and `clientSecret` in macOS
 Keychain, mints a short-lived token for each command, and writes only
@@ -74,9 +74,11 @@ secret files, client secrets, and access tokens out of Git and agent logs.
 
 ## Access model
 
-Each project should have its own machine identity, Universal Auth client
-secret, Keychain profile, and Infisical project membership. Use named human
-accounts for people and machine identities for agents/workloads:
+External projects should have their own machine identity, Universal Auth
+client secret, Keychain profile, and Infisical project membership. Home-lab
+workloads use the shared home-lab Kubernetes identity with service-specific
+paths. Use named human accounts for people and machine identities for
+agents/workloads:
 
 - `viewer`: read-only agent or observer.
 - `member`: agent that must add, edit, or delete project secrets.
@@ -87,16 +89,18 @@ Use the narrowest project, environment, and folder scope. For example,
 credentials. Secret keys are uppercase and service-prefixed, such as
 `FINANCE_DATABASE_URL`.
 
-`my-home-lab` provisions and audits access, but an application receives only
-its project identity. Kubernetes uses a project-specific Infisical Secrets
-Operator `credentialsRef` in `platform-secrets`. External projects use the
-Keychain-backed helper and `infisical run`.
+`my-home-lab` provisions and audits access. Kubernetes home-lab workloads use
+the `infisical-universal-auth` Infisical Secrets Operator credential in
+`platform-secrets` with the `home-lab` project and a service-specific path.
+External projects use their own project identity, the Keychain-backed helper,
+and `infisical run`.
 
 Every access request must state project, environment/path, principal type,
 role, read/write need, duration, and rotation plan. The administrator returns
 the profile and scope, never a credential. Revoke access when the agent,
 human, project, or task ends.
 
-For Kubernetes workloads, continue using the Infisical Secrets Operator and a
-project-scoped identity Secret in `platform-secrets`. This helper is for
-external project directories and local AI-agent commands.
+For Kubernetes workloads, continue using the Infisical Secrets Operator and
+the appropriate home-lab or external project identity Secret in
+`platform-secrets`. This helper is for external project directories and local
+AI-agent commands.

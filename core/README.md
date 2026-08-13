@@ -12,6 +12,18 @@ Rancher Desktop owns the `kube-system` Traefik, CoreDNS, local-path-provisioner,
 metrics-server, Flannel, and ServiceLB components. They are observed and
 configured here only where the ownership boundary permits it.
 
+## Application onboarding
+
+Use the repository home-lab skill and `AGENTS.md` deployment contract for every
+new service. The short checklist is: inspect and reuse platform dependencies;
+define the namespace, local HTTPS route, storage, health, and observability;
+create the service path and required secret/non-secret keys in the shared
+`home-lab` Infisical project; render/lint and server-side dry-run; publish and
+merge the branch; tag the merged commit; deploy with `helm-validate` and
+`helm-apply`; then verify the actual rollout and HTTPS endpoint. A first admin
+is created only through the service's supported one-shot bootstrap flow, with
+the standard local identity and password kept in Infisical.
+
 ## Node inotify capacity
 
 `nodes/inotify-capacity.yaml` raises `fs.inotify.max_user_instances` to at least
