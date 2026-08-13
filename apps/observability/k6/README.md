@@ -6,7 +6,7 @@ Kubernetes-based performance-test runner with Prometheus and Grafana output.
 |---|---|
 | Namespace | `observability-tests` |
 | UI | Ephemeral live UI: `https://k6-live.local.dev` |
-| Dashboard | `https://k6-dashboard.local.dev/d/k6-prometheus/k6-prometheus` through Grafana, without hostname redirect |
+| Dashboard | `https://k6-dashboard.local.dev/` redirects to the canonical Grafana URL |
 | Metrics | Prometheus remote-write and k6 ServiceMonitor |
 | Approval | Load tests require explicit current-turn approval |
 
