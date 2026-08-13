@@ -285,6 +285,8 @@ nats:
     password: ""
     financeUsername: ""
     financePassword: ""
+    financeTestUsername: ""
+    financeTestPassword: ""
     clusterUsername: ""
     clusterPassword: ""
   image:

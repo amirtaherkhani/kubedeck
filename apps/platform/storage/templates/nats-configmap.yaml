@@ -75,6 +75,44 @@ data:
               allow: ["_INBOX.>"]
             }
           }
+        },
+        {
+          user: $NATS_FINANCE_TEST_USERNAME
+          password: $NATS_FINANCE_TEST_PASSWORD
+          permissions: {
+            publish: {
+              allow: [
+                "vv.finance.internal.>",
+                "vv.finance.internal-dlq.>",
+                "$JS.API.INFO",
+                "$JS.API.STREAM.CREATE.VV_FINANCE_INTERNAL_EVENTS_TEST",
+                "$JS.API.STREAM.UPDATE.VV_FINANCE_INTERNAL_EVENTS_TEST",
+                "$JS.API.STREAM.DELETE.VV_FINANCE_INTERNAL_EVENTS_TEST",
+                "$JS.API.STREAM.INFO.VV_FINANCE_INTERNAL_EVENTS_TEST",
+                "$JS.API.STREAM.MSG.GET.VV_FINANCE_INTERNAL_EVENTS_TEST",
+                "$JS.API.STREAM.CREATE.VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ",
+                "$JS.API.STREAM.UPDATE.VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ",
+                "$JS.API.STREAM.DELETE.VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ",
+                "$JS.API.STREAM.INFO.VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ",
+                "$JS.API.STREAM.MSG.GET.VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ",
+                "$JS.API.CONSUMER.CREATE.VV_FINANCE_INTERNAL_EVENTS_TEST.>",
+                "$JS.API.CONSUMER.DURABLE.CREATE.VV_FINANCE_INTERNAL_EVENTS_TEST.>",
+                "$JS.API.CONSUMER.INFO.VV_FINANCE_INTERNAL_EVENTS_TEST.>",
+                "$JS.API.CONSUMER.DELETE.VV_FINANCE_INTERNAL_EVENTS_TEST.>",
+                "$JS.API.CONSUMER.MSG.NEXT.VV_FINANCE_INTERNAL_EVENTS_TEST.>",
+                "$JS.API.CONSUMER.CREATE.VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ.>",
+                "$JS.API.CONSUMER.DURABLE.CREATE.VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ.>",
+                "$JS.API.CONSUMER.INFO.VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ.>",
+                "$JS.API.CONSUMER.DELETE.VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ.>",
+                "$JS.API.CONSUMER.MSG.NEXT.VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ.>",
+                "$JS.ACK.VV_FINANCE_INTERNAL_EVENTS_TEST.>",
+                "$JS.ACK.VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ.>"
+              ]
+            }
+            subscribe: {
+              allow: ["_INBOX.>"]
+            }
+          }
         }
       ]
     }

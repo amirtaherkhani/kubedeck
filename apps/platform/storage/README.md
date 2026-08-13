@@ -41,3 +41,11 @@ The Finance client uses NATS-generated request/reply inboxes, so its only
 subscription permission is `_INBOX.>`; it has no subscription permission on
 application data subjects. Narrowing that inbox tree further requires the
 Finance client to configure a dedicated `inboxPrefix` first.
+
+The development durable-source test identity is separate from the Finance
+runtime identity. It is synchronized with `NATS_FINANCE_TEST_USERNAME` and
+`NATS_FINANCE_TEST_PASSWORD`; its JetStream API permissions are limited to
+`VV_FINANCE_INTERNAL_EVENTS_TEST` and
+`VV_FINANCE_INTERNAL_EVENTS_TEST_DLQ`. The external Finance runner receives
+the corresponding five-key contract from its own Infisical project at
+`/finance/test-internal-events`.

@@ -111,6 +111,16 @@ spec:
                 secretKeyRef:
                   name: {{ include "platform-storage.natsName" . }}
                   key: NATS_FINANCE_PASSWORD
+            - name: NATS_FINANCE_TEST_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "platform-storage.natsName" . }}
+                  key: NATS_FINANCE_TEST_USERNAME
+            - name: NATS_FINANCE_TEST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "platform-storage.natsName" . }}
+                  key: NATS_FINANCE_TEST_PASSWORD
             - name: NATS_CLUSTER_USERNAME
               valueFrom:
                 secretKeyRef:
