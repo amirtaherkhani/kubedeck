@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: k6-dashboard
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: k6
+    app.kubernetes.io/component: grafana-dashboard
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - k6-dashboard.local.dev
+      secretName: local-dev-tls
+  rules:
+    - host: k6-dashboard.local.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  name: service
