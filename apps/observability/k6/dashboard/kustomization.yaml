@@ -19,4 +19,4 @@ configMapGenerator:
       - k6-prometheus-native-histograms-dashboard.json
 
 resources:
-  - k6-dashboard-ingress.yaml
+  - k6-dashboard-redirect.yaml
