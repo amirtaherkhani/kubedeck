@@ -14,7 +14,7 @@ Use this workflow for every change in this repository.
 5. Add recommended Kubernetes metadata, probes, resource settings, ServiceMonitors, Grafana dashboards, and Alloy integrations when supported.
 6. Validate with Helm lint/template and Kubernetes server-side dry-run. Use live Grafana as the source of truth for dashboard and datasource claims when its MCP is available.
 7. Document the service in its local `README.md`; report unavailable integrations explicitly instead of implying they are enabled.
-8. For custom local images, use `$docker-image-deploy` and keep only the verified current image version in the local registry.
+8. For custom local images, use `$docker-image-deploy` and keep only one verified complete image set, referenced by one tag, in the exact local registry repository.
 
 ## Application onboarding contract
 
@@ -65,6 +65,9 @@ Use this workflow for every change in this repository.
   (currently 10 days) and filter dashboards to currently Running pods. Do not
   manually delete old pod-hash streams or metric series as routine cleanup.
 - For custom images use `$docker-image-deploy`, Rancher Desktop
-  `nerdctl`/containerd, immutable version tags, and one verified current tag
-  per local registry repository. Do not run load tests, production traffic, or
-  destructive cleanup as deployment verification without current approval.
+  `nerdctl`/containerd, and immutable version tags. Delete and verify absence of
+  the exact repository's complete existing image set before each build, then
+  retain one verified image set referenced by one tag. Deploy its release with
+  `HELM_AUTO_ROLLBACK=false` after the prior image is removed. Do not run load
+  tests, production traffic, registry garbage collection, or cleanup outside
+  that repository as deployment verification without current approval.

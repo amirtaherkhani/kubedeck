@@ -69,8 +69,20 @@ Do not commit the environment-specific tag as a hard-coded runtime value.
    incomplete or if another deployable image set remains.
 8. Store the new tag in the service's Infisical configuration, resolve it into
    Helm values, and add `app.kubernetes.io/version`. Render and lint the chart.
-9. Deploy through the repository release workflow, using `--wait` and
-   rollback-on-failure behavior where available.
+9. Deploy the individual custom-image release through the repository wrapper,
+   explicitly disabling automatic rollback while retaining its wait and cleanup
+   behavior:
+
+   ```bash
+   HELM_AUTO_ROLLBACK=false make helm-apply RELEASE=<release>
+   ```
+
+   Do not use the wrapper's default automatic rollback mode when the previous
+   release points to the image set deleted by step 5. If rollout fails, retain
+   the requested image as the repository's one image set, diagnose, and fix
+   forward. A rollback requires an explicit recovery request and restoration of
+   the selected image through this complete replacement workflow before changing
+   the release.
 10. Verify the rollout, image ID/digest, probes, HTTPS route, logs, metrics,
    dashboards, and application endpoint.
 
@@ -93,6 +105,12 @@ If the build or push fails after the required cleanup, leave the target
 repository empty, do not deploy, and report that state. Do not restore the stale
 image unless the user explicitly requests recovery.
 
+If deployment fails after the requested image is verified, keep that image as
+the repository's one image set and fix forward. Never roll back a release to an
+image that is absent from the registry. An explicitly requested rollback first
+restores its selected image through this workflow, replacing the failed image
+set before the Helm rollback or redeployment.
+
 ## Failure rules
 
 - Do not deploy an image that cannot be pulled by the Kubernetes node.
@@ -104,6 +122,9 @@ image unless the user explicitly requests recovery.
   project repository.
 - Do not update Helm values until the new repository contains exactly one
   verified image set.
+- For custom-image replacement, set `HELM_AUTO_ROLLBACK=false` on the repository
+  Helm wrapper. Fix forward unless the user explicitly authorizes image recovery
+  and rollback.
 - Do not commit credentials, registry tokens, Dockerfiles containing secrets,
   or third-party source files.
 - If registry cleanup, build, push, render, rollout, or health verification

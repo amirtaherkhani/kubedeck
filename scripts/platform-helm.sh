@@ -26,6 +26,8 @@ Commands:
 
 The default release for validate and apply is "all".
 To uninstall, set CONFIRM_UNINSTALL to the exact release name.
+Set HELM_AUTO_ROLLBACK=false for a custom-image replacement whose previous
+image has been removed. Automatic rollback defaults to true.
 EOF
 }
 
@@ -192,25 +194,42 @@ apply_release() {
   local version="$4"
   local values="$5"
   local timeout="$6"
-  local rollback_flag="--atomic"
+  local auto_rollback="${HELM_AUTO_ROLLBACK:-true}"
+  local rollback_flag=""
+
+  case "${auto_rollback}" in
+    true)
+      rollback_flag="--atomic"
+      if [[ "$(helm upgrade --help)" == *"--rollback-on-failure"* ]]; then
+        rollback_flag="--rollback-on-failure"
+      fi
+      ;;
+    false)
+      ;;
+    *)
+      die "HELM_AUTO_ROLLBACK must be true or false"
+      ;;
+  esac
 
   if [[ "${release}" == "infisical" ]]; then
     "${REPO_ROOT}/scripts/infisical-bootstrap.sh"
   fi
 
-  if [[ "$(helm upgrade --help)" == *"--rollback-on-failure"* ]]; then
-    rollback_flag="--rollback-on-failure"
-  fi
-
   printf 'Applying   %-18s namespace=%-12s chart=%s\n' "${release}" "${namespace}" "${chart}"
   helm_base_args "${release}" "${namespace}" "${chart}" "${version}" "${values}"
-  helm "${HELM_ARGS[@]}" \
-    --timeout "${timeout}" \
-    --wait \
-    --wait-for-jobs \
-    "${rollback_flag}" \
-    --cleanup-on-fail \
+  HELM_ARGS+=(
+    --timeout "${timeout}"
+    --wait
+    --wait-for-jobs
+  )
+  if [[ -n "${rollback_flag}" ]]; then
+    HELM_ARGS+=("${rollback_flag}")
+  fi
+  HELM_ARGS+=(
+    --cleanup-on-fail
     --history-max 10
+  )
+  helm "${HELM_ARGS[@]}"
 }
 
 show_values() {
