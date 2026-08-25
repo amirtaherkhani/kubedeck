@@ -27,7 +27,7 @@ identity that belongs to the same Infisical project:
 ```bash
 ./scripts/infisical-agent-access.sh configure \
   --profile vero-finance \
-  --project-id 82075663-04cb-4b35-a685-1d7a46b6193d \
+  --project-id 4574398d-423d-49bc-90e0-1e6a57a20c23 \
   --environment development \
   --path /finance \
   --kube-secret vero-vault-finance-infisical-auth \
@@ -68,6 +68,40 @@ Check the short-lived token without printing it:
 ```bash
 ./scripts/infisical-agent-access.sh status --profile vero-finance
 ```
+
+## Finance agent helper
+
+For the local Finance agent, use the Finance-only helper rather than an
+administrator account or the `home-lab` identity. Its one-time bootstrap
+creates `vero-vault-finance-agent` with `member` access limited to
+`vero-finance/development:/finance`, a 90-day client-secret rotation period,
+and short-lived (one-hour) access tokens:
+
+```bash
+./scripts/vero-vault-finance-infisical.sh provision-agent
+```
+
+The bootstrap requires the local Keychain-backed Infisical administrator only
+to create that scoped identity. It never prints or exports the administrator
+password, client credentials, access tokens, or secret values. The resulting
+client credentials are stored only in macOS Keychain and
+`platform-secrets/vero-vault-finance-infisical-auth`.
+
+Daily Finance operations do not use the web UI:
+
+```bash
+./scripts/vero-vault-finance-infisical.sh status
+./scripts/vero-vault-finance-infisical.sh list
+./scripts/vero-vault-finance-infisical.sh get FINANCE_DATABASE_URL
+printf '%s' 'new-value' | ./scripts/vero-vault-finance-infisical.sh set FINANCE_EXAMPLE_KEY
+./scripts/vero-vault-finance-infisical.sh delete FINANCE_EXAMPLE_KEY
+./scripts/vero-vault-finance-infisical.sh run -- npm test
+```
+
+`get` intentionally displays the requested value, while `set` reads one value
+from standard input to avoid saving it in shell history. Treat `delete` as an
+intentional destructive operation. Never use these commands with another
+project's profile or credentials.
 
 Prefer `run` over redirecting `export` to a file. Keep `.env` files, exported
 secret files, client secrets, and access tokens out of Git and agent logs.
