@@ -1,4 +1,5 @@
 {{- if .Values.redis.enabled }}
+{{- $redisAcl := default (dict) .Values.redis.acl }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -30,8 +31,8 @@ spec:
           args:
             - --appendonly
             - "yes"
-            - --requirepass
-            - $(REDIS_PASSWORD)
+            - --aclfile
+            - /etc/redis/users.acl
           env:
             - name: REDIS_PASSWORD
               valueFrom:
@@ -64,8 +65,18 @@ spec:
           resources:
             {{- toYaml .Values.redis.resources | nindent 12 }}
           volumeMounts:
+            - name: acl
+              mountPath: /etc/redis
+              readOnly: true
             - name: data
               mountPath: /data
+      volumes:
+        - name: acl
+          secret:
+            secretName: {{ include "platform-storage.redisName" . }}
+            items:
+              - key: {{ default "REDIS_ACL_FILE" $redisAcl.fileSecretKey }}
+                path: users.acl
   volumeClaimTemplates:
     - metadata:
         name: data

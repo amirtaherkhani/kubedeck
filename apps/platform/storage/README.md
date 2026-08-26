@@ -52,3 +52,10 @@ dedicated `vv.finance.test.internal.>` and
 the corresponding seven-key contract, including its two test subject-prefix
 values, from its own Infisical project at
 `/finance/test-internal-events`.
+
+The Redis Secret is synchronized from `/apps/platform-storage/redis`. It
+contains the platform default password plus a `REDIS_ACL_FILE` key mounted as
+Redis' durable ACL file. Finance receives a distinct Redis ACL identity whose
+commands are restricted to `vvf:*` keys. The ACL file must preserve the
+platform default user and must not be replaced with an inline Kubernetes
+Secret or Helm value.
