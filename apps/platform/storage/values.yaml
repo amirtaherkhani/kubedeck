@@ -472,6 +472,14 @@ mailpit:
   service:
     type: LoadBalancer
     smtpPort: 1025
+  smtp:
+    auth:
+      enabled: true
+      secretName: mailpit-smtp-auth
+      secretKey: auth
+      # Mailpit's local SMTP listener does not currently have STARTTLS
+      # certificates. Keep this explicit for the development-only service.
+      allowInsecure: true
   uiService:
     type: ClusterIP
     port: 80

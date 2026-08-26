@@ -26,6 +26,15 @@ spec:
           env:
             - name: MP_DATABASE
               value: /data/mailpit.db
+            {{- if .Values.mailpit.smtp.auth.enabled }}
+            - name: MP_SMTP_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mailpit.smtp.auth.secretName }}
+                  key: {{ .Values.mailpit.smtp.auth.secretKey }}
+            - name: MP_SMTP_AUTH_ALLOW_INSECURE
+              value: {{ .Values.mailpit.smtp.auth.allowInsecure | quote }}
+            {{- end }}
           ports:
             - name: smtp
               containerPort: {{ .Values.mailpit.service.smtpPort }}

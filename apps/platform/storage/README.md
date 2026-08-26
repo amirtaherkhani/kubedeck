@@ -22,6 +22,15 @@ UI domains are defined in `values.yaml`; common routes include:
 `mailpit-ui.local.dev`, `schema-registry-ui.local.dev`, and
 `grpcui.local.dev`.
 
+Mailpit SMTP authentication is enabled for the local development listener.
+The platform Infisical path `/apps/platform-storage/mailpit` supplies
+`MAIL_SMTP_USER` and `MAIL_SMTP_PASSWORD`; the operator combines them into the
+namespace-local `mailpit-smtp-auth` Secret key `auth`, and the Deployment passes
+that value to Mailpit as `MP_SMTP_AUTH`. `MP_SMTP_AUTH_ALLOW_INSECURE=true` is
+intentional while this local listener has no SMTP TLS certificate; do not expose
+port 1025 outside the trusted home-lab network. Finance uses its own
+`MAIL_USER` and `MAIL_PASSWORD` values from its external `vero-finance` project.
+
 Internal clients must use Kubernetes service DNS in the
 `platform-storage.svc.cluster.local` namespace. macOS clients use the
 documented `*.local.dev` DNS names.
