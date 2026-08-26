@@ -4,7 +4,7 @@ set -euo pipefail
 
 readonly PF_CONF="/etc/pf.conf"
 readonly HOST_IP="${HOME_LAB_HOST_IP:-192.168.1.100}"
-readonly CLUSTER_DNS_IP="${HOME_LAB_CLUSTER_DNS_IP:-192.168.1.183}"
+readonly KUBE_CONTEXT="${KUBE_CONTEXT:-rancher-desktop}"
 readonly HOMEBREW_PREFIX="${HOMEBREW_PREFIX:-/opt/homebrew}"
 readonly DNSMASQ_BIN="${HOME_LAB_DNSMASQ_BIN:-${HOMEBREW_PREFIX}/sbin/dnsmasq}"
 readonly DNSMASQ_CONF_DIR="${HOMEBREW_PREFIX}/etc/dnsmasq.d"
@@ -15,6 +15,13 @@ readonly PF_RDR_ANCHOR='rdr-anchor "home-lab-dns"'
 readonly PF_LOAD_ANCHOR='load anchor "home-lab-dns" from "/etc/pf.anchors/home-lab-dns"'
 
 readonly PF_TMP="$(mktemp -t home-lab-pf)"
+
+cluster_dns_ip="${HOME_LAB_CLUSTER_DNS_IP:-}"
+if [[ -z "${cluster_dns_ip}" ]] && command -v kubectl >/dev/null 2>&1; then
+  cluster_dns_ip="$(kubectl --context "${KUBE_CONTEXT}" -n kube-system get service home-lab-dns \
+    -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
+fi
+readonly CLUSTER_DNS_IP="${cluster_dns_ip:-192.168.1.183}"
 
 trap 'rm -f "${PF_TMP}"' EXIT
 
