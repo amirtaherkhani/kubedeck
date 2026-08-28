@@ -62,9 +62,8 @@ the corresponding seven-key contract, including its two test subject-prefix
 values, from its own Infisical project at
 `/finance/test-internal-events`.
 
-The Redis Secret is synchronized from `/apps/platform-storage/redis`. It
-contains the platform default password plus a `REDIS_ACL_FILE` key mounted as
-Redis' durable ACL file. Finance receives a distinct Redis ACL identity whose
-commands are restricted to `vvf:*` keys. The ACL file must preserve the
-platform default user and must not be replaced with an inline Kubernetes
-Secret or Helm value.
+Redis ACL-file loading and Redis authentication are intentionally disabled for
+the local home lab. Redis has no Infisical-managed Secret or Kubernetes secret
+mount, and clients connect through the in-cluster Service endpoint without
+credentials. The legacy `/apps/platform-storage/redis` Infisical path is not
+consumed by Kubernetes.

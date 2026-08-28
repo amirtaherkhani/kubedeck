@@ -13,8 +13,6 @@ spec:
       {{- include "platform-storage.redisCommanderLabels" . | nindent 6 }}
   template:
     metadata:
-      annotations:
-        checksum/secret: {{ include (print $.Template.BasePath "/redis-commander-secret.yaml") . | sha256sum }}
       labels:
         {{- include "platform-storage.labels" . | nindent 8 }}
         {{- include "platform-storage.redisCommanderLabels" . | nindent 8 }}

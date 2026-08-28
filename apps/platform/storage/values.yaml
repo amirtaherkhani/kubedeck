@@ -55,8 +55,6 @@ pgadmin:
 redis:
   enabled: true
   name: redis
-  acl:
-    fileSecretKey: REDIS_ACL_FILE
   image:
     repository: ecr-public.aws.com/docker/library/redis
     tag: 8.2.3-alpine

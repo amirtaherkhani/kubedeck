@@ -1,5 +1,4 @@
 {{- if .Values.redis.enabled }}
-{{- $redisAcl := default (dict) .Values.redis.acl }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -15,8 +14,6 @@ spec:
       {{- include "platform-storage.redisLabels" . | nindent 6 }}
   template:
     metadata:
-      annotations:
-        checksum/secret: {{ include (print $.Template.BasePath "/redis-secret.yaml") . | sha256sum }}
       labels:
         {{- include "platform-storage.labels" . | nindent 8 }}
         {{- include "platform-storage.redisLabels" . | nindent 8 }}
@@ -31,19 +28,6 @@ spec:
           args:
             - --appendonly
             - "yes"
-            - --aclfile
-            - /etc/redis/users.acl
-          env:
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "platform-storage.redisName" . }}
-                  key: REDIS_PASSWORD
-            - name: REDISCLI_AUTH
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "platform-storage.redisName" . }}
-                  key: REDIS_REDISCLI_AUTH
           readinessProbe:
             exec:
               command:
@@ -65,18 +49,8 @@ spec:
           resources:
             {{- toYaml .Values.redis.resources | nindent 12 }}
           volumeMounts:
-            - name: acl
-              mountPath: /etc/redis
-              readOnly: true
             - name: data
               mountPath: /data
-      volumes:
-        - name: acl
-          secret:
-            secretName: {{ include "platform-storage.redisName" . }}
-            items:
-              - key: {{ default "REDIS_ACL_FILE" $redisAcl.fileSecretKey }}
-                path: users.acl
   volumeClaimTemplates:
     - metadata:
         name: data
