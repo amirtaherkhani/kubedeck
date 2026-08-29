@@ -29,7 +29,8 @@ auth:
 timeline:
   storage: sqlite
   dbPath: /data/timeline.db
-  retention: 168h
+  # Keep the local activity timeline bounded for development.
+  retention: 72h
   maxSize: 800Mi
 
 persistence:

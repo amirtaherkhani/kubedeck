@@ -62,7 +62,7 @@ Use this workflow for every change in this repository.
 ## Data and image safety
 
 - Keep Loki and Prometheus on the documented time-based retention policy
-  (currently 10 days) and filter dashboards to currently Running pods. Do not
+  (currently 5 days) and filter dashboards to currently Running pods. Do not
   manually delete old pod-hash streams or metric series as routine cleanup.
 - For custom images use `$docker-image-deploy`, Rancher Desktop
   `nerdctl`/containerd, and immutable version tags. Delete and verify absence of

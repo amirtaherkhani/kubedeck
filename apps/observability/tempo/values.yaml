@@ -2,6 +2,9 @@ deploymentMode: SingleBinary
 
 tempo:
   reportingEnabled: false
+  # Automatically remove local trace blocks older than three days. The
+  # single-binary deployment runs the compaction/retention loop in-process.
+  retention: 72h
 
   metricsGenerator:
     enabled: true
