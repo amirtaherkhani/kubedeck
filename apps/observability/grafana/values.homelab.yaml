@@ -1,5 +1,7 @@
 replicas: 1
 
+envFromSecret: grafana-admin
+
 admin:
   existingSecret: grafana-admin
   userKey: GRAFANA_ADMIN_USER

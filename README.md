@@ -11,6 +11,7 @@ apps/platform/                storage, cert-manager, Infisical
 apps/observability/           Grafana, Prometheus, Loki, Tempo, Alloy, k6
 apps/dev/                     KubeDeck, KubeDeck Agent, n8n, Temporal
 scripts/                      safe validation and operation helpers
+tools/local-dev-env-mcp/      project-aware Infisical connector for local agents
 ```
 
 ## Conventions
@@ -37,6 +38,20 @@ make helm-apply RELEASE=all
 
 `helm-validate` is traffic-free dry-run validation. `helm-apply` changes the
 cluster and must only be run after reviewing the rendered configuration.
+
+Local Codex and OpenCode agents use `local-dev-env-mcp` to discover, read, and
+maintain project environment values without receiving passwords, tokens,
+project IDs, or folder paths in prompts. Bootstrap and verify it with:
+
+```bash
+make local-dev-env-bootstrap
+make local-dev-env-test
+make local-dev-env-doctor
+```
+
+See [tools/local-dev-env-mcp/README.md](tools/local-dev-env-mcp/README.md) for
+the agent tools, project registration, identity boundaries, and direct
+Kubernetes injection contract.
 
 Rancher Desktop owns Traefik, Traefik CRDs, CoreDNS, Flannel,
 local-path-provisioner, metrics-server, ServiceLB, and K3s system controllers.

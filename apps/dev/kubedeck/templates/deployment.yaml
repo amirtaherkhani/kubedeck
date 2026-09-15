@@ -8,6 +8,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "kubedeck.fullname" . }}
+  annotations:
+    secrets.infisical.com/auto-reload: "true"
   labels:
     {{- include "kubedeck.labels" . | nindent 4 }}
 spec:
@@ -48,6 +50,9 @@ spec:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
+          envFrom:
+            - secretRef:
+                name: {{ required "admin.existingSecret is required" .Values.admin.existingSecret }}
           env:
             - name: PORT
               value: {{ .Values.service.targetPort | quote }}

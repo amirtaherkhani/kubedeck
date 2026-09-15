@@ -2,5 +2,5 @@ apiVersion: v2
 name: platform-storage
 description: Shared local Kubernetes storage dependencies for application projects.
 type: application
-version: 0.1.1
-appVersion: "0.1.1"
+version: 0.1.3
+appVersion: "0.1.3"

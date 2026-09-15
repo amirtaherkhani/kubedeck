@@ -2,6 +2,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    secrets.infisical.com/auto-reload: "true"
   name: {{ include "platform-storage.natsUiName" . }}
   labels:
     {{- include "platform-storage.labels" . | nindent 4 }}

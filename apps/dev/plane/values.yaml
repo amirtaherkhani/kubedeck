@@ -21,17 +21,21 @@ redis:
   image: valkey/valkey:7.2.11-alpine
   storageClass: local-path
   volumeSize: 100Mi
+  annotations: &infisicalAutoReload
+    secrets.infisical.com/auto-reload: "true"
 
 postgres:
   local_setup: true
   image: postgres:15.7-alpine
   storageClass: local-path
   volumeSize: 1Gi
+  annotations: *infisicalAutoReload
 
 rabbitmq:
   local_setup: true
   image: rabbitmq:3.13.6-management-alpine
   storageClass: local-path
+  annotations: *infisicalAutoReload
 
 minio:
   image: minio/minio:RELEASE.2025-09-07T16-13-09Z
@@ -39,8 +43,30 @@ minio:
   local_setup: true
   storageClass: local-path
   volumeSize: 1Gi
+  annotations: *infisicalAutoReload
   env:
     minio_endpoint_ssl: false
+
+web:
+  annotations: *infisicalAutoReload
+
+space:
+  annotations: *infisicalAutoReload
+
+admin:
+  annotations: *infisicalAutoReload
+
+live:
+  annotations: *infisicalAutoReload
+
+api:
+  annotations: *infisicalAutoReload
+
+worker:
+  annotations: *infisicalAutoReload
+
+beatworker:
+  annotations: *infisicalAutoReload
 
 external_secrets:
   rabbitmq_existingSecret: plane-rabbitmq

@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "cognee.fullname" . }}
+  annotations:
+    secrets.infisical.com/auto-reload: "true"
   labels:
     {{- include "cognee.labels" . | nindent 4 }}
 spec:

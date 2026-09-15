@@ -1,6 +1,6 @@
 RELEASE ?= all
 
-.PHONY: core-validate core-apply macos-dns macos-dns-check macos-trust-tls infisical-bootstrap infisical-admin-bootstrap helm-inventory helm-repos helm-status helm-validate helm-apply helm-values helm-remove helm-lint nats-ha-test tempo-smoke
+.PHONY: core-validate core-apply macos-dns macos-dns-check macos-trust-tls infisical-bootstrap infisical-admin-bootstrap local-dev-env-bootstrap local-dev-env-test local-dev-env-doctor helm-inventory helm-repos helm-status helm-validate helm-apply helm-values helm-remove helm-lint nats-ha-test tempo-smoke
 
 core-validate:
 	kubectl apply --dry-run=server -f core/namespaces/namespaces.yaml
@@ -30,6 +30,15 @@ infisical-bootstrap:
 
 infisical-admin-bootstrap:
 	./scripts/infisical-admin-bootstrap.sh
+
+local-dev-env-bootstrap:
+	./scripts/local-dev-env-bootstrap.sh
+
+local-dev-env-test:
+	npm test --prefix tools/local-dev-env-mcp
+
+local-dev-env-doctor:
+	local-dev-env-mcp doctor
 
 helm-inventory:
 	./scripts/platform-helm.sh inventory

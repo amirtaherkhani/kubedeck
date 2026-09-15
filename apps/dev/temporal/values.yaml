@@ -1,3 +1,6 @@
+additionalAnnotations:
+  secrets.infisical.com/auto-reload: "true"
+
 server:
   metrics:
     serviceMonitor:
