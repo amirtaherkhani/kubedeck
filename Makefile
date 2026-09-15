@@ -1,6 +1,6 @@
 RELEASE ?= all
 
-.PHONY: core-validate core-apply macos-dns macos-trust-tls infisical-bootstrap infisical-admin-bootstrap helm-inventory helm-repos helm-status helm-validate helm-apply helm-values helm-remove helm-lint nats-ha-test tempo-smoke
+.PHONY: core-validate core-apply macos-dns macos-dns-check macos-trust-tls infisical-bootstrap infisical-admin-bootstrap helm-inventory helm-repos helm-status helm-validate helm-apply helm-values helm-remove helm-lint nats-ha-test tempo-smoke
 
 core-validate:
 	kubectl apply --dry-run=server -f core/namespaces/namespaces.yaml
@@ -18,6 +18,9 @@ core-apply:
 macos-dns:
 	./core/host/macos/configure-local-dev-dns-forwarding.sh
 	./core/host/macos/configure-local-dev-resolver.sh
+
+macos-dns-check:
+	./core/host/macos/configure-local-dev-resolver.sh --dry-run
 
 macos-trust-tls:
 	./core/host/macos/trust-local-dev-tls.sh

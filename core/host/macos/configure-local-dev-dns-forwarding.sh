@@ -17,11 +17,20 @@ readonly PF_LOAD_ANCHOR='load anchor "home-lab-dns" from "/etc/pf.anchors/home-l
 readonly PF_TMP="$(mktemp -t home-lab-pf)"
 
 cluster_dns_ip="${HOME_LAB_CLUSTER_DNS_IP:-}"
-if [[ -z "${cluster_dns_ip}" ]] && command -v kubectl >/dev/null 2>&1; then
+if [[ -z "${cluster_dns_ip}" ]]; then
+  if ! command -v kubectl >/dev/null 2>&1; then
+    echo "kubectl is required to discover the home-lab-dns LoadBalancer; set HOME_LAB_CLUSTER_DNS_IP only for an explicit emergency override." >&2
+    exit 1
+  fi
+
   cluster_dns_ip="$(kubectl --context "${KUBE_CONTEXT}" -n kube-system get service home-lab-dns \
     -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
 fi
-readonly CLUSTER_DNS_IP="${cluster_dns_ip:-192.168.1.183}"
+if [[ -z "${cluster_dns_ip}" ]]; then
+  echo "home-lab-dns has no LoadBalancer IP; refusing to write a stale dnsmasq forwarding target." >&2
+  exit 1
+fi
+readonly CLUSTER_DNS_IP="${cluster_dns_ip}"
 
 trap 'rm -f "${PF_TMP}"' EXIT
 

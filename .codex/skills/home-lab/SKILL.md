@@ -43,6 +43,31 @@ Use this workflow for every change in this repository.
   workload's own Infisical-backed environment; report the adapter unavailable
   until its credential is present and verified.
 
+## macOS `local.dev` DNS self-healing
+
+- Treat `home-lab-dns` and the `*.local.dev` ingress address as two different
+  addresses. The `home-lab-dns` LoadBalancer is the DNS **server**; CoreDNS
+  answers `*.local.dev` with the macOS ingress address (normally
+  `192.168.1.100`). Never write that answer address to `/etc/resolver/local.dev`.
+- Before diagnosing an application, Grafana, TLS, or ingress failure as a
+  workload issue, compare the live `kube-system/home-lab-dns` LoadBalancer IP
+  with `/etc/resolver/local.dev`, then query the DNS service directly. Desktop
+  runtime restarts can change the LoadBalancer address while macOS retains the
+  old resolver target.
+- When the live DNS service is Ready and answers `grafana.local.dev` with the
+  expected ingress address, run
+  `./core/host/macos/configure-local-dev-resolver.sh`. It discovers and
+  validates the current DNS LoadBalancer, updates only `/etc/resolver/local.dev`,
+  flushes the macOS DNS cache, and reloads `mDNSResponder`. Use `--dry-run`
+  or `make macos-dns-check` before a repair when diagnosing.
+- The repair requires the user's macOS administrator authentication. Do not
+  bypass the prompt, hard-code a stale ServiceLB address, alter `/etc/hosts`,
+  or change CoreDNS/Traefik merely to compensate for a stale macOS resolver.
+- Verify the operating-system resolver with
+  `dscacheutil -q host -a name grafana.local.dev`; do not use a bare `dig` as
+  proof of macOS scoped-resolver behavior. Verify the application separately
+  over HTTPS.
+
 ## Delivery and recovery loop
 
 - Validate with Helm lint/template and Kubernetes server-side dry-run. Check
