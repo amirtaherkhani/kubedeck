@@ -59,22 +59,22 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ include "platform-storage.postgresqlName" . }}
-                  key: POSTGRESQL_LEGACY_POSTGRES_DB
+                  key: POSTGRESQL_DATABASE
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: {{ include "platform-storage.postgresqlName" . }}
-                  key: POSTGRESQL_LEGACY_POSTGRES_USER
+                  key: POSTGRESQL_USERNAME
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "platform-storage.postgresqlName" . }}
-                  key: POSTGRESQL_LEGACY_POSTGRES_PASSWORD
+                  key: POSTGRESQL_PASSWORD
             - name: POSTGRES_POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "platform-storage.postgresqlName" . }}
-                  key: POSTGRESQL_LEGACY_POSTGRES_POSTGRES_PASSWORD
+                  key: POSTGRESQL_POSTGRES_PASSWORD
             - name: POSTGRESQL_PORT_NUMBER
               value: "5432"
             - name: POSTGRESQL_VOLUME_DIR
