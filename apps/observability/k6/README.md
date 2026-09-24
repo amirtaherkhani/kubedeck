@@ -12,3 +12,9 @@ Kubernetes-based performance-test runner with Prometheus and Grafana output.
 
 Durable dashboards are provisioned into Grafana. Runner resources are
 temporary and must be bounded and cleaned up after an approved test.
+
+## k6 2.x runner contract
+
+The k6 operator starts runners paused and resumes them through the k6 REST API
+on port `6565`. k6 2.x disables that API by default, so every TestRun using a
+k6 2.x runner must set `K6_ADDRESS=0.0.0.0:6565` under `spec.runner.env`.

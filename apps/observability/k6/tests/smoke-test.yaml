@@ -54,6 +54,10 @@ spec:
       file: test.js
   runner:
     env:
+      # k6 2.x disables its control API by default. The operator starts a
+      # runner paused and resumes it through this API on port 6565.
+      - name: K6_ADDRESS
+        value: 0.0.0.0:6565
       - name: K6_PROMETHEUS_RW_SERVER_URL
         value: http://monitoring-kube-prometheus-prometheus.observability.svc.cluster.local:9090/api/v1/write
       - name: K6_PROMETHEUS_RW_TREND_STATS

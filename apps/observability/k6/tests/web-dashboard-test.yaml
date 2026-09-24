@@ -98,6 +98,10 @@ spec:
   runner:
     image: grafana/k6:2.0.0
     env:
+      # k6 2.x disables its control API by default. The operator starts a
+      # runner paused and resumes it through this API on port 6565.
+      - name: K6_ADDRESS
+        value: 0.0.0.0:6565
       - name: K6_WEB_DASHBOARD
         value: "true"
       - name: K6_WEB_DASHBOARD_HOST
