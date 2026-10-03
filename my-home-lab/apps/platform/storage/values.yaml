@@ -21,7 +21,9 @@ postgresql:
       cpu: 100m
       memory: 128Mi
     limits:
-      cpu: 500m
+      # Align with the proven live limit: the prior 500m limit fully throttled
+      # PostgreSQL during Finance load profiles.
+      cpu: "3"
       memory: 512Mi
 pgadmin:
   enabled: true
