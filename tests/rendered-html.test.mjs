@@ -402,9 +402,8 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
 
   const html = await dashboard.text();
   assert.match(html, /<title>KubeDeck — Kubernetes Launchpad<\/title>/i);
-  assert.match(html, /Your Kubernetes ecosystem/);
-  assert.match(html, /kubedeck-banner\.png/);
-  assert.match(html, /kubedeck-live-graph/);
+  assert.match(html, /Dashboard overview/);
+  assert.doesNotMatch(html, /kubedeck-banner\.png|kubedeck-live-graph/);
   assert.match(html, /Fleet resources/);
   assert.match(html, /CPU/);
   assert.match(html, /Memory/);
@@ -857,7 +856,6 @@ test("keeps the v0.1.2 package and Helm versions aligned", async () => {
 test("ships the admin schema, migration, and finished product assets", async () => {
   const [
     loginPage,
-    bannerComponent,
     logoComponent,
     notificationsComponent,
     dashboardPage,
@@ -875,7 +873,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
     hosting,
     packageJson,
     socialImage,
-    bannerImage,
+    gradientNoiseImage,
     logoSvg,
     logo16,
     logo32,
@@ -892,10 +890,6 @@ test("ships the admin schema, migration, and finished product assets", async () 
     globalStyles,
   ] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(
-      new URL("../components/kubedeck-banner.tsx", import.meta.url),
-      "utf8",
-    ),
     readFile(
       new URL("../components/kubedeck-logo.tsx", import.meta.url),
       "utf8",
@@ -931,7 +925,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../public/og.png", import.meta.url)),
-    readFile(new URL("../public/kubedeck-banner.png", import.meta.url)),
+    readFile(new URL("../public/gradient-noise.png", import.meta.url)),
     readFile(
       new URL("../public/brand/kubedeck-mark.svg", import.meta.url),
       "utf8",
@@ -957,13 +951,6 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(loginPage, /<AdminAuthForm mode=\{isSetup/);
   assert.match(loginPage, /auth-cluster-scene/);
   assert.match(loginPage, /One happy little deck/);
-  assert.match(bannerComponent, /src="\/kubedeck-banner\.png"/);
-  assert.match(bannerComponent, /Your Kubernetes ecosystem/);
-  assert.match(bannerComponent, /liveGraph/);
-  assert.match(bannerComponent, /kubedeck-live-link/);
-  assert.match(bannerComponent, /kubedeck-live-beacon/);
-  assert.match(bannerComponent, /kubedeck-banner-layer--data/);
-  assert.match(bannerComponent, /kubedeck-banner-layer--api/);
   assert.match(logoComponent, /KubeDeckLogoVariant = "light" \| "dark" \| "clear"/);
   assert.match(logoComponent, /data-logo-variant=\{variant\}/);
   assert.match(notificationsComponent, /Services and Kubernetes nodes/);
@@ -971,7 +958,10 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(notificationsComponent, /kubedeck-notify-nodes/);
   assert.match(dashboardPage, /getCurrentAdmin/);
   assert.match(dashboardPage, /<DashboardClient[\s\S]*admin=\{admin\}/);
-  assert.match(dashboardClient, /KubeDeckBanner/);
+  assert.match(dashboardClient, /Dashboard overview/);
+  assert.doesNotMatch(dashboardClient, /KubeDeckBanner/);
+  assert.doesNotMatch(dashboardClient, /liquid-grid|liquid-orbit/);
+  assert.doesNotMatch(settingsClient, /liquid-grid|liquid-orbit/);
   assert.match(dashboardClient, /const webApps:/);
   assert.match(dashboardClient, /const operationalMeta:/);
   assert.match(dashboardClient, /AI & MCP Services/);
@@ -1007,26 +997,12 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.doesNotMatch(layout, /\bGeist\b/);
   assert.match(globalStyles, /font-family: var\(--font-manrope\)/);
   assert.match(globalStyles, /\.dashboard-sidebar/);
-  assert.match(globalStyles, /\.liquid-orbit/);
-  assert.match(globalStyles, /\.kubedeck-banner\s*\{[^}]*perspective: 1400px/s);
-  assert.match(
-    globalStyles,
-    /\.dashboard-banner:hover \.kubedeck-banner-layer--data/s,
-  );
-  assert.match(globalStyles, /\.kubedeck-motion-off \.kubedeck-banner-layer/);
-  assert.match(
-    globalStyles,
-    /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.kubedeck-banner-layer/,
-  );
-  assert.doesNotMatch(globalStyles, /kubedeck-banner-(?:drift|scan)/);
-  assert.match(
-    globalStyles,
-    /\.kubedeck-live-link--top\s*\{[^}]*width: 9\.1%/s,
-  );
-  assert.match(
-    globalStyles,
-    /\.kubedeck-live-link--bottom\s*\{[^}]*top: 50\.8%[^}]*width: 10%[^}]*rotate\(90deg\)/s,
-  );
+  assert.match(globalStyles, /--layout-background: #090040/);
+  assert.match(globalStyles, /--background: #002029/);
+  assert.match(globalStyles, /url\("\/gradient-noise\.png"\)/);
+  assert.doesNotMatch(globalStyles, /grid-drift|liquid-orbit-spin/);
+  assert.match(globalStyles, /\.kubedeck-logo__cube/);
+  assert.doesNotMatch(globalStyles, /kubedeck-banner-layer|kubedeck-live-link/);
   assert.match(packageJson, /"recharts": "\^3\.8\.0"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.match(environmentExample, /KUBEDECK_ADMIN_EMAIL=/);
@@ -1047,14 +1023,13 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.equal(socialImage.readUInt32BE(16), 1731);
   assert.equal(socialImage.readUInt32BE(20), 909);
   assert.deepEqual(
-    [...bannerImage.subarray(0, 8)],
+    [...gradientNoiseImage.subarray(0, 8)],
     [137, 80, 78, 71, 13, 10, 26, 10],
   );
-  assert.equal(bannerImage.readUInt32BE(16), 2172);
-  assert.equal(bannerImage.readUInt32BE(20), 724);
-  assert.match(logoSvg, /<title id="title">KubeDeck Liquid Glass logo<\/title>/);
-  assert.match(logoSvg, /fill-rule="evenodd"/);
-  assert.match(logoSvg, /linearGradient id="monogram"/);
+  assert.equal(gradientNoiseImage.readUInt32BE(16), 256);
+  assert.equal(gradientNoiseImage.readUInt32BE(20), 256);
+  assert.match(logoSvg, /<title id="title">KubeDeck<\/title>/);
+  assert.match(logoSvg, /A rounded K inside an open cube/);
   for (const [asset, size] of [
     [logo16, 16],
     [logo32, 32],
