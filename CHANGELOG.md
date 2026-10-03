@@ -12,6 +12,8 @@ All notable KubeDeck changes are documented in this file.
   the shared shadcn-style UI components.
 - Replace the banner's continuous drift and scan with an interactive isometric
   interface, API, and data layer stack.
+- Replace animated liquid grid and orbit backdrops with the supplied static
+  purple gradient and grain texture.
 
 ## [0.1.1] - 2026-08-01
 

@@ -815,6 +815,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
     packageJson,
     socialImage,
     bannerImage,
+    gradientNoiseImage,
     logoSvg,
     logo16,
     logo32,
@@ -871,6 +872,7 @@ test("ships the admin schema, migration, and finished product assets", async () 
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../public/og.png", import.meta.url)),
     readFile(new URL("../public/kubedeck-banner.png", import.meta.url)),
+    readFile(new URL("../public/gradient-noise.png", import.meta.url)),
     readFile(
       new URL("../public/brand/kubedeck-mark.svg", import.meta.url),
       "utf8",
@@ -911,6 +913,8 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(dashboardPage, /getCurrentAdmin/);
   assert.match(dashboardPage, /<DashboardClient[\s\S]*admin=\{admin\}/);
   assert.match(dashboardClient, /KubeDeckBanner/);
+  assert.doesNotMatch(dashboardClient, /liquid-grid|liquid-orbit/);
+  assert.doesNotMatch(settingsClient, /liquid-grid|liquid-orbit/);
   assert.match(dashboardClient, /const webApps:/);
   assert.match(dashboardClient, /const operationalMeta:/);
   assert.match(dashboardClient, /AI & MCP Services/);
@@ -946,7 +950,10 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.doesNotMatch(layout, /\bGeist\b/);
   assert.match(globalStyles, /font-family: var\(--font-manrope\)/);
   assert.match(globalStyles, /\.dashboard-sidebar/);
-  assert.match(globalStyles, /\.liquid-orbit/);
+  assert.match(globalStyles, /#460e44/);
+  assert.match(globalStyles, /#3b1e4a/);
+  assert.match(globalStyles, /url\("\/gradient-noise\.png"\)/);
+  assert.doesNotMatch(globalStyles, /grid-drift|liquid-orbit-spin/);
   assert.match(globalStyles, /\.kubedeck-banner\s*\{[^}]*perspective: 1400px/s);
   assert.match(
     globalStyles,
@@ -989,6 +996,12 @@ test("ships the admin schema, migration, and finished product assets", async () 
     [...bannerImage.subarray(0, 8)],
     [137, 80, 78, 71, 13, 10, 26, 10],
   );
+  assert.deepEqual(
+    [...gradientNoiseImage.subarray(0, 8)],
+    [137, 80, 78, 71, 13, 10, 26, 10],
+  );
+  assert.equal(gradientNoiseImage.readUInt32BE(16), 256);
+  assert.equal(gradientNoiseImage.readUInt32BE(20), 256);
   assert.equal(bannerImage.readUInt32BE(16), 2172);
   assert.equal(bannerImage.readUInt32BE(20), 724);
   assert.match(logoSvg, /<title id="title">KubeDeck Liquid Glass logo<\/title>/);
