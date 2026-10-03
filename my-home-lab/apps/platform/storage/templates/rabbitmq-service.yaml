@@ -15,6 +15,9 @@ spec:
     - name: management
       port: {{ .Values.rabbitmq.service.managementPort }}
       targetPort: management
+    - name: metrics
+      port: {{ .Values.rabbitmq.service.metricsPort }}
+      targetPort: {{ .Values.rabbitmq.service.metricsPort }}
   selector:
     {{- include "platform-storage.rabbitmqLabels" . | nindent 4 }}
 {{- end }}
