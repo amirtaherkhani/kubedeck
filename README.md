@@ -201,9 +201,10 @@ existing administrator.
 ### Browser setup
 
 When all four variables are absent, KubeDeck displays **Create the admin
-account**. The hosted private setup route additionally expects the authenticated
-Sites identity header. For a Kubernetes deployment, backend bootstrap through a
-Secret is the recommended path.
+account**. Local `npm run dev` enables this browser setup path. The hosted
+private setup route additionally expects the authenticated Sites identity
+header. For a Kubernetes deployment, backend bootstrap through a Secret is the
+recommended path.
 
 Sessions use a signed `__Host-` cookie with `Secure`, `HttpOnly`, and
 `SameSite=Strict`, and expire after 12 hours.

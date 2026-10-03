@@ -305,6 +305,20 @@ test("renders one-time admin setup and creates a hashed admin account", async (t
   });
   assert.equal(unverifiedSetup.status, 403);
 
+  const localRuntime = await createRuntime({ KUBEDECK_LOCAL_SETUP: "true" });
+  t.after(() => localRuntime.dispose());
+  const localSetup = await localRuntime.request("/api/auth/setup", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      firstName: "Local",
+      lastName: "Admin",
+      email: "local-admin@example.com",
+      password: "Longer-Local-Password-2026",
+    }),
+  });
+  assert.equal(localSetup.status, 201);
+
   await setupAdmin(runtime);
   const storedAdmin = await runtime.getAdminRecord();
   assert.equal(storedAdmin.email, "admin@example.com");
