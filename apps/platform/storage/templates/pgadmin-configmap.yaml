@@ -18,7 +18,7 @@ data:
           "Host": "{{ include "platform-storage.postgresqlName" . }}.{{ .Release.Namespace }}.svc.cluster.local",
           "Port": {{ .Values.postgresql.service.port }},
           "MaintenanceDB": "default",
-          "Username": "admin",
+          "Username": "app",
           "ConnectionParameters": {
             "sslmode": "prefer",
             "connect_timeout": 10

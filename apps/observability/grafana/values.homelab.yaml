@@ -23,6 +23,19 @@ service:
   port: 80
   targetPort: 3000
 
+# Enable the renderer used by Grafana panel/image export and k6 evidence.
+# Keep the image version pinned so renderer behavior is reproducible.
+imageRenderer:
+  enabled: true
+  replicas: 1
+  image:
+    tag: v5.12.2
+    pullPolicy: IfNotPresent
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: monitoring
+
 serviceMonitor:
   enabled: true
   path: /metrics

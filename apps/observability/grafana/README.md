@@ -10,6 +10,7 @@ Primary home-lab observability UI.
 | Storage | `local-path` PVC, 10 Gi |
 | Datasources | Prometheus, Loki, Tempo, Alertmanager |
 | Dashboards | Kubernetes, macOS, platform, k6, and service dashboards |
+| Rendering | Remote image renderer `v5.12.2` for panel/dashboard exports |
 
 Dashboard ConfigMaps are discovered across namespaces using the Grafana sidecar.
 Stable datasource UIDs are `prometheus`, `loki`, `tempo`, and `alertmanager`.
