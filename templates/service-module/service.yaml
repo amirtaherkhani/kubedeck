@@ -1,0 +1,25 @@
+# Copy this file into an app module after adding real metadata and validating it.
+# This template alone is not registered or deployed.
+apiVersion: catalog.kubedeck.io/v1alpha1
+kind: ServiceModule
+module:
+  id: example-module
+  displayName: Example Module
+  category: example
+  ownership: managed
+  purpose: Replace this sentence with the module's purpose.
+components:
+  - id: example-component
+    type: other
+    purpose: Replace this sentence with the component's purpose.
+    provides: []
+    requires: []
+    externalConnections: []
+    workloadRefs: []
+    endpoints: []
+    healthChecks: []
+    observability:
+      dashboards: []
+      metrics: []
+      logs: []
+    secretRefs: []
