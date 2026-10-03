@@ -18,7 +18,7 @@ export function loadCredentials() {
   const clientId = keychainValue("client-id");
   const clientSecret = keychainValue("client-secret");
   if (!clientId || !clientSecret) {
-    throw new Error("local development Infisical credentials are not configured; run make local-dev-env-bootstrap");
+    throw new Error("local development Infisical credentials are not configured; run make kubedeck-env-bootstrap");
   }
   return { clientId, clientSecret };
 }

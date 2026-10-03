@@ -64,19 +64,19 @@ install_agent_surfaces() {
   chmod 0600 "${codex_config}"
   opencode_temp="$(mktemp)"
   awk '
-    /^\[mcp_servers\.local-dev-env\]$/ { skip=1; next }
+    /^\[mcp_servers\.(local-dev-env|kubedeck-env)(\.env)?\]$/ { skip=1; next }
     skip && /^\[/ { skip=0 }
     !skip { print }
   ' "${codex_config}" >"${opencode_temp}"
   printf '\n%s\n%s\n%s\n%s\n%s\n%s\n' \
-    '[mcp_servers.local-dev-env]' \
+    '[mcp_servers.kubedeck-env]' \
     "command = \"${executable}\"" \
     'args = ["serve"]' \
     'enabled = true' \
     'startup_timeout_sec = 30.0' \
     'tool_timeout_sec = 30.0' \
     '' \
-    '[mcp_servers.local-dev-env.env]' \
+    '[mcp_servers.kubedeck-env.env]' \
     'NODE_USE_SYSTEM_CA = "1"' >>"${opencode_temp}"
   install -m 0600 "${opencode_temp}" "${codex_config}"
   rm -f "${opencode_temp}"
@@ -86,7 +86,7 @@ install_agent_surfaces() {
   [[ -f "${opencode_config}" ]] || printf '{}\n' >"${opencode_config}"
   opencode_temp="$(mktemp)"
   jq --arg executable "${executable}" \
-    '.mcp["local-dev-env"] = {type:"local",command:[$executable,"serve"],environment:{NODE_USE_SYSTEM_CA:"1"},enabled:true,timeout:30000}' \
+    'del(.mcp["local-dev-env"]) | .mcp["kubedeck-env"] = {type:"local",command:[$executable,"serve"],environment:{NODE_USE_SYSTEM_CA:"1"},enabled:true,timeout:30000}' \
     "${opencode_config}" >"${opencode_temp}"
   install -m 0600 "${opencode_temp}" "${opencode_config}"
   rm -f "${opencode_temp}"

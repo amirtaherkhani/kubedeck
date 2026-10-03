@@ -64,7 +64,7 @@ try {
   const initialized = await request("initialize", {
     protocolVersion: "2025-11-25",
     capabilities: { roots: { listChanged: true } },
-    clientInfo: { name: "local-dev-env-live-smoke", version: "1.0.0" }
+    clientInfo: { name: "kubedeck-env-live-smoke", version: "1.0.0" }
   });
   assert.equal(initialized.serverInfo.name, "kubedeck-env-mcp");
   child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`);
