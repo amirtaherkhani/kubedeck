@@ -1,0 +1,4 @@
+# Install and retain cert-manager APIs as part of the managed release.
+crds:
+  enabled: true
+  keep: true

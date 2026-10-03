@@ -1,0 +1,70 @@
+{{- if .Values.rabbitmq.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    secrets.infisical.com/auto-reload: "true"
+  name: {{ include "platform-storage.rabbitmqName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.rabbitmqLabels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "platform-storage.rabbitmqName" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "platform-storage.rabbitmqLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/rabbitmq-secret.yaml") . | sha256sum }}
+      labels:
+        {{- include "platform-storage.labels" . | nindent 8 }}
+        {{- include "platform-storage.rabbitmqLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: rabbitmq
+          image: "{{ .Values.rabbitmq.image.repository }}:{{ .Values.rabbitmq.image.tag }}"
+          imagePullPolicy: {{ .Values.rabbitmq.image.pullPolicy }}
+          ports:
+            - name: amqp
+              containerPort: 5672
+            - name: management
+              containerPort: 15672
+          envFrom:
+            - secretRef:
+                name: {{ include "platform-storage.rabbitmqName" . }}
+          readinessProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - -q
+                - ping
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - -q
+                - status
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 10
+          resources:
+            {{- toYaml .Values.rabbitmq.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/rabbitmq
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: {{ .Values.rabbitmq.persistence.storageClass | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.rabbitmq.persistence.size | quote }}
+{{- end }}

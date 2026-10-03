@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k6-tests
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-smoke-script
+  namespace: k6-tests
+data:
+  test.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+
+    export const options = {
+      vus: 1,
+      duration: '30s',
+      thresholds: {
+        http_req_failed: ['rate<0.05'],
+        http_req_duration: ['p(95)<1000'],
+      },
+    };
+
+    const targetUrl = __ENV.TARGET_URL || 'http://grafana.observability.svc.cluster.local/api/health';
+    const project = __ENV.PROJECT || 'platform-smoke';
+
+    export default function () {
+      const response = http.get(targetUrl, {
+        tags: {
+          project,
+        },
+      });
+
+      check(response, {
+        'status is 200': (r) => r.status === 200,
+      });
+
+      sleep(1);
+    }
+---
+apiVersion: k6.io/v1alpha1
+kind: TestRun
+metadata:
+  name: k6-smoke
+  namespace: k6-tests
+spec:
+  parallelism: 1
+  cleanup: post
+  arguments: "-o experimental-prometheus-rw"
+  script:
+    configMap:
+      name: k6-smoke-script
+      file: test.js
+  runner:
+    env:
+      # k6 2.x disables its control API by default. The operator starts a
+      # runner paused and resumes it through this API on port 6565.
+      - name: K6_ADDRESS
+        value: 0.0.0.0:6565
+      - name: K6_PROMETHEUS_RW_SERVER_URL
+        value: http://monitoring-kube-prometheus-prometheus.observability.svc.cluster.local:9090/api/v1/write
+      - name: K6_PROMETHEUS_RW_TREND_STATS
+        value: p(95),p(99),min,max,avg
+      - name: TARGET_URL
+        value: http://grafana.observability.svc.cluster.local/api/health
+      - name: PROJECT
+        value: platform-smoke

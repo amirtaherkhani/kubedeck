@@ -1,0 +1,16 @@
+KubeDeck Agent watches cluster resources and exposes an internal SSE stream at:
+
+  http://{{ include "kubedeck-agent.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}/v1/events
+
+Snapshot:
+
+  http://{{ include "kubedeck-agent.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}/v1/snapshot
+
+CoreDNS service-alias configuration:
+
+  http://{{ include "kubedeck-agent.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}/v1/dns/config
+
+The discovery ClusterRole is read-only and does not grant access to Secrets or
+node proxy APIs. CoreDNS writes are disabled by default. When enabled, a
+namespaced Role can update only ConfigMap
+{{ .Values.dnsManagement.namespace }}/{{ .Values.dnsManagement.configMapName }}.

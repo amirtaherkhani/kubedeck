@@ -1,0 +1,12 @@
+{{- if and .Values.redis.enabled .Values.redisCommander.enabled .Values.redisCommander.ingress.enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "platform-storage.redisCommanderName" . }}-basic-auth
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.redisCommanderLabels" . | nindent 4 }}
+spec:
+  basicAuth:
+    secret: {{ include "platform-storage.redisCommanderName" . }}-basic-auth
+{{- end }}

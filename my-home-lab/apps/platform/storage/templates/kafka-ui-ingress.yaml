@@ -1,0 +1,30 @@
+{{- if and .Values.kafka.enabled .Values.kafkaUi.enabled .Values.kafkaUi.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "platform-storage.kafkaUiName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.kafkaUiLabels" . | nindent 4 }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-{{ include "platform-storage.kafkaUiName" . }}-basic-auth@kubernetescrd
+spec:
+  ingressClassName: {{ .Values.kafkaUi.ingress.className }}
+  {{- if .Values.kafkaUi.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.kafkaUi.ingress.host }}
+      secretName: {{ .Values.kafkaUi.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.kafkaUi.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "platform-storage.kafkaUiName" . }}
+                port:
+                  number: {{ .Values.kafkaUi.service.port }}
+{{- end }}

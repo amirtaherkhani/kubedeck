@@ -1,0 +1,13 @@
+apiVersion: v2
+name: kubedeck
+description: Private Kubernetes service launchpad and multi-node cluster dashboard.
+home: https://kubedeck.local.dev
+keywords:
+  - kubernetes
+  - dashboard
+  - homelab
+sources:
+  - https://github.com/your-org/kubedeck
+type: application
+version: 0.1.1
+appVersion: "0.1.0"

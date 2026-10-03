@@ -1,0 +1,91 @@
+prometheus:
+  prometheusSpec:
+    image:
+      registry: docker.io
+      repository: prom/prometheus
+      tag: "v3.13.1"
+    retention: 5d
+    # Required for k6's experimental-prometheus-rw output.
+    enableRemoteWriteReceiver: true
+    # Port 9100 is Rancher Desktop's Linux VM exporter. This target is the
+    # native macOS LaunchAgent installed from host/macos/node-exporter.
+    additionalScrapeConfigs:
+      - job_name: node-exporter
+        scrape_interval: 15s
+        scrape_timeout: 10s
+        static_configs:
+          - targets:
+              - host.lima.internal:9101
+            labels:
+              cluster: macos
+              instance: mac-mini-2.local
+
+# Rancher Desktop's K3s server embeds these components instead of exposing the
+# standalone metrics Services expected by kube-prometheus-stack.
+kubeControllerManager:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+
+kubeProxy:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+defaultRules:
+  disabled:
+    # The corresponding embedded K3s components are intentionally not scraped.
+    KubeControllerManagerDown: true
+    KubeEtcdDown: true
+    KubeProxyDown: true
+    KubeSchedulerDown: true
+    # Rancher Desktop's Alpine VM has no NTP daemon/timex synchronisation
+    # signal. Host and VM epochs are verified together during platform checks.
+    NodeClockNotSynchronising: true
+
+grafana:
+  enabled: false
+  # Keep kube-prometheus-stack dashboard ConfigMaps for standalone Grafana.
+  forceDeployDashboards: true
+
+# Rancher Desktop blocks the chart's default quay.io and registry.k8s.io
+# endpoints. These are pinned public mirrors for this local cluster.
+kubeStateMetrics:
+  enabled: true
+
+kube-state-metrics:
+  image:
+    registry: docker.io
+    repository: altinity/kube-state-metrics
+    tag: "v2.19.1"
+
+prometheus-node-exporter:
+  image:
+    registry: ghcr.io
+    repository: prometheus/node-exporter
+    tag: "v1.12.0"
+    distroless: true
+
+prometheusOperator:
+  image:
+    registry: ghcr.io
+    repository: prometheus-operator/prometheus-operator
+    tag: "v0.92.1"
+  prometheusConfigReloader:
+    image:
+      registry: ghcr.io
+      repository: prometheus-operator/prometheus-config-reloader
+      tag: "v0.92.1"
+  prometheusDefaultBaseImage: prom/prometheus
+  prometheusDefaultBaseImageRegistry: docker.io
+  alertmanagerDefaultBaseImage: prom/alertmanager
+  alertmanagerDefaultBaseImageRegistry: docker.io
+
+alertmanager:
+  alertmanagerSpec:
+    image:
+      registry: docker.io
+      repository: prom/alertmanager
+      tag: "v0.33.1"

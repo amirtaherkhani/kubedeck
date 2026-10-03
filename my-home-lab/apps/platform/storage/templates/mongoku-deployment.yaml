@@ -1,0 +1,51 @@
+{{- if and .Values.mongodb.enabled .Values.mongoku.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    secrets.infisical.com/auto-reload: "true"
+  name: {{ include "platform-storage.mongokuName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.mongokuLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "platform-storage.mongokuLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/mongoku-secret.yaml") . | sha256sum }}
+      labels:
+        {{- include "platform-storage.labels" . | nindent 8 }}
+        {{- include "platform-storage.mongokuLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: mongoku
+          image: "{{ .Values.mongoku.image.repository }}:{{ .Values.mongoku.image.tag }}"
+          imagePullPolicy: {{ .Values.mongoku.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.mongoku.service.targetPort }}
+          envFrom:
+            - secretRef:
+                name: {{ include "platform-storage.mongokuName" . }}
+          env:
+            - name: MONGOKU_SERVER_PORT
+              value: {{ .Values.mongoku.service.targetPort | quote }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.mongoku.resources | nindent 12 }}
+{{- end }}
