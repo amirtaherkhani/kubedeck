@@ -920,7 +920,7 @@
   display: flex;
   align-items: flex-end;
   overflow: hidden;
-  padding: clamp(0.55rem, 1.6vw, 1.25rem);
+  padding: 0.2rem clamp(0.55rem, 1.6vw, 1.25rem);
   border: 1px solid color-mix(in oklch, var(--chart-2), transparent 35%);
   border-radius: 0.85rem;
   backface-visibility: hidden;
@@ -1012,13 +1012,15 @@
 .dashboard-banner:hover .kubedeck-banner-layer--data,
 .dashboard-banner:focus-within .kubedeck-banner-layer--data {
   opacity: 1;
-  transform: translate3d(0, 28px, -76px) rotateX(3deg) scale(0.94);
+  transform: translate3d(-8px, 48px, -76px) rotateX(3deg) rotateY(-0.8deg)
+    scale(0.94);
 }
 
 .dashboard-banner:hover .kubedeck-banner-layer--api,
 .dashboard-banner:focus-within .kubedeck-banner-layer--api {
   opacity: 1;
-  transform: translate3d(0, 14px, -38px) rotateX(1.8deg) scale(0.97);
+  transform: translate3d(5px, 32px, -38px) rotateX(1.8deg) rotateY(0.5deg)
+    scale(0.97);
 }
 
 .dashboard-banner:hover .kubedeck-banner-face,
