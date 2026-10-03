@@ -49,32 +49,48 @@ export function KubeDeckBanner({
         Kubernetes services and nodes connected through a global cluster
         topology.
       </p>
-      <Image
-        className="kubedeck-banner-image"
-        src="/kubedeck-banner.png"
-        alt=""
-        width={2172}
-        height={724}
-        priority={priority}
-        sizes="(max-width: 900px) 100vw, (max-width: 1800px) 90vw, 72vw"
-        unoptimized
-      />
-      {liveGraph ? (
-        <div className="kubedeck-live-graph" aria-hidden="true">
-          {liveGraphLinks.map((link) => (
-            <span
-              key={link}
-              className={`kubedeck-live-link kubedeck-live-link--${link}`}
-            />
-          ))}
-          {liveGraphBeacons.map((beacon) => (
-            <span
-              key={beacon}
-              className={`kubedeck-live-beacon kubedeck-live-beacon--${beacon}`}
-            />
-          ))}
+      <div className="kubedeck-banner-stage">
+        <div
+          className="kubedeck-banner-layer kubedeck-banner-layer--data"
+          aria-hidden="true"
+        >
+          <span>DATA</span>
         </div>
-      ) : null}
+        <div
+          className="kubedeck-banner-layer kubedeck-banner-layer--api"
+          aria-hidden="true"
+        >
+          <span>API</span>
+        </div>
+        <div className="kubedeck-banner-face">
+          <Image
+            className="kubedeck-banner-image"
+            src="/kubedeck-banner.png"
+            alt=""
+            width={2172}
+            height={724}
+            priority={priority}
+            sizes="(max-width: 900px) 100vw, (max-width: 1800px) 90vw, 72vw"
+            unoptimized
+          />
+          {liveGraph ? (
+            <div className="kubedeck-live-graph" aria-hidden="true">
+              {liveGraphLinks.map((link) => (
+                <span
+                  key={link}
+                  className={`kubedeck-live-link kubedeck-live-link--${link}`}
+                />
+              ))}
+              {liveGraphBeacons.map((beacon) => (
+                <span
+                  key={beacon}
+                  className={`kubedeck-live-beacon kubedeck-live-beacon--${beacon}`}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
     </section>
   )
 }
