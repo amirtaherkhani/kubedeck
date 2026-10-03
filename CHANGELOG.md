@@ -2,6 +2,13 @@
 
 All notable KubeDeck changes are documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Enable the first administrator browser setup flow in local development while
+  retaining verified workspace identity checks for hosted setup.
+
 ## [0.1.1] - 2026-08-01
 
 ### Fixed

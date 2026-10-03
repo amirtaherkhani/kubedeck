@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { env as cloudflareEnv } from "cloudflare:workers"
 
 import {
   ADMIN_SESSION_COOKIE,
@@ -11,7 +12,14 @@ import {
 } from "@/lib/auth"
 
 export async function POST(request: Request) {
-  if (!request.headers.get("oai-authenticated-user-email")) {
+  const localSetupEnabled =
+    (cloudflareEnv as unknown as Record<string, unknown>).KUBEDECK_LOCAL_SETUP ===
+    "true"
+
+  if (
+    !localSetupEnabled &&
+    !request.headers.get("oai-authenticated-user-email")
+  ) {
     return NextResponse.json(
       { error: "Private workspace verification is required for first setup." },
       { status: 403 }
