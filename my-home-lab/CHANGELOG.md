@@ -20,6 +20,12 @@
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
 
+## [platform-storage 0.1.7] - 2026-10-03
+
+### Changed
+
+- Matched the PostgreSQL CPU and memory defaults to the already-running local Helm release so the RabbitMQ monitoring upgrade retains its current resources.
+
 ## [platform-storage 0.1.6] - 2026-10-03
 
 ### Added
