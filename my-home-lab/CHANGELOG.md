@@ -4,7 +4,6 @@
 
 ### Added
 
-- Added RabbitMQ Prometheus scraping and a provisioned Grafana overview dashboard to the platform-storage chart.
 - Added explicit multi-project bootstrap through `INFISICAL_LOCAL_DEV_PROJECT_IDS` for the central local development agent identity.
 - Added a pinned Grafana image renderer deployment with Prometheus scraping support.
 
@@ -20,6 +19,12 @@
 
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
+
+## [platform-storage 0.1.6] - 2026-10-03
+
+### Added
+
+- Added RabbitMQ Prometheus scraping and a provisioned Grafana overview dashboard to the platform-storage chart.
 
 ## [1.0.41] - 2026-10-03
 
