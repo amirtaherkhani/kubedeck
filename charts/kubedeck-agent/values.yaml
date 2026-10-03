@@ -23,11 +23,11 @@ agent:
   eventLimit: 100
 
 auth:
-  existingSecret: ""
-  tokenKey: token
+  existingSecret: kubedeck-agent-auth
+  tokenKey: KUBEDECK_AGENT_TOKEN
 
 infisical:
-  enabled: false
+  enabled: true
   hostAPI: http://infisical-backend.platform-secrets.svc.cluster.local:8080/api
   credentialsSecretName: infisical-universal-auth
   credentialsSecretNamespace: platform-secrets

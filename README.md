@@ -244,6 +244,29 @@ snapshot smoke test before reporting success:
 bash .agents/skills/kubedeck-build-deploy/scripts/deploy.sh --branch main
 ```
 
+The default deployment targets the home-lab contract: namespace
+`development-tools`, Infisical project `home-lab`, environment `local`, and
+the paths `/apps/development-tools/kubedeck` and
+`/apps/development-tools/kubedeck-agent`. It expects the InfisicalSecret CRD,
+the Infisical operator, and `platform-secrets/infisical-universal-auth` to be
+ready. The operator creates `development-tools/kubedeck-admin` and
+`development-tools/kubedeck-agent-auth`; the deployment does not generate or
+print replacement credentials. Set `KUBEDECK_INFISICAL_ENABLED=false` only
+for a standalone installation that supplies these Secrets separately.
+
+Release images use the same semantic version for the dashboard and agent, for
+example `localhost:5001/kubedeck:dev-0.1.2` and
+`localhost:5001/kubedeck-agent:dev-0.1.2`. Increase the version before
+building:
+
+```bash
+bash .agents/skills/kubedeck-build-deploy/scripts/bump-version.sh patch
+```
+
+After a healthy rollout, the release workflow removes old KubeDeck registry
+tags, local builder images, zero-replica ReplicaSets, and non-running old pods.
+Set `KUBEDECK_CLEANUP_OLD_IMAGES=false` when a rollback image must be retained.
+
 The runtime forwards `KUBEDECK_AGENT_URL` and `KUBEDECK_AGENT_TOKEN` into the
 local Wrangler Worker as server-only bindings. The bearer token is never sent
 to browser code.
@@ -251,9 +274,19 @@ to browser code.
 ## Install with Helm
 
 The app and agent charts are located at `charts/kubedeck` and
-`charts/kubedeck-agent`.
+`charts/kubedeck-agent`. Their defaults use the home-lab Infisical service:
+`http://infisical-backend.platform-secrets.svc.cluster.local:8080/api`,
+credentials Secret `platform-secrets/infisical-universal-auth`, and the
+project/environment `home-lab`/`local`.
 
-Create the namespace and administrator Secret:
+For the canonical Rancher Desktop installation, prepare the dependency chain
+in this order: Infisical backend, Infisical operator and Universal Auth Secret,
+KubeDeck Agent RBAC/CoreDNS resources, then the dashboard. The shared
+Universal Auth Secret contains only `clientId` and `clientSecret`; keep its
+values in Infisical or the cluster Secret, never in this repository.
+
+For a standalone installation without Infisical, explicitly disable the
+Infisical templates and create the namespace and Secrets yourself:
 
 ```bash
 kubectl create namespace kubedeck
@@ -279,7 +312,9 @@ helm upgrade --install kubedeck-agent ./charts/kubedeck-agent \
   --namespace kubedeck \
   --set image.repository=ghcr.io/your-user/kubedeck-agent \
   --set image.tag=0.1.1 \
+  --set infisical.enabled=false \
   --set auth.existingSecret=kubedeck-agent-auth \
+  --set auth.tokenKey=token \
   --wait
 ```
 
@@ -290,7 +325,9 @@ helm upgrade --install kubedeck ./charts/kubedeck \
   --namespace kubedeck \
   --set image.repository=ghcr.io/your-user/kubedeck \
   --set image.tag=0.1.1 \
+  --set infisical.enabled=false \
   --set agent.existingSecret=kubedeck-agent-auth \
+  --set agent.tokenKey=token \
   --set ingress.enabled=false \
   --wait
 ```
@@ -331,6 +368,7 @@ Install it:
 helm upgrade --install kubedeck ./charts/kubedeck \
   --namespace kubedeck \
   --values kubedeck-values.yaml \
+  --set infisical.enabled=false \
   --wait
 ```
 
@@ -348,7 +386,9 @@ helm upgrade --install kubedeck-agent ./charts/kubedeck-agent \
   --namespace kubedeck \
   --set image.repository=ghcr.io/your-user/kubedeck-agent \
   --set image.tag=0.1.1 \
+  --set infisical.enabled=false \
   --set auth.existingSecret=kubedeck-agent-auth \
+  --set auth.tokenKey=token \
   --set dnsManagement.enabled=true \
   --wait
 ```

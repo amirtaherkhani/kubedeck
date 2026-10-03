@@ -14,14 +14,16 @@ origin branch. The default branch is main.
 
 Environment overrides:
   KUBE_CONTEXT                  Kubernetes context (default: rancher-desktop)
-  KUBEDECK_NAMESPACE           Namespace (default: kubedeck)
+  KUBEDECK_NAMESPACE           Namespace (default: development-tools)
   KUBEDECK_REGISTRY            Registry (default: localhost:5001)
   KUBEDECK_APP_RELEASE         Dashboard Helm release (default: kubedeck)
   KUBEDECK_AGENT_RELEASE       Agent Helm release (default: kubedeck-agent)
   KUBEDECK_ADMIN_SECRET        Existing dashboard admin Secret
   KUBEDECK_AGENT_AUTH_SECRET   Shared agent token Secret
-  KUBEDECK_AGENT_TOKEN_KEY     Key in the shared agent token Secret (default: token)
-  KUBEDECK_INFISICAL_ENABLED   Render InfisicalSecret resources (default: false)
+  KUBEDECK_AGENT_TOKEN_KEY     Key in the shared agent token Secret (default: KUBEDECK_AGENT_TOKEN)
+  KUBEDECK_INFISICAL_ENABLED   Render InfisicalSecret resources (default: true)
+  KUBEDECK_RELEASE_CHANNEL     Image tag channel (default: dev)
+  KUBEDECK_CLEANUP_OLD_IMAGES  Remove old local and registry images (default: true)
   KUBEDECK_VALUES_FILE         Optional dashboard Helm values file
   KUBEDECK_AGENT_VALUES_FILE   Optional agent Helm values file
   KUBEDECK_AGENT_URL           In-cluster agent URL
@@ -86,19 +88,44 @@ for required_path in \
 done
 
 context="${KUBE_CONTEXT:-rancher-desktop}"
-namespace="${KUBEDECK_NAMESPACE:-kubedeck}"
+namespace="${KUBEDECK_NAMESPACE:-development-tools}"
 registry="${KUBEDECK_REGISTRY:-localhost:5001}"
 app_release="${KUBEDECK_APP_RELEASE:-kubedeck}"
 agent_release="${KUBEDECK_AGENT_RELEASE:-kubedeck-agent}"
 admin_secret="${KUBEDECK_ADMIN_SECRET:-kubedeck-admin}"
 agent_auth_secret="${KUBEDECK_AGENT_AUTH_SECRET:-kubedeck-agent-auth}"
-agent_token_key="${KUBEDECK_AGENT_TOKEN_KEY:-token}"
-infisical_enabled="${KUBEDECK_INFISICAL_ENABLED:-false}"
+agent_token_key="${KUBEDECK_AGENT_TOKEN_KEY:-KUBEDECK_AGENT_TOKEN}"
+infisical_enabled="${KUBEDECK_INFISICAL_ENABLED:-true}"
+release_channel="${KUBEDECK_RELEASE_CHANNEL:-dev}"
+cleanup_old_images="${KUBEDECK_CLEANUP_OLD_IMAGES:-true}"
 helm_timeout="${KUBEDECK_HELM_TIMEOUT:-10m}"
 target_platform="${KUBEDECK_TARGET_PLATFORM:-}"
 app_values_file="${KUBEDECK_VALUES_FILE:-}"
 agent_values_file="${KUBEDECK_AGENT_VALUES_FILE:-}"
 agent_url="${KUBEDECK_AGENT_URL:-http://${agent_release}:8080}"
+old_pods_removed=0
+old_replicasets_removed=0
+old_registry_images_removed=0
+old_local_images_removed=0
+
+case "$infisical_enabled" in
+  true|false)
+    ;;
+  *)
+    die "KUBEDECK_INFISICAL_ENABLED must be true or false"
+    ;;
+esac
+
+case "$cleanup_old_images" in
+  true|false)
+    ;;
+  *)
+    die "KUBEDECK_CLEANUP_OLD_IMAGES must be true or false"
+    ;;
+esac
+
+[[ "$release_channel" =~ ^[a-z0-9]+([.-][a-z0-9]+)*$ ]] ||
+  die "KUBEDECK_RELEASE_CHANNEL must contain lowercase letters, numbers, dots, or hyphens"
 
 current_context="$(kubectl config current-context)"
 [[ "$current_context" == "$context" ]] ||
@@ -150,15 +177,7 @@ for chart_version in \
 done
 
 short_sha="$(git rev-parse --short=12 HEAD)"
-branch_slug="$(
-  printf '%s' "$branch" |
-    tr '[:upper:]' '[:lower:]' |
-    sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' |
-    cut -c1-48
-)"
-[[ -n "$branch_slug" ]] || branch_slug="branch"
-timestamp="$(date -u +%Y%m%d%H%M%S)"
-image_tag="${branch_slug}-${short_sha}-${timestamp}"
+image_tag="${release_channel}-${release_version}"
 app_repository="${KUBEDECK_APP_REPOSITORY:-${registry%/}/kubedeck}"
 agent_repository="${KUBEDECK_AGENT_REPOSITORY:-${registry%/}/kubedeck-agent}"
 app_image="${app_repository}:${image_tag}"
@@ -202,6 +221,39 @@ helm template "$agent_release" charts/kubedeck-agent \
 
 curl -fsS --max-time 5 "http://${registry%/}/v2/" >/dev/null ||
   die "Registry is not reachable at http://${registry%/}/v2/"
+
+registry_repository_path() {
+  local repository="$1"
+  local registry_prefix="${registry%/}/"
+  [[ "$repository" == "$registry_prefix"* ]] ||
+    die "Image repository '$repository' must use registry '$registry'"
+  printf '%s\n' "${repository#"$registry_prefix"}"
+}
+
+registry_has_tag() {
+  local repository_path="$1"
+  local tag="$2"
+  local tags_json
+  tags_json="$(curl -fsS "http://${registry%/}/v2/${repository_path}/tags/list" 2>/dev/null)" ||
+    return 1
+  printf '%s' "$tags_json" |
+    node -e '
+      let input = "";
+      process.stdin.on("data", (chunk) => { input += chunk; });
+      process.stdin.on("end", () => {
+        const tags = JSON.parse(input).tags ?? [];
+        process.exit(tags.includes(process.argv[1]) ? 0 : 1);
+      });
+    ' "$tag"
+}
+
+app_repository_path="$(registry_repository_path "$app_repository")"
+agent_repository_path="$(registry_repository_path "$agent_repository")"
+for repository_path in "$app_repository_path" "$agent_repository_path"; do
+  if registry_has_tag "$repository_path" "$image_tag"; then
+    die "Registry tag already exists: ${registry}/${repository_path}:${image_tag}; increase the release version before building"
+  fi
+done
 
 if [[ -z "$target_platform" ]]; then
   node_arches="$(
@@ -277,36 +329,45 @@ kubectl --context "$context" create namespace "$namespace" \
   -o yaml |
   kubectl --context "$context" apply -f -
 
-kubectl --context "$context" --namespace "$namespace" get secret "$admin_secret" >/dev/null 2>&1 ||
-  die "Required dashboard admin Secret '$namespace/$admin_secret' does not exist"
+agent_secret_action="managed-by-infisical"
+if [[ "$infisical_enabled" == "true" ]]; then
+  kubectl --context "$context" get crd infisicalsecrets.secrets.infisical.com >/dev/null 2>&1 ||
+    die "InfisicalSecret CRD is not installed"
+  kubectl --context "$context" --namespace platform-secrets \
+    get secret infisical-universal-auth >/dev/null 2>&1 ||
+    die "Infisical Universal Auth Secret 'platform-secrets/infisical-universal-auth' does not exist"
+else
+  kubectl --context "$context" --namespace "$namespace" get secret "$admin_secret" >/dev/null 2>&1 ||
+    die "Required dashboard admin Secret '$namespace/$admin_secret' does not exist"
 
-admin_keys="$(
-  kubectl --context "$context" --namespace "$namespace" get secret "$admin_secret" \
-    -o go-template='{{range $key, $value := .data}}{{$key}}{{"\n"}}{{end}}'
-)"
-for admin_key in \
-  KUBEDECK_ADMIN_FIRST_NAME \
-  KUBEDECK_ADMIN_LAST_NAME \
-  KUBEDECK_ADMIN_EMAIL \
-  KUBEDECK_ADMIN_PASSWORD; do
-  printf '%s\n' "$admin_keys" | grep -Fxq "$admin_key" ||
-    die "Admin Secret '$namespace/$admin_secret' is missing key '$admin_key'"
-done
-
-agent_secret_action="reused"
-if kubectl --context "$context" --namespace "$namespace" get secret "$agent_auth_secret" >/dev/null 2>&1; then
-  agent_keys="$(
-    kubectl --context "$context" --namespace "$namespace" get secret "$agent_auth_secret" \
+  admin_keys="$(
+    kubectl --context "$context" --namespace "$namespace" get secret "$admin_secret" \
       -o go-template='{{range $key, $value := .data}}{{$key}}{{"\n"}}{{end}}'
   )"
-  printf '%s\n' "$agent_keys" | grep -Fxq "$agent_token_key" ||
-    die "Agent auth Secret '$namespace/$agent_auth_secret' is missing key '$agent_token_key'"
-else
-  agent_token="$(openssl rand -hex 32)"
-  kubectl --context "$context" --namespace "$namespace" create secret generic "$agent_auth_secret" \
-    --from-literal="${agent_token_key}=${agent_token}" >/dev/null
-  unset agent_token
-  agent_secret_action="created"
+  for admin_key in \
+    KUBEDECK_ADMIN_FIRST_NAME \
+    KUBEDECK_ADMIN_LAST_NAME \
+    KUBEDECK_ADMIN_EMAIL \
+    KUBEDECK_ADMIN_PASSWORD; do
+    printf '%s\n' "$admin_keys" | grep -Fxq "$admin_key" ||
+      die "Admin Secret '$namespace/$admin_secret' is missing key '$admin_key'"
+  done
+
+  agent_secret_action="reused"
+  if kubectl --context "$context" --namespace "$namespace" get secret "$agent_auth_secret" >/dev/null 2>&1; then
+    agent_keys="$(
+      kubectl --context "$context" --namespace "$namespace" get secret "$agent_auth_secret" \
+        -o go-template='{{range $key, $value := .data}}{{$key}}{{"\n"}}{{end}}'
+    )"
+    printf '%s\n' "$agent_keys" | grep -Fxq "$agent_token_key" ||
+      die "Agent auth Secret '$namespace/$agent_auth_secret' is missing key '$agent_token_key'"
+  else
+    agent_token="$(openssl rand -hex 32)"
+    kubectl --context "$context" --namespace "$namespace" create secret generic "$agent_auth_secret" \
+      --from-literal="${agent_token_key}=${agent_token}" >/dev/null
+    unset agent_token
+    agent_secret_action="created"
+  fi
 fi
 
 temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/kubedeck-deploy.XXXXXX")"
@@ -365,10 +426,8 @@ fi
 if [[ -n "$agent_values_file" ]]; then
   agent_helm_command+=(-f "$agent_values_file")
 fi
-if [[ "$infisical_enabled" == "true" ]]; then
-  app_helm_command+=(--set-string "infisical.enabled=true")
-  agent_helm_command+=(--set-string "infisical.enabled=true")
-fi
+app_helm_command+=(--set-string "infisical.enabled=${infisical_enabled}")
+agent_helm_command+=(--set-string "infisical.enabled=${infisical_enabled}")
 
 log "Deploying $agent_release"
 helm "${agent_helm_command[@]}" \
@@ -391,6 +450,19 @@ helm "${app_helm_command[@]}" \
   "$helm_failure_flag" \
   --wait \
   --timeout "$helm_timeout"
+
+if [[ "$infisical_enabled" == "true" ]]; then
+  log "Verifying Infisical-managed Secrets"
+  kubectl --context "$context" --namespace "$namespace" wait \
+    --for=create "secret/$agent_auth_secret" \
+    --timeout="$helm_timeout"
+  kubectl --context "$context" --namespace "$namespace" wait \
+    --for=create "secret/$admin_secret" \
+    --timeout="$helm_timeout"
+  for managed_secret in "$agent_auth_secret" "$admin_secret"; do
+    kubectl --context "$context" --namespace "$namespace" get secret "$managed_secret" >/dev/null
+  done
+fi
 
 verify_release() {
   local release_name="$1"
@@ -505,6 +577,134 @@ console.log(JSON.stringify({
 NODE
 }
 
+verify_running_pod_images() {
+  local release_name="$1"
+  local expected_image="$2"
+  local stale_pods
+  stale_pods="$(
+    kubectl --context "$context" --namespace "$namespace" get pods \
+      -l "app.kubernetes.io/instance=${release_name}" \
+      -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\t"}{.spec.containers[0].image}{"\n"}{end}' |
+      awk -v expected="$expected_image" '$2 == "Running" && $3 != expected {print $1}'
+  )"
+  [[ -z "$stale_pods" ]] ||
+    die "Running pod(s) for $release_name do not use the new image: $stale_pods"
+}
+
+cleanup_old_kubernetes_objects() {
+  local release_name
+  local expected_image
+  local stale_pods
+  local old_replicasets
+
+  for release_name in "$agent_release" "$app_release"; do
+    if [[ "$release_name" == "$agent_release" ]]; then
+      expected_image="$agent_image"
+    else
+      expected_image="$app_image"
+    fi
+
+    stale_pods="$(
+      kubectl --context "$context" --namespace "$namespace" get pods \
+        -l "app.kubernetes.io/instance=${release_name}" \
+        -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\t"}{.spec.containers[0].image}{"\n"}{end}' |
+        awk -v expected="$expected_image" '$2 != "Running" && $3 != expected {print $1}'
+    )"
+    if [[ -n "$stale_pods" ]]; then
+      log "Removing non-running old pods for $release_name"
+      while IFS= read -r pod_name; do
+        [[ -n "$pod_name" ]] || continue
+        kubectl --context "$context" --namespace "$namespace" delete pod "$pod_name" \
+          --ignore-not-found \
+          --wait=false
+        old_pods_removed=$((old_pods_removed + 1))
+      done <<<"$stale_pods"
+    fi
+
+    old_replicasets="$(
+      kubectl --context "$context" --namespace "$namespace" get rs \
+        -l "app.kubernetes.io/instance=${release_name}" \
+        -o custom-columns='NAME:.metadata.name,DESIRED:.spec.replicas' \
+        --no-headers |
+        awk '$2 == 0 {print $1}'
+    )"
+    if [[ -n "$old_replicasets" ]]; then
+      log "Removing old zero-replica ReplicaSets for $release_name"
+      while IFS= read -r replicaset_name; do
+        [[ -n "$replicaset_name" ]] || continue
+        kubectl --context "$context" --namespace "$namespace" delete rs "$replicaset_name" \
+          --ignore-not-found \
+          --wait=false
+        old_replicasets_removed=$((old_replicasets_removed + 1))
+      done <<<"$old_replicasets"
+    fi
+  done
+}
+
+cleanup_old_registry_images() {
+  local repository_path="$1"
+  local tags
+  local tag
+  local digest
+  local current_digest
+
+  current_digest="$(
+    curl -fsSI \
+      -H 'Accept: application/vnd.oci.image.manifest.v1+json' \
+      -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+      "http://${registry%/}/v2/${repository_path}/manifests/${image_tag}" |
+      sed -n 's/^[Dd]ocker-[Cc]ontent-[Dd]igest:[[:space:]]*//p' |
+      tr -d '\r' |
+      tail -n 1
+  )"
+  [[ -n "$current_digest" ]] || die "Could not resolve current registry digest for ${repository_path}:${image_tag}"
+
+  tags="$(
+    curl -fsS "http://${registry%/}/v2/${repository_path}/tags/list" |
+      node -e '
+        let input = "";
+        process.stdin.on("data", (chunk) => { input += chunk; });
+        process.stdin.on("end", () => {
+          for (const tag of JSON.parse(input).tags ?? []) console.log(tag);
+        });
+      '
+  )"
+  while IFS= read -r tag; do
+    [[ -n "$tag" && "$tag" != "$image_tag" ]] || continue
+    digest="$(
+      curl -fsSI \
+        -H 'Accept: application/vnd.oci.image.manifest.v1+json' \
+        -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+        "http://${registry%/}/v2/${repository_path}/manifests/${tag}" |
+        sed -n 's/^[Dd]ocker-[Cc]ontent-[Dd]igest:[[:space:]]*//p' |
+        tr -d '\r' |
+        tail -n 1
+    )"
+    [[ -n "$digest" ]] || die "Could not resolve registry digest for ${repository_path}:${tag}"
+    [[ "$digest" != "$current_digest" ]] || continue
+    curl -fsS -X DELETE "http://${registry%/}/v2/${repository_path}/manifests/${digest}" >/dev/null
+    printf 'Removed registry image: %s/%s:%s\n' "$registry" "$repository_path" "$tag"
+    old_registry_images_removed=$((old_registry_images_removed + 1))
+  done <<<"$tags"
+}
+
+cleanup_old_local_images() {
+  local repository="$1"
+  local current_image="$2"
+  local stale_images
+  stale_images="$(
+    rdctl shell sudo nerdctl images --format '{{.Repository}}:{{.Tag}}' |
+      awk -v repository="$repository" -v current="$current_image" \
+        'index($0, repository ":") == 1 && $0 != current {print $0}'
+  )"
+  while IFS= read -r image; do
+    [[ -n "$image" ]] || continue
+    rdctl shell sudo nerdctl rmi "$image"
+    printf 'Removed local image: %s\n' "$image"
+    old_local_images_removed=$((old_local_images_removed + 1))
+  done <<<"$stale_images"
+}
+
 log "Verifying both releases"
 verify_release "$agent_release"
 verify_release "$app_release"
@@ -527,6 +727,18 @@ agent_runtime_image="$(
   die "Agent runtime image mismatch: expected $agent_image, found $agent_runtime_image"
 
 verify_dashboard_agent_proxy
+verify_running_pod_images "$agent_release" "$agent_image"
+verify_running_pod_images "$app_release" "$app_image"
+
+cleanup_old_kubernetes_objects
+if [[ "$cleanup_old_images" == "true" ]]; then
+  cleanup_old_registry_images "$app_repository_path"
+  cleanup_old_registry_images "$agent_repository_path"
+  cleanup_old_local_images "$app_repository" "$app_image"
+  cleanup_old_local_images "$agent_repository" "$agent_image"
+else
+  log "Retaining old registry and local images by request"
+fi
 
 log "Recent kubedeck-agent logs"
 kubectl --context "$context" --namespace "$namespace" logs \
@@ -549,6 +761,10 @@ printf 'Namespace: %s\n' "$namespace"
 printf 'Dashboard image: %s\n' "$app_image"
 printf 'Agent image: %s\n' "$agent_image"
 printf 'Agent auth Secret: %s (%s)\n' "$agent_auth_secret" "$agent_secret_action"
+printf 'Old pods removed: %s\n' "$old_pods_removed"
+printf 'Old ReplicaSets removed: %s\n' "$old_replicasets_removed"
+printf 'Old registry images removed: %s\n' "$old_registry_images_removed"
+printf 'Old local images removed: %s\n' "$old_local_images_removed"
 helm --kube-context "$context" list \
   --namespace "$namespace" \
   --filter "^(${app_release}|${agent_release})$"

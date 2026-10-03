@@ -8,16 +8,21 @@ network.
 
 ```bash
 helm upgrade --install kubedeck-agent ./charts/kubedeck-agent \
-  --namespace kubedeck \
+  --namespace development-tools \
   --create-namespace \
   --set image.repository=localhost:5001/kubedeck-agent \
   --set image.tag=IMMUTABLE_TAG \
   --set cluster.id=homelab \
   --set cluster.name=Homelab \
-  --set auth.existingSecret=kubedeck-agent-auth
+  --set auth.existingSecret=kubedeck-agent-auth \
+  --set auth.tokenKey=KUBEDECK_AGENT_TOKEN
 ```
 
-For bearer authentication, create a Secret separately and set:
+By default, the bearer Secret is synchronized by Infisical from project
+`home-lab`, environment `local`, path
+`/apps/development-tools/kubedeck-agent`, using
+`platform-secrets/infisical-universal-auth`. For a standalone installation,
+create a Secret separately and set `tokenKey: token`:
 
 ```yaml
 auth:
@@ -31,8 +36,11 @@ Configure the KubeDeck application with:
 agent:
   url: http://kubedeck-agent:8080
   existingSecret: kubedeck-agent-auth
-  tokenKey: token
+  tokenKey: KUBEDECK_AGENT_TOKEN
 ```
+
+For a standalone installation that uses the `token` key above, set the
+application's `agent.tokenKey` to `token` as well.
 
 ## CoreDNS aliases
 
