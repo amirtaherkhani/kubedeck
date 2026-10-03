@@ -349,12 +349,6 @@ export default function SettingsClient({
 
   return (
     <main id="main-content" className="settings-shell liquid-stage">
-      <div className="liquid-grid" aria-hidden="true" />
-      <div
-        className="liquid-orbit liquid-orbit--settings"
-        aria-hidden="true"
-      />
-
       <header className="settings-header">
         <a className="settings-brand" href="/dashboard" aria-label="KubeDeck dashboard">
           <KubeDeckLogo className="brand-mark" priority />

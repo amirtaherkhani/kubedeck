@@ -2158,12 +2158,6 @@ export default function DashboardClient({
         Skip to page content
       </a>
 
-      <div className="liquid-grid" aria-hidden="true" />
-      <div
-        className="liquid-orbit liquid-orbit--dashboard"
-        aria-hidden="true"
-      />
-
       <aside className="dashboard-sidebar" aria-label="Primary navigation">
         <a
           className="sidebar-brand"

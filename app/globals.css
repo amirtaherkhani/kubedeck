@@ -363,98 +363,37 @@
   position: relative;
   isolation: isolate;
   overflow: clip;
-}
-
-.liquid-grid {
-  position: absolute;
-  inset: 0;
-  z-index: -3;
-  opacity: 0.74;
+  background-color: #3b1e4a;
   background-image:
-    linear-gradient(
-      color-mix(in oklch, var(--chart-2), transparent 93%) 1px,
-      transparent 1px
+    radial-gradient(
+      90% 70% at 12% 8%,
+      rgb(255 255 255 / 22%),
+      rgb(255 255 255 / 0%) 60%
     ),
     linear-gradient(
-      90deg,
-      color-mix(in oklch, var(--chart-2), transparent 93%) 1px,
-      transparent 1px
+      135deg,
+      #460e44 12.5%,
+      #450f44 16.1%,
+      #441245 19.6%,
+      #421546 23.2%,
+      #401948 26.8%,
+      #3d1b49 30.4%,
+      #3c1d4a 33.9%,
+      #3b1e4a 37.5% 87.5%
     );
-  background-size: 4rem 4rem;
-  mask-image: linear-gradient(to bottom, black, transparent 84%);
-  pointer-events: none;
 }
 
-.liquid-grid::after {
+.liquid-stage::after {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(
-    circle,
-    color-mix(in oklch, var(--primary), transparent 40%) 0 1.5px,
-    transparent 1.8px
-  );
-  background-position: 0 0;
-  background-size: 4rem 4rem;
+  z-index: -1;
+  background: url("/gradient-noise.png") repeat;
+  background-size: 256px 256px;
   content: "";
-  animation: grid-drift 28s linear infinite;
-}
-
-.liquid-orbit {
-  position: absolute;
-  z-index: -2;
-  width: 38rem;
-  aspect-ratio: 1;
-  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 82%);
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0 18%,
-    color-mix(in oklch, var(--primary), transparent 82%) 25%,
-    transparent 32% 66%,
-    color-mix(in oklch, var(--chart-1), transparent 84%) 74%,
-    transparent 82%
-  );
-  filter: blur(1px);
-  opacity: 0.72;
+  image-rendering: pixelated;
+  mix-blend-mode: overlay;
+  opacity: 0.07;
   pointer-events: none;
-  animation: liquid-orbit-spin 34s linear infinite;
-}
-
-.liquid-orbit::before,
-.liquid-orbit::after {
-  position: absolute;
-  border: 1px dashed color-mix(in oklch, var(--primary), transparent 79%);
-  border-radius: inherit;
-  content: "";
-}
-
-.liquid-orbit::before {
-  inset: 12%;
-}
-
-.liquid-orbit::after {
-  inset: 29%;
-  border-style: solid;
-  opacity: 0.62;
-}
-
-.liquid-orbit--login {
-  right: -9rem;
-  top: -13rem;
-}
-
-.liquid-orbit--dashboard {
-  right: -16rem;
-  top: 16rem;
-  width: 48rem;
-  position: fixed;
-}
-
-.liquid-orbit--settings {
-  position: fixed;
-  right: -12rem;
-  top: -9rem;
-  width: 42rem;
 }
 
 .login-shell {
@@ -1352,9 +1291,6 @@
   min-height: 100svh;
   place-items: center;
   padding: clamp(1rem, 3vw, 2rem);
-  background:
-    linear-gradient(145deg, oklch(0.1 0.04 252), oklch(0.075 0.025 247)),
-    var(--background);
 }
 
 .auth-shell::before {
@@ -2325,17 +2261,6 @@
 .dashboard-shell {
   min-height: 100svh;
   padding: 1.25rem;
-  background:
-    radial-gradient(
-      circle at 74% 8%,
-      color-mix(in oklch, var(--chart-1), transparent 88%),
-      transparent 35rem
-    ),
-    radial-gradient(
-      circle at 18% 54%,
-      color-mix(in oklch, var(--primary), transparent 94%),
-      transparent 32rem
-    );
 }
 
 .dashboard-sidebar {
@@ -3507,17 +3432,6 @@
 .settings-shell {
   min-height: 100svh;
   padding: clamp(1rem, 3vw, 2.25rem);
-  background:
-    radial-gradient(
-      circle at 78% 10%,
-      color-mix(in oklch, var(--chart-1), transparent 87%),
-      transparent 34rem
-    ),
-    radial-gradient(
-      circle at 8% 62%,
-      color-mix(in oklch, var(--primary), transparent 93%),
-      transparent 30rem
-    );
 }
 
 .settings-header,
@@ -3941,26 +3855,6 @@
   transition-duration: 0.01ms !important;
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
-}
-
-@keyframes grid-drift {
-  from {
-    background-position: 0 0;
-  }
-
-  to {
-    background-position: 4rem 4rem;
-  }
-}
-
-@keyframes liquid-orbit-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @keyframes card-glint {
