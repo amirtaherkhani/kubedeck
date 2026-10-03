@@ -13,6 +13,10 @@ Kubernetes-based performance-test runner with Prometheus and Grafana output.
 Durable dashboards are provisioned into Grafana. Runner resources are
 temporary and must be bounded and cleaned up after an approved test.
 
+Both provisioned k6 dashboards filter Prometheus remote-write results by the
+operator-provided `testrun_name` label. Select **Test Run** in Grafana after a
+completed run; no InfluxDB exporter is required.
+
 ## k6 2.x runner contract
 
 The k6 operator starts runners paused and resumes them through the k6 REST API

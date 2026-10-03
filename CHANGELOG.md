@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Aligned both provisioned k6 Prometheus dashboards with the `testrun_name`
+  label emitted by the k6 operator, restoring Test Run filtering and panels.
+
 ## [1.0.40] - 2026-09-24
 
 ### Changed

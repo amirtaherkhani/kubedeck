@@ -265,7 +265,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(k6_vus{testid=~\"$testid\"})",
+          "expr": "sum(k6_vus{testrun_name=~\"$testrun_name\"})",
           "instant": false,
           "legendFormat": "vus",
           "range": true,
@@ -277,7 +277,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_http_req_duration_$quantile_stat{testid=~\"$testid\"})",
+          "expr": "avg(k6_http_req_duration_$quantile_stat{testrun_name=~\"$testrun_name\"})",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_duration_$quantile_stat",
@@ -290,7 +290,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(irate(k6_http_reqs_total{testid=~\"$testid\"}[$__rate_interval]))",
+          "expr": "sum(irate(k6_http_reqs_total{testrun_name=~\"$testrun_name\"}[$__rate_interval]))",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_s",
@@ -303,7 +303,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(round(k6_http_req_failed_rate{testid=~\"$testid\"}, 0.1)*100)",
+          "expr": "avg(round(k6_http_req_failed_rate{testrun_name=~\"$testrun_name\"}, 0.1)*100)",
           "hide": true,
           "instant": false,
           "legendFormat": "http_req_failed",
@@ -316,7 +316,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(irate(k6_http_reqs_total{testid=~\"$testid\", expected_response=\"false\"}[$__rate_interval]))",
+          "expr": "sum(irate(k6_http_reqs_total{testrun_name=~\"$testrun_name\", expected_response=\"false\"}[$__rate_interval]))",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_s_errors",
@@ -392,7 +392,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(k6_http_reqs_total{testid=~\"$testid\"})",
+          "expr": "sum(k6_http_reqs_total{testrun_name=~\"$testrun_name\"})",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -455,7 +455,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(k6_http_reqs_total{testid=~\"$testid\", expected_response=\"false\"})",
+          "expr": "sum(k6_http_reqs_total{testrun_name=~\"$testrun_name\", expected_response=\"false\"})",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -517,7 +517,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(irate(k6_http_reqs_total{testid=~\"$testid\"}[$__rate_interval]))",
+          "expr": "sum(irate(k6_http_reqs_total{testrun_name=~\"$testrun_name\"}[$__rate_interval]))",
           "instant": false,
           "interval": "",
           "legendFormat": "__auto",
@@ -587,7 +587,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_http_req_duration_$quantile_stat{testid=~\"$testid\"})",
+          "expr": "avg(k6_http_req_duration_$quantile_stat{testrun_name=~\"$testrun_name\"})",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -679,7 +679,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(irate(k6_data_sent_total{testid=~\"$testid\"}[$__rate_interval]))",
+          "expr": "avg(irate(k6_data_sent_total{testrun_name=~\"$testrun_name\"}[$__rate_interval]))",
           "instant": false,
           "legendFormat": "data_sent",
           "range": true,
@@ -692,7 +692,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "avg(irate(k6_data_received_total{testid=~\"$testid\"}[$__rate_interval]))",
+          "expr": "avg(irate(k6_data_received_total{testrun_name=~\"$testrun_name\"}[$__rate_interval]))",
           "hide": false,
           "instant": false,
           "legendFormat": "data_received",
@@ -798,7 +798,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_iteration_duration_$quantile_stat{testid=~\"$testid\"})",
+          "expr": "avg(k6_iteration_duration_$quantile_stat{testrun_name=~\"$testrun_name\"})",
           "instant": false,
           "legendFormat": "iteration_duration_$quantile_stat",
           "range": true,
@@ -811,7 +811,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "avg(k6_dropped_iterations_total{testid=~\"$testid\"})",
+          "expr": "avg(k6_dropped_iterations_total{testrun_name=~\"$testrun_name\"})",
           "hide": false,
           "instant": false,
           "legendFormat": "dropped_iterations",
@@ -933,7 +933,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_http_req_blocked_$quantile_stat{testid=~\"$testid\"})",
+          "expr": "avg(k6_http_req_blocked_$quantile_stat{testrun_name=~\"$testrun_name\"})",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_blocked_$quantile_stat",
@@ -946,7 +946,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_http_req_tls_handshaking_$quantile_stat{testid=~\"$testid\"})",
+          "expr": "avg(k6_http_req_tls_handshaking_$quantile_stat{testrun_name=~\"$testrun_name\"})",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_tls_handshaking_$quantile_stat",
@@ -959,7 +959,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_http_req_sending_$quantile_stat{testid=~\"$testid\"})",
+          "expr": "avg(k6_http_req_sending_$quantile_stat{testrun_name=~\"$testrun_name\"})",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_sending_$quantile_stat",
@@ -972,7 +972,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_http_req_waiting_$quantile_stat{testid=~\"$testid\"})",
+          "expr": "avg(k6_http_req_waiting_$quantile_stat{testrun_name=~\"$testrun_name\"})",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_waiting_$quantile_stat",
@@ -985,7 +985,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_http_req_receiving_$quantile_stat{testid=~\"$testid\"})",
+          "expr": "avg(k6_http_req_receiving_$quantile_stat{testrun_name=~\"$testrun_name\"})",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_receiving_$quantile_stat",
@@ -998,7 +998,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_http_req_duration_$quantile_stat{testid=~\"$testid\"})",
+          "expr": "avg(k6_http_req_duration_$quantile_stat{testrun_name=~\"$testrun_name\"})",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_duration_$quantile_stat",
@@ -1153,7 +1153,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_http_req_duration_$quantile_stat{testid=~\"$testid\"})",
+          "expr": "avg(k6_http_req_duration_$quantile_stat{testrun_name=~\"$testrun_name\"})",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_duration_$quantile_stat",
@@ -1166,7 +1166,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_http_req_duration_$quantile_stat{testid=~\"$testid\", expected_response=\"true\"})",
+          "expr": "avg(k6_http_req_duration_$quantile_stat{testrun_name=~\"$testrun_name\", expected_response=\"true\"})",
           "instant": false,
           "legendFormat": "success_http_req_duration_$quantile_stat",
           "range": true,
@@ -1178,7 +1178,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(k6_http_req_duration_$quantile_stat{testid=~\"$testid\", expected_response=\"false\"})",
+          "expr": "avg(k6_http_req_duration_$quantile_stat{testrun_name=~\"$testrun_name\", expected_response=\"false\"})",
           "hide": false,
           "instant": false,
           "legendFormat": "errors_http_req_duration_$quantile_stat",
@@ -1348,7 +1348,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(irate(k6_http_reqs_total{testid=~\"$testid\"}[$__rate_interval]))",
+          "expr": "sum(irate(k6_http_reqs_total{testrun_name=~\"$testrun_name\"}[$__rate_interval]))",
           "instant": false,
           "legendFormat": "http_req_s",
           "range": true,
@@ -1360,7 +1360,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(irate(k6_http_reqs_total{testid=~\"$testid\", expected_response=\"false\"}[$__rate_interval]))",
+          "expr": "sum(irate(k6_http_reqs_total{testrun_name=~\"$testrun_name\", expected_response=\"false\"}[$__rate_interval]))",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_s_errors",
@@ -1373,7 +1373,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(irate(k6_http_reqs_total{testid=~\"$testid\", expected_response=\"true\"}[$__rate_interval]))",
+          "expr": "sum(irate(k6_http_reqs_total{testrun_name=~\"$testrun_name\", expected_response=\"true\"}[$__rate_interval]))",
           "hide": false,
           "instant": false,
           "legendFormat": "http_req_s_success",
@@ -1527,7 +1527,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg by(name, method, status) (k6_http_req_duration_min{testid=~\"$testid\"})",
+          "expr": "avg by(name, method, status) (k6_http_req_duration_min{testrun_name=~\"$testrun_name\"})",
           "format": "table",
           "hide": false,
           "instant": false,
@@ -1541,7 +1541,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg by(name, method, status) (k6_http_req_duration_max{testid=~\"$testid\"})",
+          "expr": "avg by(name, method, status) (k6_http_req_duration_max{testrun_name=~\"$testrun_name\"})",
           "format": "table",
           "hide": false,
           "instant": false,
@@ -1555,7 +1555,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg by(name, method, status) (k6_http_req_duration_p95{testid=~\"$testid\"})",
+          "expr": "avg by(name, method, status) (k6_http_req_duration_p95{testrun_name=~\"$testrun_name\"})",
           "format": "table",
           "hide": false,
           "instant": false,
@@ -1569,7 +1569,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg by(name, method, status) (k6_http_req_duration_p99{testid=~\"$testid\"})",
+          "expr": "avg by(name, method, status) (k6_http_req_duration_p99{testrun_name=~\"$testrun_name\"})",
           "format": "table",
           "hide": false,
           "instant": false,
@@ -1776,7 +1776,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "round(k6_checks_rate{testid=~\"$testid\"}, 0.1)",
+          "expr": "round(k6_checks_rate{testrun_name=~\"$testrun_name\"}, 0.1)",
           "format": "table",
           "instant": false,
           "legendFormat": "__auto",
@@ -1930,7 +1930,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(round(k6_checks_rate{testid=~\"$testid\"}, 0.1)*100)",
+          "expr": "avg(round(k6_checks_rate{testrun_name=~\"$testrun_name\"}, 0.1)*100)",
           "instant": false,
           "legendFormat": "k6_checks_rate",
           "range": true,
@@ -1998,16 +1998,16 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values(testid)",
-        "description": "Filter by \"testid\" tag. Define it by tagging: k6 run --tag testid=xyz",
+        "definition": "label_values(testrun_name)",
+        "description": "Filter by the k6 TestRun name emitted with Prometheus remote-write metrics.",
         "hide": 0,
         "includeAll": true,
-        "label": "Test ID",
+        "label": "Test Run",
         "multi": true,
-        "name": "testid",
+        "name": "testrun_name",
         "options": [],
         "query": {
-          "query": "label_values(testid)",
+          "query": "label_values(testrun_name)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
