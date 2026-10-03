@@ -9,7 +9,7 @@ Shared development dependencies for personal projects.
 | HTTPS | `*.local.dev` through Traefik and `local-dev-tls` |
 | Storage | `local-path` PVCs |
 | Configuration | Infisical; no credentials in Git |
-| Observability | Prometheus metrics where supported; Alloy/Loki logs |
+| Observability | Prometheus metrics, Grafana dashboards where supported; Alloy/Loki logs |
 
 Services include PostgreSQL, pgAdmin, Redis, Redis Commander, RabbitMQ,
 Kafka, Kafka UI, MongoDB, Mongoku, NATS, NATS UI, MinIO, Jaeger, Mailpit,
@@ -38,6 +38,19 @@ documented `*.local.dev` DNS names.
 Deploy with `make helm-validate RELEASE=platform-storage` and
 `make helm-apply RELEASE=platform-storage` after Infisical-backed secrets are
 available.
+
+RabbitMQ is scraped from its built-in Prometheus endpoint on port `15692` by
+the `rabbitmq` ServiceMonitor. The provisioned **RabbitMQ Overview** Grafana
+dashboard appears in the `RabbitMQ` folder and covers scrape health,
+connections, queue depth, message throughput, consumer backlog, memory, and
+disk headroom. A separate bounded scrape of `/metrics/detailed` collects
+per-queue data only for the Finance vhost `/vero-vault-finance`; it supports
+queue-specific backlog, consumer capacity, storage, disk-I/O, virtual-host, and
+exchange-topology panels without turning on high-cardinality metrics globally.
+Broker-wide message throughput retains delivery, acknowledgement, and
+redelivery visibility.
+Finance application metrics (outbox, relay, inbox, retry, and DLQ behaviour)
+remain owned by the Finance service dashboards.
 
 The `nats` Secret is synchronized from Infisical path
 `/apps/platform-storage/nats`. In addition to the shared administrative and
