@@ -38,7 +38,7 @@ local-dev-env-test:
 	npm test --prefix tools/local-dev-env-mcp
 
 local-dev-env-doctor:
-	local-dev-env-mcp doctor
+	NODE_USE_SYSTEM_CA=1 local-dev-env-mcp doctor
 
 helm-inventory:
 	./scripts/platform-helm.sh inventory
