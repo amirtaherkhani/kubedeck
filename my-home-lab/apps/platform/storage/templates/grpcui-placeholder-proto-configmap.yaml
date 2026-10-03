@@ -1,0 +1,26 @@
+{{- if .Values.grpcui.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "platform-storage.grpcuiName" . }}-placeholder-proto
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.grpcuiLabels" . | nindent 4 }}
+data:
+  placeholder.proto: |
+    syntax = "proto3";
+
+    package dev.placeholder;
+
+    service Placeholder {
+      rpc Ping (PingRequest) returns (PingReply);
+    }
+
+    message PingRequest {
+      string message = 1;
+    }
+
+    message PingReply {
+      string message = 1;
+    }
+{{- end }}

@@ -775,6 +775,67 @@ test("forwards the cluster agent configuration into the Wrangler runtime", async
   assert.match(deployScript, /\/dashboard\/catalog\/deployments/);
 });
 
+test("defaults Kubernetes releases to the home-lab Infisical contract", async () => {
+  const [dashboardValues, agentValues, deployScript] = await Promise.all([
+    readFile(new URL("../charts/kubedeck/values.yaml", import.meta.url), "utf8"),
+    readFile(
+      new URL("../charts/kubedeck-agent/values.yaml", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../.agents/skills/kubedeck-build-deploy/scripts/deploy.sh",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ]);
+
+  for (const values of [dashboardValues, agentValues]) {
+    assert.match(values, /^  enabled: true$/m);
+    assert.match(values, /credentialsSecretName: infisical-universal-auth/);
+    assert.match(values, /credentialsSecretNamespace: platform-secrets/);
+    assert.match(values, /projectSlug: home-lab/);
+    assert.match(values, /envSlug: local/);
+  }
+  assert.match(dashboardValues, /existingSecret: kubedeck-agent-auth/);
+  assert.match(dashboardValues, /tokenKey: KUBEDECK_AGENT_TOKEN/);
+  assert.match(agentValues, /existingSecret: kubedeck-agent-auth/);
+  assert.match(agentValues, /tokenKey: KUBEDECK_AGENT_TOKEN/);
+  assert.match(deployScript, /namespace="\$\{KUBEDECK_NAMESPACE:-development-tools\}"/);
+  assert.match(deployScript, /infisical_enabled="\$\{KUBEDECK_INFISICAL_ENABLED:-true\}"/);
+  assert.match(deployScript, /infisical\.enabled=\$\{infisical_enabled\}/);
+  assert.match(deployScript, /image_tag="\$\{release_channel\}-\$\{release_version\}"/);
+  assert.match(deployScript, /KUBEDECK_RELEASE_CHANNEL:-dev/);
+  assert.match(deployScript, /cleanup_old_kubernetes_objects/);
+  assert.match(deployScript, /cleanup_old_registry_images/);
+});
+
+test("ships the versioned cleanup policy and release helper", async () => {
+  const [policy, versionHelper] = await Promise.all([
+    readFile(
+      new URL(
+        "../.agents/policies/kubedeck-build-deploy.md",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../.agents/skills/kubedeck-build-deploy/scripts/bump-version.sh",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(policy, /localhost:5001\/kubedeck:dev-0\.1\.2/);
+  assert.match(policy, /KUBEDECK_CLEANUP_OLD_IMAGES=false/);
+  assert.match(policy, /zero-replica ReplicaSets/);
+  assert.match(versionHelper, /package-lock\.json/);
+  assert.match(versionHelper, /charts\/kubedeck-agent\/Chart\.yaml/);
+});
+
 test("keeps the v0.1.1 package and Helm versions aligned", async () => {
   const [packageSource, dashboardChart, agentChart] = await Promise.all([
     readFile(new URL("../package.json", import.meta.url), "utf8"),

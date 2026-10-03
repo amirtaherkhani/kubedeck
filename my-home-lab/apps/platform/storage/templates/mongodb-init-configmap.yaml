@@ -1,0 +1,19 @@
+{{- if .Values.mongodb.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "platform-storage.mongodbName" . }}-init
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.mongodbLabels" . | nindent 4 }}
+data:
+  01-create-app-user.js: |
+    const appDb = db.getSiblingDB(process.env.MONGODB_APP_DATABASE);
+    appDb.createUser({
+      user: process.env.MONGODB_APP_USERNAME,
+      pwd: process.env.MONGODB_APP_PASSWORD,
+      roles: [
+        { role: "readWrite", db: process.env.MONGODB_APP_DATABASE }
+      ]
+    });
+{{- end }}

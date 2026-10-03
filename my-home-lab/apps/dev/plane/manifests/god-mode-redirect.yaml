@@ -1,0 +1,36 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: plane-god-mode-slash
+  namespace: development-tools
+  labels:
+    app.kubernetes.io/name: plane
+    app.kubernetes.io/part-of: home-lab
+spec:
+  redirectRegex:
+    regex: '^https?://plane\.local\.dev/god-mode$'
+    replacement: 'https://plane.local.dev/god-mode/'
+    permanent: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: plane-god-mode-redirect
+  namespace: development-tools
+  labels:
+    app.kubernetes.io/name: plane
+    app.kubernetes.io/part-of: home-lab
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`plane.local.dev`) && PathPrefix(`/god-mode`)
+      priority: 1000
+      middlewares:
+        - name: plane-god-mode-slash
+      services:
+        - name: plane-admin
+          port: 3000
+  tls:
+    secretName: local-dev-tls

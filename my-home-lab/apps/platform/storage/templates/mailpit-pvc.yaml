@@ -1,0 +1,16 @@
+{{- if and .Values.mailpit.enabled .Values.mailpit.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "platform-storage.mailpitName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.mailpitLabels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.mailpit.persistence.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.mailpit.persistence.size | quote }}
+{{- end }}

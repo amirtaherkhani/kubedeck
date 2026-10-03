@@ -1,0 +1,30 @@
+{{- if and .Values.nats.enabled .Values.nats.monitoringIngress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "platform-storage.natsMonitoringName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.natsMonitoringLabels" . | nindent 4 }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: {{ .Release.Namespace }}-{{ include "platform-storage.natsMonitoringName" . }}-basic-auth@kubernetescrd
+spec:
+  ingressClassName: {{ .Values.nats.monitoringIngress.className }}
+  {{- if .Values.nats.monitoringIngress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.nats.monitoringIngress.host }}
+      secretName: {{ .Values.nats.monitoringIngress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.nats.monitoringIngress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "platform-storage.natsMonitoringName" . }}
+                port:
+                  name: http
+{{- end }}

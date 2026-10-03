@@ -1,0 +1,26 @@
+{{- if .Values.jaeger.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "platform-storage.jaegerName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.jaegerLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.jaeger.service.type }}
+  ports:
+    - name: otlp-grpc
+      port: {{ .Values.jaeger.service.otlpGrpcPort }}
+      targetPort: otlp-grpc
+    - name: otlp-http
+      port: {{ .Values.jaeger.service.otlpHttpPort }}
+      targetPort: otlp-http
+    - name: sampling
+      port: {{ .Values.jaeger.service.samplingPort }}
+      targetPort: sampling
+    - name: zipkin
+      port: {{ .Values.jaeger.service.zipkinPort }}
+      targetPort: zipkin
+  selector:
+    {{- include "platform-storage.jaegerLabels" . | nindent 4 }}
+{{- end }}

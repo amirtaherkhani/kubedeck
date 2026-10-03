@@ -1,0 +1,16 @@
+# Illustrative profile only. It does not refer to a real service or install a release.
+apiVersion: catalog.kubedeck.io/v1alpha1
+kind: InstallationProfile
+profile:
+  id: local-single-node-example
+  displayName: Local Single-Node Example
+  target: local-single-node
+installations:
+  - moduleId: example-managed-module
+    releaseName: example-managed-module
+    namespace: example
+    chart:
+      source: example-repository
+      name: example-chart
+      version: 0.0.1
+    valuesFiles: []

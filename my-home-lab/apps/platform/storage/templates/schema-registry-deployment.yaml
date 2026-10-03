@@ -1,0 +1,62 @@
+{{- if and .Values.kafka.enabled .Values.schemaRegistry.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    secrets.infisical.com/auto-reload: "true"
+  name: {{ include "platform-storage.schemaRegistryName" . }}
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.schemaRegistryLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "platform-storage.schemaRegistryLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "platform-storage.labels" . | nindent 8 }}
+        {{- include "platform-storage.schemaRegistryLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: schema-registry
+          image: "{{ .Values.schemaRegistry.image.repository }}:{{ .Values.schemaRegistry.image.tag }}"
+          imagePullPolicy: {{ .Values.schemaRegistry.image.pullPolicy }}
+          env:
+            - name: APICURIO_STORAGE_KIND
+              value: sql
+            - name: APICURIO_STORAGE_SQL_KIND
+              value: postgresql
+            - name: APICURIO_DATASOURCE_URL
+              value: "jdbc:postgresql://{{ .Values.schemaRegistry.database.host }}:{{ .Values.schemaRegistry.database.port }}/{{ .Values.schemaRegistry.database.name }}"
+            - name: APICURIO_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "platform-storage.postgresqlName" . }}
+                  key: POSTGRESQL_USERNAME
+            - name: APICURIO_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "platform-storage.postgresqlName" . }}
+                  key: POSTGRESQL_PASSWORD
+            - name: REGISTRY_REST_ARTIFACT_DELETION_ENABLED
+              value: "true"
+          ports:
+            - name: http
+              containerPort: {{ .Values.schemaRegistry.service.port }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.schemaRegistry.resources | nindent 12 }}
+{{- end }}

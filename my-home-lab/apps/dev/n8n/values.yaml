@@ -1,0 +1,107 @@
+replicaCount: 1
+
+image:
+  repository: docker.n8n.io/n8nio/n8n
+  tag: "2.30.7-arm64"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  runAsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5678
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: development-tools-n8n-https-redirect@kubernetescrd
+  host: n8n.local.dev
+  tls:
+    enabled: true
+    secretName: local-dev-tls
+
+persistence:
+  enabled: true
+  storageClass: local-path
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+
+database:
+  type: postgresdb
+  host: postgresql.platform-storage.svc.cluster.local
+  port: 5432
+  database: n8n
+  user: n8n
+  schema: public
+  existingSecret: n8n
+  passwordKey: N8N_DB_POSTGRESDB_PASSWORD
+
+config:
+  host: n8n.local.dev
+  protocol: http
+  port: "5678"
+  webhookUrl: https://n8n.local.dev/
+  editorBaseUrl: https://n8n.local.dev/
+  proxyHops: "1"
+  secureCookie: "true"
+  genericTimezone: Asia/Tehran
+  timezone: Asia/Tehran
+  metrics: "true"
+  queueHealthCheckActive: "true"
+  encryptionKeySecretName: n8n
+  encryptionKeySecretKey: N8N_ENCRYPTION_KEY
+
+extraEnv: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+
+startupProbe:
+  failureThreshold: 60
+  periodSeconds: 5
+
+readinessProbe:
+  periodSeconds: 10
+  failureThreshold: 6
+
+livenessProbe:
+  periodSeconds: 30
+  failureThreshold: 3
+
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    release: monitoring
+  interval: 30s
+  scrapeTimeout: 10s

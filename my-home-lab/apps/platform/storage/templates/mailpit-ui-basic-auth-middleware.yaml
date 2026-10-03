@@ -1,0 +1,12 @@
+{{- if and .Values.mailpit.enabled .Values.mailpit.ingress.enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "platform-storage.mailpitUiName" . }}-basic-auth
+  labels:
+    {{- include "platform-storage.labels" . | nindent 4 }}
+    {{- include "platform-storage.mailpitUiLabels" . | nindent 4 }}
+spec:
+  basicAuth:
+    secret: {{ include "platform-storage.mailpitUiName" . }}-basic-auth
+{{- end }}

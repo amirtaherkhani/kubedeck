@@ -1,0 +1,531 @@
+## Inline credentials are intentionally disabled. All application and UI
+## credentials are synchronized from Infisical into namespace-local Secrets.
+inlineSecrets: false
+
+postgresql:
+  enabled: true
+  name: postgresql
+  image:
+    repository: registry-1.docker.io/bitnami/postgresql
+    tag: "latest@sha256:e6463683ee29a3bbe00051cb28f5d7871f4dde9f07008ebe3c65c230d85d2eb9"
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    port: 5432
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 8Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+pgadmin:
+  enabled: true
+  name: pgadmin
+  image:
+    repository: dpage/pgadmin4
+    tag: "latest@sha256:2f4ce946ddf8360680d7eff4eaba1d91859eb6b4003e6623bad5c63a322c2f4d"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 5050
+  ingress:
+    enabled: true
+    className: traefik
+    host: pgadmin.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+redis:
+  enabled: true
+  name: redis
+  image:
+    repository: ecr-public.aws.com/docker/library/redis
+    tag: 8.2.3-alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    port: 6379
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 4Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+redisCommander:
+  enabled: true
+  name: redis-commander
+  image:
+    repository: rediscommander/redis-commander
+    tag: "latest@sha256:19cd0c49f418779fa2822a0496c5e6516d0c792effc39ed20089e6268477e40a"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8081
+  ingress:
+    enabled: true
+    className: traefik
+    host: redis-ui.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 384Mi
+rabbitmq:
+  enabled: true
+  name: rabbitmq
+  image:
+    repository: ecr-public.aws.com/docker/library/rabbitmq
+    tag: 3-management
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    amqpPort: 5672
+    managementPort: 15672
+  ingress:
+    enabled: true
+    className: traefik
+    host: rabbitmq-ui.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 4Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      # The 500m ceiling sustained 27-32% CFS throttling during idle checks.
+      cpu: "1"
+      memory: 768Mi
+kafka:
+  enabled: true
+  name: kafka
+  image:
+    repository: confluentinc/cp-kafka
+    tag: 7.7.1
+    pullPolicy: IfNotPresent
+  kraft:
+    clusterId: MkU3OEVBNTcwNTJENDM2Qk
+  service:
+    type: LoadBalancer
+    internalPort: 9092
+    controllerPort: 9093
+    externalPort: 9094
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 8Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1536Mi
+kafkaUi:
+  enabled: true
+  name: kafka-ui
+  image:
+    repository: provectuslabs/kafka-ui
+    tag: v0.7.2
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    className: traefik
+    host: kafka-ui.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 768Mi
+schemaRegistry:
+  enabled: true
+  name: schema-registry
+  image:
+    repository: apicurio/apicurio-registry
+    tag: "3.0.12"
+    pullPolicy: IfNotPresent
+  uiImage:
+    repository: apicurio/apicurio-registry-ui
+    tag: "3.0.12"
+    pullPolicy: IfNotPresent
+  database:
+    host: postgresql.platform-storage.svc.cluster.local
+    port: 5432
+    name: default
+  service:
+    type: ClusterIP
+    port: 8080
+  uiService:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    className: traefik
+    host: schema-registry.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  uiIngress:
+    enabled: true
+    className: traefik
+    host: schema-registry-ui.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  resources:
+    requests:
+      cpu: 100m
+      memory: 384Mi
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+  uiResources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+mongodb:
+  enabled: true
+  name: mongodb
+  image:
+    repository: mongo
+    tag: "7.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    port: 27017
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 8Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+mongoku:
+  enabled: true
+  name: mongoku
+  image:
+    repository: huggingface/mongoku
+    tag: "1.3.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3100
+  ingress:
+    enabled: true
+    className: traefik
+    host: mongo-ui.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+nats:
+  enabled: true
+  name: nats
+  replicaCount: 3
+  auth:
+    adminUsername: ""
+    adminPassword: ""
+    username: ""
+    password: ""
+    financeUsername: ""
+    financePassword: ""
+    financeTestUsername: ""
+    financeTestPassword: ""
+    clusterUsername: ""
+    clusterPassword: ""
+  image:
+    repository: nats
+    tag: "2.11.17-alpine3.22"
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    clientPort: 4222
+    monitoringPort: 8222
+  cluster:
+    enabled: true
+    name: platform-nats
+    routePort: 6222
+    connectRetries: 120
+    poolSize: 3
+    noAdvertise: true
+  monitoringIngress:
+    enabled: true
+    className: traefik
+    host: nats-monitor.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  prometheusExporter:
+    enabled: true
+    image:
+      repository: natsio/prometheus-nats-exporter
+      tag: "0.20.1"
+      pullPolicy: IfNotPresent
+    port: 7777
+    serviceMonitor:
+      enabled: true
+      interval: 15s
+      scrapeTimeout: 10s
+      additionalLabels:
+        release: monitoring
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+  grafanaDashboard:
+    enabled: true
+    folder: NATS
+  jetstream:
+    enabled: true
+    storeDir: /data/jetstream
+    maxMemoryStore: 128MB
+    maxFileStore: 3GB
+    requestQueueLimit: 10000
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 4Gi
+  podManagementPolicy: Parallel
+  minReadySeconds: 10
+  terminationGracePeriodSeconds: 60
+  preStopSleepSeconds: 35
+  lameDuckDuration: 30s
+  lameDuckGracePeriod: 10s
+  goMemLimit: 460MiB
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  scheduling:
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+natsUi:
+  enabled: true
+  name: nats-ui
+  image:
+    repository: ghcr.io/nats-nui/nui
+    tag: "edge@sha256:6ee7f54cb7262644b663a06282a04bfcd4bb3d97af7b3456f6bafe54e9b20728"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 31311
+  ingress:
+    enabled: true
+    className: traefik
+    host: nats-ui.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+minio:
+  enabled: true
+  name: minio
+  image:
+    repository: minio/minio
+    tag: "latest@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e"
+    pullPolicy: IfNotPresent
+  mcImage:
+    repository: quay.io/minio/mc
+    tag: "RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727"
+    pullPolicy: IfNotPresent
+  defaultBucket: default
+  region: us-east-1
+  service:
+    type: ClusterIP
+    apiPort: 9000
+    consolePort: 9001
+  ingress:
+    enabled: true
+    className: traefik
+    apiHost: s3.local.dev
+    consoleHost: s3-ui.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 8Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+jaeger:
+  enabled: true
+  name: jaeger
+  image:
+    repository: cr.jaegertracing.io/jaegertracing/jaeger
+    tag: "2.19.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    uiPort: 16686
+    otlpGrpcPort: 4317
+    otlpHttpPort: 4318
+    samplingPort: 5778
+    zipkinPort: 9411
+  uiService:
+    type: ClusterIP
+    port: 80
+  ingress:
+    enabled: true
+    className: traefik
+    host: jaeger-ui.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+mailpit:
+  enabled: true
+  name: mailpit
+  image:
+    repository: axllent/mailpit
+    tag: "latest@sha256:d5ecbb067db3705fa953d79e1b7f81ef84038df67aba6c52825d8c02a1ea748a"
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    smtpPort: 1025
+  smtp:
+    auth:
+      enabled: true
+      secretName: mailpit-smtp-auth
+      secretKey: auth
+      # Mailpit's local SMTP listener does not currently have STARTTLS
+      # certificates. Keep this explicit for the development-only service.
+      allowInsecure: true
+  uiService:
+    type: ClusterIP
+    port: 80
+    targetPort: 8025
+  ingress:
+    enabled: true
+    className: traefik
+    host: mailpit-ui.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+grpcui:
+  enabled: true
+  name: grpcui
+  image:
+    repository: fullstorydev/grpcui
+    tag: "latest@sha256:a528a3e36e075bba4b3f34b42fa437bb6eb9682be99f28c1095438d24bcfa587"
+    pullPolicy: IfNotPresent
+  target:
+    address: jaeger.platform-storage.svc.cluster.local:4317
+    plaintext: true
+    connectFailFast: false
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  ingress:
+    enabled: true
+    className: traefik
+    host: grpcui.local.dev
+    tls:
+      enabled: true
+      secretName: local-dev-tls
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi

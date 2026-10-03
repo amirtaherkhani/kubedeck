@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docker Image Deploy"
+  short_description: "Replace and deploy one local registry image"
+  default_prompt: "Use $docker-image-deploy to delete this project's existing local-registry image before building, then push, deploy without automatic rollback, verify, and leave exactly one image."
