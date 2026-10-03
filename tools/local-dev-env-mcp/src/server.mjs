@@ -63,7 +63,7 @@ export async function serve() {
           throw new Error("the MCP client must provide a registered workspace root");
         }
         const context = resolveProjectContext({ roots });
-        const store = new InfisicalStore({ credentials: loadCredentials(context.credentialProfile), context });
+        const store = new InfisicalStore({ credentials: loadCredentials(), context });
         return { context, store };
       });
     }

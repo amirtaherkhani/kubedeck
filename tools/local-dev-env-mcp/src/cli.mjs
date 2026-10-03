@@ -30,7 +30,7 @@ async function doctor(args) {
   const flags = options(args);
   if (Object.keys(flags).some((key) => key !== "root")) throw new Error("doctor accepts only --root");
   const context = resolveProjectContext({ cwd: resolve(flags.root ?? process.cwd()) });
-  const store = new InfisicalStore({ credentials: loadCredentials(context.credentialProfile), context });
+  const store = new InfisicalStore({ credentials: loadCredentials(), context });
   const names = await store.list();
   console.log(JSON.stringify({ ok: true, context: contextSummary(context), secretCount: names.length }, null, 2));
 }
@@ -47,7 +47,6 @@ async function main() {
       environment: flags.environment,
       path: flags.path ?? "/",
       domain: flags.domain,
-      credentialProfile: flags.profile ?? "home-lab"
     });
     console.log(JSON.stringify({ registered: contextSummary(context) }, null, 2));
     return;

@@ -43,7 +43,7 @@ test("credential reconciliation revokes only superseded connector credentials", 
   assert.equal(readFileSync(log, "utf8").trim(), "/auth/universal-auth/identities/identity/client-secrets/old/revoke");
 });
 
-test("credential replacement stores a seven-day secret before revoking old credentials", () => {
+test("credential replacement stores a one-year secret before revoking old credentials", () => {
   const log = join(mkdtempSync(join(tmpdir(), "local-dev-env-bootstrap-")), "rotation.log");
   execFileSync("/bin/bash", ["-c", `
     source "$1"
@@ -61,7 +61,7 @@ test("credential replacement stores a seven-day secret before revoking old crede
 
   const events = readFileSync(log, "utf8").trim().split("\n");
   const createPayload = JSON.parse(events[0].slice("create ".length));
-  assert.equal(createPayload.ttl, 604800);
+  assert.equal(createPayload.ttl, 31536000);
   assert.deepEqual(events.slice(1), [
     "store client-id",
     "store client-secret",
@@ -70,7 +70,7 @@ test("credential replacement stores a seven-day secret before revoking old crede
   ]);
 });
 
-test("credential validation retains seven-day credentials and rejects longer TTLs", () => {
+test("credential validation retains one-year credentials and rejects shorter TTLs", () => {
   const tokenPayload = Buffer.from(JSON.stringify({ identityId: "identity" })).toString("base64url");
   const command = `
     source "$1"
@@ -92,8 +92,8 @@ test("credential validation retains seven-day credentials and rejects longer TTL
     env: { ...process.env, TEST_TTL: String(ttl), TEST_JWT_PAYLOAD: tokenPayload }
   });
 
-  assert.equal(runWithTtl(604800), "valid");
-  assert.equal(runWithTtl(31536000), "invalid");
+  assert.equal(runWithTtl(31536000), "valid");
+  assert.equal(runWithTtl(604800), "invalid");
 });
 
 test("Universal Auth uses attach for a fresh identity and update for an existing identity", () => {
@@ -117,8 +117,8 @@ test("Universal Auth uses attach for a fresh identity and update for an existing
   assert.equal(freshMethod, "POST");
   assert.equal(existingMethod, "PATCH");
   for (const payload of [JSON.parse(freshPayload), JSON.parse(existingPayload)]) {
-    assert.equal(payload.accessTokenTTL, 900);
-    assert.equal(payload.accessTokenMaxTTL, 900);
+    assert.equal(payload.accessTokenTTL, 3600);
+    assert.equal(payload.accessTokenMaxTTL, 3600);
   }
 });
 

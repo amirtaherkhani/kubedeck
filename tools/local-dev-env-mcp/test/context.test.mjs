@@ -13,13 +13,13 @@ test("uses the longest matching central registration", () => {
   const registryPath = join(base, "projects.json");
   writeFileSync(registryPath, JSON.stringify({ projects: [
     { root: base, projectId: "parent", environment: "local", path: "/" },
-    { root: join(base, "apps"), projectId: "child", environment: "development", path: "/api", credentialProfile: "child-project" }
+    { root: join(base, "apps"), projectId: "child", environment: "development", path: "/api" }
   ] }));
 
   const context = resolveProjectContext({ cwd: nested, registryPath });
   assert.equal(context.projectId, "child");
   assert.equal(context.path, "/api");
-  assert.equal(context.credentialProfile, "child-project");
+  assert.equal(context.credentialProfile, undefined);
 });
 
 test("maps a Git worktree path to the registered primary checkout", () => {
@@ -101,8 +101,8 @@ test("rejects client roots that resolve to different project scopes", () => {
   mkdirSync(finance);
   const registryPath = join(base, "projects.json");
   writeFileSync(registryPath, JSON.stringify({ projects: [
-    { root: home, projectId: "home", environment: "local", path: "/", credentialProfile: "home-lab" },
-    { root: finance, projectId: "finance", environment: "development", path: "/finance", credentialProfile: "vero-finance" }
+    { root: home, projectId: "home", environment: "local", path: "/" },
+    { root: finance, projectId: "finance", environment: "development", path: "/finance" }
   ] }));
 
   assert.throws(

@@ -23,12 +23,12 @@ This repository manages the local Rancher Desktop Kubernetes home lab.
 ## Infisical ownership and external-project access
 
 - `my-home-lab` administers the Infisical organization and the shared `home-lab` project: project creation, environment/folder layout, machine identities, roles, audit, and revocation. Every application deployed by this repository uses the `home-lab` project with its service-specific path; the source repository's GitHub location does not change that deployment ownership.
-- Projects deployed outside this repository keep their own Infisical project and Universal Auth machine identity. Never reuse administrator, Finance, home-lab, or another project's credentials across those external deployments.
-- Humans use named Infisical accounts. AI agents and automation use project-scoped machine identities with short-lived tokens. Do not give agents organization-admin access or give humans shared machine credentials.
+- Local development agents use the central `local-dev-agents` Universal Auth identity through `local-dev-env-mcp`; grant it `member` access only to explicitly approved development projects. Kubernetes workloads and external deployments keep their own project-scoped credentials and must never mount the local agent identity.
+- Humans use named Infisical accounts. Local AI agents use the central development-only machine identity with short-lived tokens; workloads use project-scoped identities. Do not give agents organization-admin access or give humans shared machine credentials.
 - Use `viewer` for read-only agents, `member` for agents that must add/edit/delete project secrets, and `admin` only for a designated project owner.
 - Use stable project scopes and uppercase service-prefixed keys. For example, `vero-finance` uses `/finance` and keys such as `FINANCE_DATABASE_URL`; other Vero applications do not reuse its credentials.
 - Kubernetes uses an Infisical Secrets Operator `credentialsRef` belonging to the same project identity. Verify `ReadyToSyncSecrets=True`; an existing managed Secret is not proof of current authorization.
-- External agents use `scripts/infisical-agent-access.sh`, Keychain-backed credentials, and `infisical run`. They must not read arbitrary Kubernetes Secrets, use the admin token, export secrets to files, or put tokens in prompts, logs, CI artifacts, or Git.
+- Local AI agents use the globally installed `local-dev-env-mcp` connector, which reads its 365-day client credential from Keychain and renews short-lived access tokens automatically. They must not use `infisical login`, `INFISICAL_TOKEN`, the administrator token, arbitrary Kubernetes Secrets, exported secret files, or credentials in prompts, logs, CI artifacts, or Git.
 - Record project, environment/path, principal, role, reason, rotation/expiry plan, and verification for every access change. Revoke access when an agent, human, project, or task ends.
 
 ## Application deployment contract

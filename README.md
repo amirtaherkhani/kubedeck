@@ -49,6 +49,11 @@ make local-dev-env-test
 make local-dev-env-doctor
 ```
 
+Set `INFISICAL_LOCAL_DEV_PROJECT_IDS` to a comma-separated list of approved
+development project IDs before bootstrap to grant the central agent access to
+additional projects. The client credential is stored in Keychain for 365 days;
+short-lived access tokens renew automatically.
+
 See [tools/local-dev-env-mcp/README.md](tools/local-dev-env-mcp/README.md) for
 the agent tools, project registration, identity boundaries, and direct
 Kubernetes injection contract.
