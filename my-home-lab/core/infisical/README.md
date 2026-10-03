@@ -1,6 +1,6 @@
 # Infisical access for local AI agents
 
-Use `local-dev-env-mcp` as the single local connector. It resolves the
+Use `kubedeck-env-mcp` as the single local connector. It resolves the
 workspace project and service path automatically, reads one development-only
 Universal Auth identity from macOS Keychain, and refreshes short-lived access
 tokens without an interactive login.
@@ -8,9 +8,9 @@ tokens without an interactive login.
 ## One-time setup
 
 ```bash
-cd /Users/mac/Documents/GitHub/my-home-lab
+cd my-home-lab
 INFISICAL_LOCAL_DEV_PROJECT_IDS=<home-lab-id>,<other-dev-project-id> \
-  make local-dev-env-bootstrap
+  make kubedeck-env-bootstrap
 ```
 
 The bootstrap creates or reuses `local-dev-agents`, grants `member` access to
@@ -26,7 +26,7 @@ short-lived (one hour) and renew automatically. Verify without printing a
 token or secret value:
 
 ```bash
-make local-dev-env-doctor
+make kubedeck-env-doctor
 ```
 
 Agents use the globally installed MCP server and the installed
@@ -38,7 +38,7 @@ password, project ID, profile, token, or path.
 ```text
 AI client
   ↓ global MCP server
-local-dev-env-mcp
+kubedeck-env-mcp
   ↓ macOS Keychain
 local-dev-agents Universal Auth
   ↓ renewable token

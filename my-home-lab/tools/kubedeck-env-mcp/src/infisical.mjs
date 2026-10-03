@@ -41,7 +41,8 @@ export class InfisicalStore {
       if (value !== undefined) url.searchParams.set(key, String(value));
     }
     const headers = { "content-type": "application/json" };
-    if (authenticated) headers.authorization = `Bearer ${await this.token()}`;
+    const requestToken = authenticated ? await this.token() : null;
+    if (requestToken) headers.authorization = `Bearer ${requestToken}`;
     const response = await this.fetch(url, {
       method,
       headers,
@@ -49,8 +50,11 @@ export class InfisicalStore {
       signal: AbortSignal.timeout(30_000)
     });
     if (response.status === 401 && authenticated && retryAuth) {
-      this.accessToken = null;
-      this.accessTokenExpiresAt = 0;
+      // Another in-flight request may already have refreshed this stale token.
+      if (this.accessToken === requestToken) {
+        this.accessToken = null;
+        this.accessTokenExpiresAt = 0;
+      }
       return this.request(path, { method, query, body, authenticated, retryAuth: false });
     }
     if (!response.ok) throw new Error(`Infisical request failed [StatusCode=${response.status}]`);

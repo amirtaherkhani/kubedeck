@@ -56,7 +56,7 @@ function validateContext(raw, root, source) {
     throw new Error(`${source} must define projectId/workspaceId and environment/defaultEnvironment`);
   }
   if (!ALLOWED_ENVIRONMENTS.has(environment)) {
-    throw new Error(`environment ${environment} is blocked; local-dev-env-mcp permits only local, development, or dev`);
+    throw new Error(`environment ${environment} is blocked; kubedeck-env-mcp permits only local, development, or dev`);
   }
   if (domain !== DEFAULT_DOMAIN) throw new Error(`${source} domain must be ${DEFAULT_DOMAIN}`);
   if (!secretPath.startsWith("/")) throw new Error(`${source} path must start with /`);
@@ -89,7 +89,7 @@ export function resolveProjectContext({ roots = [], cwd = process.cwd(), registr
     }
   }
 
-  throw new Error("no Infisical project mapping found; run local-dev-env-mcp register from this project");
+  throw new Error("no Infisical project mapping found; run kubedeck-env-mcp register from this project");
 }
 
 export function contextSummary(context) {
