@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.0.41] - 2026-10-03
+
 ### Fixed
 
 - Aligned both provisioned k6 Prometheus dashboards with the `testrun_name`
