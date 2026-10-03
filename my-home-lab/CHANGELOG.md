@@ -20,6 +20,12 @@
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
 
+## [platform-storage 0.1.8] - 2026-10-03
+
+### Fixed
+
+- Run the MinIO bootstrap hook on installation only by default; later upgrades can opt in when bucket or policy setup must be refreshed.
+
 ## [platform-storage 0.1.7] - 2026-10-03
 
 ### Changed

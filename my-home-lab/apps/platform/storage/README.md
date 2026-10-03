@@ -39,6 +39,11 @@ Deploy with `make helm-validate RELEASE=platform-storage` and
 `make helm-apply RELEASE=platform-storage` after Infisical-backed secrets are
 available.
 
+MinIO's bucket/user bootstrap Job runs on the initial chart installation. It
+does not run on routine upgrades; set `minio.initOnUpgrade=true` only when its
+bucket or policy setup must be refreshed. Validate that lifecycle with
+`python3 apps/platform/storage/tests/test_minio_hook.py`.
+
 RabbitMQ is scraped from its built-in Prometheus endpoint on port `15692` by
 the `rabbitmq` ServiceMonitor. The provisioned **RabbitMQ Overview** Grafana
 dashboard appears in the `RabbitMQ` folder and covers scrape health,
