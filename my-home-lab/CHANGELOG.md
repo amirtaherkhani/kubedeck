@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added RabbitMQ Prometheus scraping and a provisioned Grafana overview dashboard to the platform-storage chart.
 - Added explicit multi-project bootstrap through `INFISICAL_LOCAL_DEV_PROJECT_IDS` for the central local development agent identity.
 - Added a pinned Grafana image renderer deployment with Prometheus scraping support.
 
