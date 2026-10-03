@@ -1,12 +1,9 @@
-import Image from "next/image"
-
 import { cn } from "@/lib/utils"
 
 type KubeDeckBannerProps = {
   className?: string
   headingId: string
   liveGraph?: boolean
-  priority?: boolean
 }
 
 const liveGraphLinks = [
@@ -32,7 +29,6 @@ export function KubeDeckBanner({
   className,
   headingId,
   liveGraph = false,
-  priority = false,
 }: KubeDeckBannerProps) {
   const descriptionId = `${headingId}-description`
 
@@ -63,16 +59,6 @@ export function KubeDeckBanner({
           <span>API</span>
         </div>
         <div className="kubedeck-banner-face">
-          <Image
-            className="kubedeck-banner-image"
-            src="/kubedeck-banner.png"
-            alt=""
-            width={2172}
-            height={724}
-            priority={priority}
-            sizes="(max-width: 900px) 100vw, (max-width: 1800px) 90vw, 72vw"
-            unoptimized
-          />
           {liveGraph ? (
             <div className="kubedeck-live-graph" aria-hidden="true">
               {liveGraphLinks.map((link) => (

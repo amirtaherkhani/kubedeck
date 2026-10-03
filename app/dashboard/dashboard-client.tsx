@@ -2378,7 +2378,6 @@ export default function DashboardClient({
                   className="dashboard-banner"
                   headingId="overview-banner-title"
                   liveGraph
-                  priority
                 />
 
                 <div
