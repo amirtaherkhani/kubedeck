@@ -10,6 +10,8 @@ All notable KubeDeck changes are documented in this file.
   retaining verified workspace identity checks for hosted setup.
 - Add reduced-motion-aware entrance, hover, focus, and open/close transitions to
   the shared shadcn-style UI components.
+- Replace the banner's continuous drift and scan with an interactive isometric
+  interface, API, and data layer stack.
 
 ## [0.1.1] - 2026-08-01
 

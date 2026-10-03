@@ -901,6 +901,8 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(bannerComponent, /liveGraph/);
   assert.match(bannerComponent, /kubedeck-live-link/);
   assert.match(bannerComponent, /kubedeck-live-beacon/);
+  assert.match(bannerComponent, /kubedeck-banner-layer--data/);
+  assert.match(bannerComponent, /kubedeck-banner-layer--api/);
   assert.match(logoComponent, /KubeDeckLogoVariant = "light" \| "dark" \| "clear"/);
   assert.match(logoComponent, /data-logo-variant=\{variant\}/);
   assert.match(notificationsComponent, /Services and Kubernetes nodes/);
@@ -945,10 +947,17 @@ test("ships the admin schema, migration, and finished product assets", async () 
   assert.match(globalStyles, /font-family: var\(--font-manrope\)/);
   assert.match(globalStyles, /\.dashboard-sidebar/);
   assert.match(globalStyles, /\.liquid-orbit/);
+  assert.match(globalStyles, /\.kubedeck-banner\s*\{[^}]*perspective: 1400px/s);
   assert.match(
     globalStyles,
-    /\.kubedeck-live-graph\s*\{[^}]*animation: kubedeck-banner-drift/s,
+    /\.dashboard-banner:hover \.kubedeck-banner-layer--data/s,
   );
+  assert.match(globalStyles, /\.kubedeck-motion-off \.kubedeck-banner-layer/);
+  assert.match(
+    globalStyles,
+    /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.kubedeck-banner-layer/,
+  );
+  assert.doesNotMatch(globalStyles, /kubedeck-banner-(?:drift|scan)/);
   assert.match(
     globalStyles,
     /\.kubedeck-live-link--top\s*\{[^}]*width: 9\.1%/s,

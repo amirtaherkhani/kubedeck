@@ -899,19 +899,105 @@
   display: block;
   width: 100%;
   aspect-ratio: 3 / 1;
-  overflow: hidden;
   isolation: isolate;
+  perspective: 1400px;
+  transform-style: preserve-3d;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
-.kubedeck-banner::before {
+.kubedeck-banner-stage {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.kubedeck-banner-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  padding: clamp(0.55rem, 1.6vw, 1.25rem);
+  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 35%);
+  border-radius: 0.85rem;
+  backface-visibility: hidden;
+  pointer-events: none;
+  transform-origin: center;
+  transition:
+    transform 620ms cubic-bezier(0.2, 0.75, 0.2, 1),
+    opacity 420ms ease;
+  will-change: transform;
+}
+
+.kubedeck-banner-layer span {
+  padding: 0.25rem 0.55rem;
+  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 50%);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--background), transparent 22%);
+  color: color-mix(in oklch, var(--foreground), transparent 18%);
+  font-family: var(--font-mono);
+  font-size: clamp(0.55rem, 0.8vw, 0.7rem);
+  letter-spacing: 0.16em;
+}
+
+.kubedeck-banner-layer--data {
+  z-index: 0;
+  background:
+    radial-gradient(
+      ellipse at 82% 5%,
+      color-mix(in oklch, var(--chart-2), transparent 77%),
+      transparent 52%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in oklch, var(--chart-2), var(--background) 82%),
+      var(--background)
+    );
+  box-shadow: 0 18px 38px color-mix(in oklch, black, transparent 48%);
+  opacity: 0.76;
+  transform: translate3d(0, 6px, -58px) rotateX(1.5deg) scale(0.96);
+}
+
+.kubedeck-banner-layer--api {
+  z-index: 1;
+  background:
+    radial-gradient(
+      ellipse at 22% 110%,
+      color-mix(in oklch, var(--primary), transparent 77%),
+      transparent 56%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in oklch, var(--primary), var(--background) 88%),
+      color-mix(in oklch, var(--chart-2), var(--background) 91%)
+    );
+  box-shadow: 0 12px 28px color-mix(in oklch, black, transparent 40%);
+  opacity: 0.88;
+  transform: translate3d(0, 3px, -28px) rotateX(0.75deg) scale(0.98);
+}
+
+.kubedeck-banner-face {
   position: absolute;
   inset: 0;
   z-index: 2;
-  border-radius: inherit;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 24%);
+  border-radius: 0.75rem;
+  background: var(--background);
+  box-shadow: 0 8px 30px color-mix(in oklch, black, transparent 42%);
+  transform: translate3d(0, 0, 0);
+  transform-origin: center;
+  transition: transform 620ms cubic-bezier(0.2, 0.75, 0.2, 1);
+  will-change: transform;
+}
+
+.kubedeck-banner-face::before {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   background:
     linear-gradient(
       180deg,
@@ -923,43 +1009,42 @@
   pointer-events: none;
 }
 
-.kubedeck-banner::after {
-  position: absolute;
-  inset: -35% auto -35% -28%;
-  z-index: 3;
-  width: 18%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in oklch, var(--chart-2), transparent 78%),
-    transparent
-  );
-  content: "";
-  pointer-events: none;
-  transform: skewX(-12deg) translateX(-240%);
-  animation: kubedeck-banner-scan 8s ease-in-out infinite;
+.dashboard-banner:hover .kubedeck-banner-layer--data,
+.dashboard-banner:focus-within .kubedeck-banner-layer--data {
+  opacity: 1;
+  transform: translate3d(0, 28px, -76px) rotateX(3deg) scale(0.94);
+}
+
+.dashboard-banner:hover .kubedeck-banner-layer--api,
+.dashboard-banner:focus-within .kubedeck-banner-layer--api {
+  opacity: 1;
+  transform: translate3d(0, 14px, -38px) rotateX(1.8deg) scale(0.97);
+}
+
+.dashboard-banner:hover .kubedeck-banner-face,
+.dashboard-banner:focus-within .kubedeck-banner-face {
+  transform: translate3d(0, -4px, 22px) rotateX(-0.75deg);
 }
 
 .kubedeck-banner-image {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 1;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   transform-origin: 63% 50%;
-  animation: kubedeck-banner-drift 18s ease-in-out infinite alternate;
 }
 
 .kubedeck-live-graph {
   position: absolute;
   inset: 0;
-  z-index: 4;
+  z-index: 3;
   overflow: hidden;
   border-radius: inherit;
   pointer-events: none;
   transform-origin: 63% 50%;
-  animation: kubedeck-banner-drift 18s ease-in-out infinite alternate;
 }
 
 .kubedeck-live-link {
@@ -1121,38 +1206,6 @@
 .login-banner {
   align-self: center;
   animation: surface-reveal 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes kubedeck-banner-scan {
-  0%,
-  14% {
-    opacity: 0;
-    transform: skewX(-12deg) translateX(-240%);
-  }
-
-  24% {
-    opacity: 1;
-  }
-
-  56% {
-    opacity: 0.75;
-  }
-
-  72%,
-  100% {
-    opacity: 0;
-    transform: skewX(-12deg) translateX(820%);
-  }
-}
-
-@keyframes kubedeck-banner-drift {
-  from {
-    transform: scale(1);
-  }
-
-  to {
-    transform: scale(1.018);
-  }
 }
 
 @keyframes kubedeck-packet-flow {
@@ -4347,7 +4400,29 @@
   }
 }
 
+.kubedeck-motion-off .dashboard-banner:hover .kubedeck-banner-layer,
+.kubedeck-motion-off .dashboard-banner:focus-within .kubedeck-banner-layer,
+.kubedeck-motion-off .dashboard-banner:hover .kubedeck-banner-face,
+.kubedeck-motion-off .dashboard-banner:focus-within .kubedeck-banner-face {
+  transform: none;
+  transition: none;
+}
+
+.kubedeck-motion-off .kubedeck-banner-layer {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .kubedeck-banner-layer,
+  .kubedeck-banner-face {
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .kubedeck-banner-layer {
+    opacity: 0;
+  }
+
   *,
   *::before,
   *::after {
