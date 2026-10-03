@@ -5,7 +5,7 @@ description: Read or change local-development environment values through the pro
 
 # Local development environment values
 
-Use the `local-dev-env` MCP tools. Project, environment, and Infisical path are selected automatically from the current workspace. Never ask the user for an Infisical password, project ID, profile, token, or secret path.
+Use the `kubedeck-env` MCP tools. Project, environment, and Infisical path are selected automatically from the current workspace. Never ask the user for an Infisical password, project ID, profile, token, or secret path.
 
 1. Call `env_context` only when the selected project or path is uncertain.
 2. Call `env_list` to discover names without exposing values.

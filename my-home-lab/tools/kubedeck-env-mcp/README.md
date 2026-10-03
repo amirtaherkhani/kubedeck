@@ -66,7 +66,8 @@ compatibility aliases. Existing `~/.config/local-dev-env/projects.json`,
 Keychain credentials, and MCP client registrations are left in place. This
 source rename does not install or register a new global MCP server. A client
 using the old binary continues to work; changing global client registrations
-requires a separate review.
+requires a separate review. The approved bootstrap registration now replaces
+the old client stanza with one `kubedeck-env` stanza instead of duplicating it.
 
 The bootstrap configures a 365-day Universal Auth client credential and
 one-hour access tokens. The connector requests a new access token 30 seconds

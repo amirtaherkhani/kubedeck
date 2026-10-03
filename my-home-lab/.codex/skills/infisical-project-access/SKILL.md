@@ -56,7 +56,7 @@ organization-admin access to solve a project-level problem.
 ## Safe commands
 
 ```bash
-make local-dev-env-doctor
+make kubedeck-env-doctor
 kubedeck-env-mcp register --project-id ID --environment development --root /absolute/project/path
 ```
 

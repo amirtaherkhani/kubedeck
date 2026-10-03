@@ -34,7 +34,7 @@ export async function serve() {
 
   function requestRoots() {
     if (!supportsRoots) return Promise.resolve(null);
-    const id = `local-dev-env-roots-${++rootRequestId}`;
+    const id = `kubedeck-env-roots-${++rootRequestId}`;
     send({ jsonrpc: "2.0", id, method: "roots/list", params: {} });
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {

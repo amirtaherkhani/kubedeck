@@ -14,3 +14,10 @@ test("new KubeDeck command retains the existing CLI alias and registry", () => {
   const context = readFileSync(new URL("src/context.mjs", root), "utf8");
   assert.match(context, /\.config", "local-dev-env", "projects\.json"/);
 });
+
+test("bootstrap registers one preferred MCP client name", () => {
+  const surfaces = readFileSync(new URL("../../scripts/lib/local-dev-env-bootstrap-surfaces.sh", root), "utf8");
+  assert.match(surfaces, /\[mcp_servers\.kubedeck-env\]/);
+  assert.match(surfaces, /\.mcp\["kubedeck-env"\]/);
+  assert.match(surfaces, /del\(\.mcp\["local-dev-env"\]\)/);
+});
