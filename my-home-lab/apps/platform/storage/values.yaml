@@ -427,6 +427,9 @@ minio:
     tag: "RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727"
     pullPolicy: IfNotPresent
   defaultBucket: default
+  # The bootstrap Job is one-time. Enable explicitly when a later upgrade must
+  # recreate its bucket/user/policy setup.
+  initOnUpgrade: false
   region: us-east-1
   service:
     type: ClusterIP
