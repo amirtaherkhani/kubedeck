@@ -208,7 +208,7 @@ main() {
   install_agent_surfaces
   register_projects "${token}"
   unset token
-  (cd "${REPO_ROOT}" && local-dev-env-mcp doctor >/dev/null)
+  (cd "${REPO_ROOT}" && NODE_USE_SYSTEM_CA=1 local-dev-env-mcp doctor >/dev/null)
   printf 'local-dev-env-mcp is installed, registered, and authenticated for local development.\n'
 }
 

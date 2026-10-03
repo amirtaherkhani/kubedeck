@@ -9,7 +9,11 @@ const root = resolve(process.argv[2] ?? process.cwd());
 const serverCwd = resolve(process.argv[3] ?? root);
 const secretPath = process.argv[4];
 const scope = secretPath ? { path: secretPath } : {};
-const child = spawn("local-dev-env-mcp", ["serve"], { cwd: serverCwd, stdio: ["pipe", "pipe", "pipe"] });
+const child = spawn("local-dev-env-mcp", ["serve"], {
+  cwd: serverCwd,
+  env: { ...process.env, NODE_USE_SYSTEM_CA: "1" },
+  stdio: ["pipe", "pipe", "pipe"]
+});
 const output = createInterface({ input: child.stdout, crlfDelay: Infinity });
 const pending = new Map();
 let nextId = 1;
