@@ -210,6 +210,9 @@
   align-items: center;
   justify-content: center;
   flex: none;
+}
+
+.resource-icon {
   border: 1px solid color-mix(in oklch, var(--primary), transparent 56%);
   background:
     linear-gradient(
@@ -225,108 +228,54 @@
   width: 2.5rem;
   height: 2.5rem;
   overflow: hidden;
-  border-radius: 0.8rem;
-  padding: 0.18rem;
+  border-radius: 0.75rem;
 }
 
 .kubedeck-logo {
-  --logo-edge: oklch(1 0 0 / 0.26);
-  --logo-frame-fill: oklch(0.16 0.05 251 / 0.94);
-  --logo-highlight: oklch(1 0 0 / 0.3);
-  --logo-mark-end: oklch(0.61 0.19 254);
-  --logo-mark-highlight: oklch(1 0 0 / 0.56);
-  --logo-mark-start: oklch(0.83 0.17 193);
-  --logo-shadow: oklch(0.03 0.05 250 / 0.48);
-  --logo-surface-end: oklch(0.12 0.05 251 / 0.9);
-  --logo-surface-start: oklch(0.3 0.08 244 / 0.7);
+  --logo-cube: oklch(0.86 0.13 181);
+  --logo-letter: oklch(0.8 0.12 293);
+  --logo-node: oklch(0.86 0.15 79);
+  --logo-tile: oklch(0.17 0.04 246);
   display: inline-flex;
-  position: relative;
   flex: none;
-  isolation: isolate;
-  padding: 0.2rem;
-  border: 1px solid color-mix(in oklch, var(--logo-edge), transparent 22%);
-  border-radius: 0.95rem;
-  background: var(--logo-frame-fill);
-  box-shadow: 0 0.55rem 1.25rem color-mix(in oklch, var(--logo-shadow), transparent 28%);
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.85rem;
+  background: var(--logo-tile);
+  color: var(--logo-ink);
 }
 
 .kubedeck-logo svg {
   display: block;
   width: 100%;
   height: 100%;
-  overflow: visible;
 }
 
-.kubedeck-logo__surface-start {
-  stop-color: var(--logo-surface-start);
+.kubedeck-logo__cube {
+  stroke: var(--logo-cube);
 }
 
-.kubedeck-logo__surface-end {
-  stop-color: var(--logo-surface-end);
+.kubedeck-logo__letter {
+  stroke: var(--logo-letter);
 }
 
-.kubedeck-logo__mark-start {
-  stop-color: var(--logo-mark-start);
-}
-
-.kubedeck-logo__mark-end {
-  stop-color: var(--logo-mark-end);
-}
-
-.kubedeck-logo__surface {
-  stroke: color-mix(in oklch, var(--logo-edge), transparent 28%);
-  stroke-width: 2;
-}
-
-.kubedeck-logo__edge {
-  stroke: var(--logo-edge);
-  stroke-width: 7;
-  opacity: 0.72;
-}
-
-.kubedeck-logo__specular {
-  fill: var(--logo-highlight);
-  opacity: 0.42;
-}
-
-.kubedeck-logo__mark {
-  stroke: color-mix(in oklch, var(--logo-mark-start), white 45%);
-  stroke-width: 3;
-  stroke-linejoin: round;
-}
-
-.kubedeck-logo__mark-highlight {
-  fill: var(--logo-mark-highlight);
-  opacity: 0.38;
-}
-
-.kubedeck-logo__shadow {
-  flood-color: var(--logo-shadow);
-  flood-opacity: 1;
+.kubedeck-logo__node {
+  fill: var(--logo-node);
 }
 
 .kubedeck-logo--light {
-  --logo-edge: oklch(0.32 0.06 244 / 0.2);
-  --logo-frame-fill: oklch(0.96 0.02 242 / 0.98);
-  --logo-highlight: oklch(1 0 0 / 0.72);
-  --logo-mark-end: oklch(0.46 0.17 255);
-  --logo-mark-highlight: oklch(1 0 0 / 0.86);
-  --logo-mark-start: oklch(0.63 0.15 194);
-  --logo-shadow: oklch(0.25 0.04 249 / 0.2);
-  --logo-surface-end: oklch(0.89 0.025 242 / 0.76);
-  --logo-surface-start: oklch(1 0 0 / 0.9);
+  --logo-cube: oklch(0.48 0.12 184);
+  --logo-letter: oklch(0.5 0.16 293);
+  --logo-node: oklch(0.66 0.16 74);
+  --logo-tile: oklch(0.96 0.015 220);
 }
 
 .kubedeck-logo--clear {
-  --logo-edge: oklch(1 0 0 / 0.5);
-  --logo-frame-fill: oklch(1 0 0 / 0.16);
-  --logo-highlight: oklch(1 0 0 / 0.46);
-  --logo-mark-end: oklch(0.7 0.17 252);
-  --logo-mark-highlight: oklch(1 0 0 / 0.8);
-  --logo-mark-start: oklch(0.9 0.13 190);
-  --logo-shadow: oklch(0.03 0.05 250 / 0.2);
-  --logo-surface-end: oklch(1 0 0 / 0.08);
-  --logo-surface-start: oklch(1 0 0 / 0.28);
+  --logo-cube: oklch(0.9 0.11 181);
+  --logo-letter: oklch(0.86 0.09 293);
+  --logo-node: oklch(0.9 0.13 79);
+  --logo-tile: transparent;
 }
 
 .resource-icon {
