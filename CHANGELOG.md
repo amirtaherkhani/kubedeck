@@ -5,6 +5,7 @@
 ### Added
 
 - Added explicit multi-project bootstrap through `INFISICAL_LOCAL_DEV_PROJECT_IDS` for the central local development agent identity.
+- Added a pinned Grafana image renderer deployment with Prometheus scraping support.
 
 ### Changed
 
@@ -12,10 +13,12 @@
 - Consolidated local AI environment access on one project-aware `local-dev-env-mcp` connector and removed per-project profile selection from the agent surface.
 - Configured the global MCP clients to use the macOS system CA store so `*.local.dev` HTTPS is trusted by Node.
 - Applied the same system-CA setting to bootstrap, doctor, and live smoke verification commands.
+- Updated pgAdmin's configured PostgreSQL application user to `app`.
 
 ### Removed
 
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
+- Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
 
 ## [1.0.41] - 2026-10-03
 
