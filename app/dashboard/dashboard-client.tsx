@@ -120,7 +120,6 @@ import {
   RadioGroup,
   RadioIndicator,
 } from "@/components/animate-ui/primitives/base/radio"
-import { KubeDeckBanner } from "@/components/kubedeck-banner"
 import { KubeDeckLogo } from "@/components/kubedeck-logo"
 import { NotificationsMenu } from "@/components/notifications-menu"
 import {
@@ -2158,12 +2157,6 @@ export default function DashboardClient({
         Skip to page content
       </a>
 
-      <div className="liquid-grid" aria-hidden="true" />
-      <div
-        className="liquid-orbit liquid-orbit--dashboard"
-        aria-hidden="true"
-      />
-
       <aside className="dashboard-sidebar" aria-label="Primary navigation">
         <a
           className="sidebar-brand"
@@ -2375,18 +2368,10 @@ export default function DashboardClient({
 
           {view === "overview" ? (
             <>
-              <section
-                id="overview"
-                className="dashboard-hero"
-                aria-label="KubeDeck overview"
-              >
-                <KubeDeckBanner
-                  className="dashboard-banner"
-                  headingId="overview-banner-title"
-                  liveGraph
-                  priority
-                />
-
+              <section id="overview" aria-labelledby="overview-title">
+                <h1 id="overview-title" className="sr-only">
+                  Dashboard overview
+                </h1>
                 <div
                   id="fleet-resources"
                   className="resource-meter"

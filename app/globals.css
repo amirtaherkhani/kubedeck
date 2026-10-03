@@ -101,6 +101,7 @@
   --measure-narrow: 45ch;
   --measure-base: 65ch;
   --measure-wide: 75ch;
+  --layout-background: #090040;
   --background: #002029;
   --foreground: oklch(0.965 0.012 234);
   --card: #00303d;
@@ -110,7 +111,7 @@
   --popover: #00303d;
   --popover-foreground: oklch(0.94 0.013 246);
   --primary: #e8c547;
-  --primary-strong: #e37902;
+  --primary-hover: #e37902;
   --primary-foreground: #002029;
   --secondary: #004052;
   --secondary-foreground: oklch(0.91 0.015 247);
@@ -209,6 +210,9 @@
   align-items: center;
   justify-content: center;
   flex: none;
+}
+
+.resource-icon {
   border: 1px solid color-mix(in oklch, var(--primary), transparent 56%);
   background:
     linear-gradient(
@@ -224,108 +228,54 @@
   width: 2.5rem;
   height: 2.5rem;
   overflow: hidden;
-  border-radius: 0.8rem;
-  padding: 0.18rem;
+  border-radius: 0.75rem;
 }
 
 .kubedeck-logo {
-  --logo-edge: oklch(1 0 0 / 0.26);
-  --logo-frame-fill: oklch(0.16 0.05 251 / 0.94);
-  --logo-highlight: oklch(1 0 0 / 0.3);
-  --logo-mark-end: oklch(0.61 0.19 254);
-  --logo-mark-highlight: oklch(1 0 0 / 0.56);
-  --logo-mark-start: oklch(0.83 0.17 193);
-  --logo-shadow: oklch(0.03 0.05 250 / 0.48);
-  --logo-surface-end: oklch(0.12 0.05 251 / 0.9);
-  --logo-surface-start: oklch(0.3 0.08 244 / 0.7);
+  --logo-cube: oklch(0.86 0.13 181);
+  --logo-letter: oklch(0.8 0.12 293);
+  --logo-node: oklch(0.86 0.15 79);
+  --logo-tile: oklch(0.17 0.04 246);
   display: inline-flex;
-  position: relative;
   flex: none;
-  isolation: isolate;
-  padding: 0.2rem;
-  border: 1px solid color-mix(in oklch, var(--logo-edge), transparent 22%);
-  border-radius: 0.95rem;
-  background: var(--logo-frame-fill);
-  box-shadow: 0 0.55rem 1.25rem color-mix(in oklch, var(--logo-shadow), transparent 28%);
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.85rem;
+  background: var(--logo-tile);
+  color: var(--logo-ink);
 }
 
 .kubedeck-logo svg {
   display: block;
   width: 100%;
   height: 100%;
-  overflow: visible;
 }
 
-.kubedeck-logo__surface-start {
-  stop-color: var(--logo-surface-start);
+.kubedeck-logo__cube {
+  stroke: var(--logo-cube);
 }
 
-.kubedeck-logo__surface-end {
-  stop-color: var(--logo-surface-end);
+.kubedeck-logo__letter {
+  stroke: var(--logo-letter);
 }
 
-.kubedeck-logo__mark-start {
-  stop-color: var(--logo-mark-start);
-}
-
-.kubedeck-logo__mark-end {
-  stop-color: var(--logo-mark-end);
-}
-
-.kubedeck-logo__surface {
-  stroke: color-mix(in oklch, var(--logo-edge), transparent 28%);
-  stroke-width: 2;
-}
-
-.kubedeck-logo__edge {
-  stroke: var(--logo-edge);
-  stroke-width: 7;
-  opacity: 0.72;
-}
-
-.kubedeck-logo__specular {
-  fill: var(--logo-highlight);
-  opacity: 0.42;
-}
-
-.kubedeck-logo__mark {
-  stroke: color-mix(in oklch, var(--logo-mark-start), white 45%);
-  stroke-width: 3;
-  stroke-linejoin: round;
-}
-
-.kubedeck-logo__mark-highlight {
-  fill: var(--logo-mark-highlight);
-  opacity: 0.38;
-}
-
-.kubedeck-logo__shadow {
-  flood-color: var(--logo-shadow);
-  flood-opacity: 1;
+.kubedeck-logo__node {
+  fill: var(--logo-node);
 }
 
 .kubedeck-logo--light {
-  --logo-edge: oklch(0.32 0.06 244 / 0.2);
-  --logo-frame-fill: oklch(0.96 0.02 242 / 0.98);
-  --logo-highlight: oklch(1 0 0 / 0.72);
-  --logo-mark-end: oklch(0.46 0.17 255);
-  --logo-mark-highlight: oklch(1 0 0 / 0.86);
-  --logo-mark-start: oklch(0.63 0.15 194);
-  --logo-shadow: oklch(0.25 0.04 249 / 0.2);
-  --logo-surface-end: oklch(0.89 0.025 242 / 0.76);
-  --logo-surface-start: oklch(1 0 0 / 0.9);
+  --logo-cube: oklch(0.48 0.12 184);
+  --logo-letter: oklch(0.5 0.16 293);
+  --logo-node: oklch(0.66 0.16 74);
+  --logo-tile: oklch(0.96 0.015 220);
 }
 
 .kubedeck-logo--clear {
-  --logo-edge: oklch(1 0 0 / 0.5);
-  --logo-frame-fill: oklch(1 0 0 / 0.16);
-  --logo-highlight: oklch(1 0 0 / 0.46);
-  --logo-mark-end: oklch(0.7 0.17 252);
-  --logo-mark-highlight: oklch(1 0 0 / 0.8);
-  --logo-mark-start: oklch(0.9 0.13 190);
-  --logo-shadow: oklch(0.03 0.05 250 / 0.2);
-  --logo-surface-end: oklch(1 0 0 / 0.08);
-  --logo-surface-start: oklch(1 0 0 / 0.28);
+  --logo-cube: oklch(0.9 0.11 181);
+  --logo-letter: oklch(0.86 0.09 293);
+  --logo-node: oklch(0.9 0.13 79);
+  --logo-tile: transparent;
 }
 
 .resource-icon {
@@ -363,98 +313,26 @@
   position: relative;
   isolation: isolate;
   overflow: clip;
-}
-
-.liquid-grid {
-  position: absolute;
-  inset: 0;
-  z-index: -3;
-  opacity: 0.74;
+  background-color: var(--layout-background);
   background-image:
-    linear-gradient(
-      color-mix(in oklch, var(--chart-2), transparent 93%) 1px,
-      transparent 1px
-    ),
-    linear-gradient(
-      90deg,
-      color-mix(in oklch, var(--chart-2), transparent 93%) 1px,
-      transparent 1px
+    radial-gradient(
+      90% 70% at 12% 8%,
+      rgb(255 255 255 / 22%),
+      rgb(255 255 255 / 0%) 60%
     );
-  background-size: 4rem 4rem;
-  mask-image: linear-gradient(to bottom, black, transparent 84%);
-  pointer-events: none;
 }
 
-.liquid-grid::after {
+.liquid-stage::after {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(
-    circle,
-    color-mix(in oklch, var(--primary), transparent 40%) 0 1.5px,
-    transparent 1.8px
-  );
-  background-position: 0 0;
-  background-size: 4rem 4rem;
+  z-index: -1;
+  background: url("/gradient-noise.png") repeat;
+  background-size: 256px 256px;
   content: "";
-  animation: grid-drift 28s linear infinite;
-}
-
-.liquid-orbit {
-  position: absolute;
-  z-index: -2;
-  width: 38rem;
-  aspect-ratio: 1;
-  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 82%);
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0 18%,
-    color-mix(in oklch, var(--primary), transparent 82%) 25%,
-    transparent 32% 66%,
-    color-mix(in oklch, var(--chart-1), transparent 84%) 74%,
-    transparent 82%
-  );
-  filter: blur(1px);
-  opacity: 0.72;
+  image-rendering: pixelated;
+  mix-blend-mode: overlay;
+  opacity: 0.07;
   pointer-events: none;
-  animation: liquid-orbit-spin 34s linear infinite;
-}
-
-.liquid-orbit::before,
-.liquid-orbit::after {
-  position: absolute;
-  border: 1px dashed color-mix(in oklch, var(--primary), transparent 79%);
-  border-radius: inherit;
-  content: "";
-}
-
-.liquid-orbit::before {
-  inset: 12%;
-}
-
-.liquid-orbit::after {
-  inset: 29%;
-  border-style: solid;
-  opacity: 0.62;
-}
-
-.liquid-orbit--login {
-  right: -9rem;
-  top: -13rem;
-}
-
-.liquid-orbit--dashboard {
-  right: -16rem;
-  top: 16rem;
-  width: 48rem;
-  position: fixed;
-}
-
-.liquid-orbit--settings {
-  position: fixed;
-  right: -12rem;
-  top: -9rem;
-  width: 42rem;
 }
 
 .login-shell {
@@ -900,369 +778,9 @@
   }
 }
 
-.kubedeck-banner {
-  position: relative;
-  display: block;
-  width: 100%;
-  aspect-ratio: 3 / 1;
-  isolation: isolate;
-  perspective: 1400px;
-  transform-style: preserve-3d;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.kubedeck-banner-stage {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-}
-
-.kubedeck-banner-layer {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: flex-end;
-  overflow: hidden;
-  padding: 0.2rem clamp(0.55rem, 1.6vw, 1.25rem);
-  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 35%);
-  border-radius: 0.85rem;
-  backface-visibility: hidden;
-  pointer-events: none;
-  transform-origin: center;
-  transition:
-    transform 620ms cubic-bezier(0.2, 0.75, 0.2, 1),
-    opacity 420ms ease;
-  will-change: transform;
-}
-
-.kubedeck-banner-layer span {
-  padding: 0.25rem 0.55rem;
-  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 50%);
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--background), transparent 22%);
-  color: color-mix(in oklch, var(--foreground), transparent 18%);
-  font-family: var(--font-mono);
-  font-size: clamp(0.55rem, 0.8vw, 0.7rem);
-  letter-spacing: 0.16em;
-}
-
-.kubedeck-banner-layer--data {
-  z-index: 0;
-  background:
-    radial-gradient(
-      ellipse at 82% 5%,
-      color-mix(in oklch, var(--chart-2), transparent 77%),
-      transparent 52%
-    ),
-    linear-gradient(
-      145deg,
-      color-mix(in oklch, var(--chart-2), var(--background) 82%),
-      var(--background)
-    );
-  box-shadow: 0 18px 38px color-mix(in oklch, black, transparent 48%);
-  opacity: 0.76;
-  transform: translate3d(0, 6px, -58px) rotateX(1.5deg) scale(0.96);
-}
-
-.kubedeck-banner-layer--api {
-  z-index: 1;
-  background:
-    radial-gradient(
-      ellipse at 22% 110%,
-      color-mix(in oklch, var(--primary), transparent 77%),
-      transparent 56%
-    ),
-    linear-gradient(
-      145deg,
-      color-mix(in oklch, var(--primary), var(--background) 88%),
-      color-mix(in oklch, var(--chart-2), var(--background) 91%)
-    );
-  box-shadow: 0 12px 28px color-mix(in oklch, black, transparent 40%);
-  opacity: 0.88;
-  transform: translate3d(0, 3px, -28px) rotateX(0.75deg) scale(0.98);
-}
-
-.kubedeck-banner-face {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 24%);
-  border-radius: 0.75rem;
-  background: var(--background);
-  box-shadow: 0 8px 30px color-mix(in oklch, black, transparent 42%);
-  transform: translate3d(0, 0, 0);
-  transform-origin: center;
-  transition: transform 620ms cubic-bezier(0.2, 0.75, 0.2, 1);
-  will-change: transform;
-}
-
-.kubedeck-banner-face::before {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklch, white, transparent 96%),
-      transparent 18% 82%,
-      color-mix(in oklch, black, transparent 76%)
-    );
-  content: "";
-  pointer-events: none;
-}
-
-.dashboard-banner:hover .kubedeck-banner-layer--data,
-.dashboard-banner:focus-within .kubedeck-banner-layer--data {
-  opacity: 1;
-  transform: translate3d(-8px, 48px, -76px) rotateX(3deg) rotateY(-0.8deg)
-    scale(0.94);
-}
-
-.dashboard-banner:hover .kubedeck-banner-layer--api,
-.dashboard-banner:focus-within .kubedeck-banner-layer--api {
-  opacity: 1;
-  transform: translate3d(5px, 32px, -38px) rotateX(1.8deg) rotateY(0.5deg)
-    scale(0.97);
-}
-
-.dashboard-banner:hover .kubedeck-banner-face,
-.dashboard-banner:focus-within .kubedeck-banner-face {
-  transform: translate3d(0, -4px, 22px) rotateX(-0.75deg);
-}
-
-.kubedeck-banner-image {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform-origin: 63% 50%;
-}
-
-.kubedeck-live-graph {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  overflow: hidden;
-  border-radius: inherit;
-  pointer-events: none;
-  transform-origin: 63% 50%;
-}
-
-.kubedeck-live-link {
-  --live-link-delay: 0s;
-  --live-link-duration: 3.8s;
-  position: absolute;
-  height: 1px;
-  overflow: visible;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    color-mix(in oklch, var(--chart-2), transparent 96%),
-    color-mix(in oklch, var(--chart-2), transparent 52%),
-    color-mix(in oklch, var(--primary), transparent 78%)
-  );
-  opacity: 0.85;
-  transform-origin: left center;
-}
-
-.kubedeck-live-link::after {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: clamp(0.28rem, 0.7vw, 0.7rem);
-  height: clamp(0.16rem, 0.32vw, 0.28rem);
-  border-radius: 999px;
-  background: white;
-  box-shadow:
-    0 0 0.3rem color-mix(in oklch, white, transparent 18%),
-    0 0 0.8rem color-mix(in oklch, var(--chart-2), transparent 8%),
-    0 0 1.4rem color-mix(in oklch, var(--primary), transparent 40%);
-  content: "";
-  opacity: 0;
-  transform: translate(-50%, -50%);
-  animation: kubedeck-packet-flow var(--live-link-duration) linear infinite;
-  animation-delay: var(--live-link-delay);
-}
-
-.kubedeck-live-link--top {
-  top: 50.8%;
-  left: 62.85%;
-  width: 9.1%;
-  transform: rotate(-90deg);
-}
-
-.kubedeck-live-link--left {
-  top: 43.8%;
-  left: 51%;
-  width: 12.4%;
-  transform: rotate(11deg);
-  --live-link-delay: -1.7s;
-  --live-link-duration: 3.2s;
-}
-
-.kubedeck-live-link--right {
-  top: 50.8%;
-  left: 62.85%;
-  width: 12%;
-  transform: rotate(-11deg);
-  --live-link-delay: -0.85s;
-  --live-link-duration: 3.4s;
-}
-
-.kubedeck-live-link--lower-left {
-  top: 78.2%;
-  left: 53.1%;
-  width: 13.3%;
-  transform: rotate(-43deg);
-  --live-link-delay: -2.35s;
-  --live-link-duration: 4.1s;
-}
-
-.kubedeck-live-link--lower-right {
-  top: 50.8%;
-  left: 62.85%;
-  width: 13.4%;
-  transform: rotate(43deg);
-  --live-link-delay: -1.15s;
-  --live-link-duration: 3.7s;
-}
-
-.kubedeck-live-link--bottom {
-  top: 50.8%;
-  left: 62.85%;
-  width: 10%;
-  transform: rotate(90deg);
-  --live-link-delay: -2.75s;
-  --live-link-duration: 4.4s;
-}
-
-.kubedeck-live-beacon {
-  --beacon-delay: 0s;
-  position: absolute;
-  width: clamp(0.34rem, 0.72vw, 0.72rem);
-  aspect-ratio: 1;
-  border: 1px solid color-mix(in oklch, white, transparent 22%);
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--chart-2), white 14%);
-  box-shadow:
-    0 0 0.45rem color-mix(in oklch, var(--chart-2), transparent 8%),
-    0 0 1rem color-mix(in oklch, var(--primary), transparent 48%);
-  transform: translate(-50%, -50%);
-  animation: kubedeck-beacon-breathe 2.8s ease-in-out infinite;
-  animation-delay: var(--beacon-delay);
-}
-
-.kubedeck-live-beacon::after {
-  position: absolute;
-  inset: -55%;
-  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 36%);
-  border-radius: inherit;
-  content: "";
-  animation: kubedeck-beacon-ring 2.8s ease-out infinite;
-  animation-delay: var(--beacon-delay);
-}
-
-.kubedeck-live-beacon--core {
-  top: 50.8%;
-  left: 62.85%;
-  width: clamp(0.52rem, 1vw, 1rem);
-}
-
-.kubedeck-live-beacon--top {
-  top: 23.5%;
-  left: 62.85%;
-  --beacon-delay: -0.45s;
-}
-
-.kubedeck-live-beacon--left {
-  top: 43.8%;
-  left: 51%;
-  --beacon-delay: -1.3s;
-}
-
-.kubedeck-live-beacon--right {
-  top: 43.8%;
-  left: 74.3%;
-  --beacon-delay: -0.8s;
-}
-
-.kubedeck-live-beacon--lower-left {
-  top: 78.2%;
-  left: 53.1%;
-  --beacon-delay: -1.9s;
-}
-
-.kubedeck-live-beacon--lower-right {
-  top: 78.2%;
-  left: 72.6%;
-  --beacon-delay: -2.3s;
-}
-
-.kubedeck-live-beacon--bottom {
-  top: 80.7%;
-  left: 62.85%;
-  --beacon-delay: -1.05s;
-}
-
 .login-banner {
   align-self: center;
   animation: surface-reveal 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes kubedeck-packet-flow {
-  0%,
-  10% {
-    left: 0;
-    opacity: 0;
-  }
-
-  18%,
-  82% {
-    opacity: 1;
-  }
-
-  90%,
-  100% {
-    left: 100%;
-    opacity: 0;
-  }
-}
-
-@keyframes kubedeck-beacon-breathe {
-  0%,
-  100% {
-    filter: brightness(0.9);
-    opacity: 0.72;
-  }
-
-  50% {
-    filter: brightness(1.35);
-    opacity: 1;
-  }
-}
-
-@keyframes kubedeck-beacon-ring {
-  0% {
-    opacity: 0;
-    transform: scale(0.62);
-  }
-
-  28% {
-    opacity: 0.86;
-  }
-
-  82%,
-  100% {
-    opacity: 0;
-    transform: scale(1.9);
-  }
 }
 
 @keyframes surface-reveal {
@@ -1352,9 +870,6 @@
   min-height: 100svh;
   place-items: center;
   padding: clamp(1rem, 3vw, 2rem);
-  background:
-    linear-gradient(145deg, oklch(0.1 0.04 252), oklch(0.075 0.025 247)),
-    var(--background);
 }
 
 .auth-shell::before {
@@ -2325,17 +1840,6 @@
 .dashboard-shell {
   min-height: 100svh;
   padding: 1.25rem;
-  background:
-    radial-gradient(
-      circle at 74% 8%,
-      color-mix(in oklch, var(--chart-1), transparent 88%),
-      transparent 35rem
-    ),
-    radial-gradient(
-      circle at 18% 54%,
-      color-mix(in oklch, var(--primary), transparent 94%),
-      transparent 32rem
-    );
 }
 
 .dashboard-sidebar {
@@ -2682,14 +2186,6 @@
   color: var(--muted-foreground);
   font-size: 0.82rem;
   line-height: 1.65;
-}
-
-.dashboard-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: clamp(1rem, 2vw, 1.5rem);
-  align-items: stretch;
-  scroll-margin-top: 7rem;
 }
 
 .resource-meter {
@@ -3507,17 +3003,6 @@
 .settings-shell {
   min-height: 100svh;
   padding: clamp(1rem, 3vw, 2.25rem);
-  background:
-    radial-gradient(
-      circle at 78% 10%,
-      color-mix(in oklch, var(--chart-1), transparent 87%),
-      transparent 34rem
-    ),
-    radial-gradient(
-      circle at 8% 62%,
-      color-mix(in oklch, var(--primary), transparent 93%),
-      transparent 30rem
-    );
 }
 
 .settings-header,
@@ -3943,26 +3428,6 @@
   animation-iteration-count: 1 !important;
 }
 
-@keyframes grid-drift {
-  from {
-    background-position: 0 0;
-  }
-
-  to {
-    background-position: 4rem 4rem;
-  }
-}
-
-@keyframes liquid-orbit-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @keyframes card-glint {
   from {
     transform: skewX(-14deg) translateX(-220%);
@@ -3974,20 +3439,12 @@
 }
 
 @media (min-width: 1181px) {
-  .dashboard-hero {
-    grid-template-columns: minmax(0, 2.15fr) minmax(21rem, 0.9fr);
-  }
-
   .resource-meter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1800px) {
-  .dashboard-hero {
-    grid-template-columns: minmax(0, 2.45fr) minmax(30rem, 0.82fr);
-  }
-
   .resource-meter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4027,10 +3484,6 @@
 
   .login-topology {
     min-height: 30rem;
-  }
-
-  .dashboard-hero {
-    grid-template-columns: 1fr;
   }
 
   .dashboard-page-heading {
@@ -4329,14 +3782,6 @@
     gap: 0.65rem;
   }
 
-  .kubedeck-banner {
-    aspect-ratio: 3 / 1;
-  }
-
-  .kubedeck-banner-image {
-    object-position: center;
-  }
-
   .resource-meter-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -4415,29 +3860,7 @@
   }
 }
 
-.kubedeck-motion-off .dashboard-banner:hover .kubedeck-banner-layer,
-.kubedeck-motion-off .dashboard-banner:focus-within .kubedeck-banner-layer,
-.kubedeck-motion-off .dashboard-banner:hover .kubedeck-banner-face,
-.kubedeck-motion-off .dashboard-banner:focus-within .kubedeck-banner-face {
-  transform: none;
-  transition: none;
-}
-
-.kubedeck-motion-off .kubedeck-banner-layer {
-  opacity: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .kubedeck-banner-layer,
-  .kubedeck-banner-face {
-    transform: none !important;
-    transition: none !important;
-  }
-
-  .kubedeck-banner-layer {
-    opacity: 0;
-  }
-
   *,
   *::before,
   *::after {
