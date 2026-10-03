@@ -79,6 +79,32 @@ test("refreshes authentication once after an API 401", async () => {
   assert.equal(lists, 2);
 });
 
+test("concurrent stale-token 401 responses reuse one refreshed login", async () => {
+  let logins = 0;
+  let staleRequests = 0;
+  const response = (status, data) => ({ ok: status >= 200 && status < 300, status, json: async () => data });
+  const store = new InfisicalStore({
+    credentials: { clientId: "id", clientSecret: "secret" },
+    context: { projectId: "p", environment: "local", path: "/", domain: "https://example.test" },
+    fetchImpl: async (url, options) => {
+      if (url.pathname.endsWith("/auth/universal-auth/login")) {
+        logins += 1;
+        return response(200, { accessToken: `token-${logins}`, expiresIn: 3600 });
+      }
+      if (options.headers.authorization === "Bearer token-1") {
+        staleRequests += 1;
+        await new Promise((resolve) => setTimeout(resolve, staleRequests === 1 ? 10 : 30));
+        return response(401, {});
+      }
+      return response(200, { secrets: [] });
+    }
+  });
+
+  await store.token();
+  assert.deepEqual(await Promise.all([store.list(), store.list()]), [[], []]);
+  assert.equal(logins, 2);
+});
+
 test("sends the exact project, environment, and selected path on every operation", async () => {
   const { store, requests } = storeWith({ EXISTING: "old" });
   const path = "/apps/storage/postgres";

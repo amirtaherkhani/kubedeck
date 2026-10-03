@@ -35,7 +35,7 @@ project; a folder is not a substitute for project membership.
    projects. Kubernetes workloads still use their own project identity.
 3. Store client credentials in macOS Keychain or a Kubernetes Secret in
    `platform-secrets`, never in Git or chat.
-4. Use the globally installed `local-dev-env-mcp` connector for local agent
+4. Use the globally installed `kubedeck-env-mcp` connector for local agent
    access. It selects project and path from the workspace registry, reads the
    central Keychain credential, and renews short-lived tokens.
 5. For Kubernetes, use an Infisical Secrets Operator resource with the
@@ -57,7 +57,7 @@ organization-admin access to solve a project-level problem.
 
 ```bash
 make local-dev-env-doctor
-local-dev-env-mcp register --project-id ID --environment development --root /absolute/project/path
+kubedeck-env-mcp register --project-id ID --environment development --root /absolute/project/path
 ```
 
 Do not redirect secrets to files or print them in logs.

@@ -27,9 +27,9 @@ registration_path_for_file() {
 
 register_projects() {
   local token="$1" metadata service_path specific_path service_dir canonical_service_dir finance_dir
-  local command=(local-dev-env-mcp register --project-id "${HOME_LAB_PROJECT_ID}" --environment local --domain "${DOMAIN}")
-  local-dev-env-mcp unregister --root "${PROJECT_ROOT}" >/dev/null
-  if [[ "${REPO_ROOT}" != "${PROJECT_ROOT}" ]]; then local-dev-env-mcp unregister --root "${REPO_ROOT}" >/dev/null; fi
+  local command=(kubedeck-env-mcp register --project-id "${HOME_LAB_PROJECT_ID}" --environment local --domain "${DOMAIN}")
+  kubedeck-env-mcp unregister --root "${PROJECT_ROOT}" >/dev/null
+  if [[ "${REPO_ROOT}" != "${PROJECT_ROOT}" ]]; then kubedeck-env-mcp unregister --root "${REPO_ROOT}" >/dev/null; fi
   "${command[@]}" --path / --root "${PROJECT_ROOT}" >/dev/null
 
   while IFS= read -r metadata; do
@@ -45,18 +45,18 @@ register_projects() {
 
   finance_dir="${VERO_FINANCE_PROJECT_DIR:-/Users/mac/Documents/GitHub/verovault-finance}"
   if [[ -d "${finance_dir}" ]]; then
-    local-dev-env-mcp register --project-id "${FINANCE_PROJECT_ID}" --environment development \
+    kubedeck-env-mcp register --project-id "${FINANCE_PROJECT_ID}" --environment development \
       --path /finance --domain "${DOMAIN}" --root "${finance_dir}" >/dev/null
   fi
 }
 
 install_agent_surfaces() {
   local executable codex_config opencode_config opencode_temp
-  npm install --global "${REPO_ROOT}/tools/local-dev-env-mcp" >/dev/null
+  npm install --global "${REPO_ROOT}/tools/kubedeck-env-mcp" >/dev/null
   mkdir -p /Users/mac/.codex/skills/local-dev-env /Users/mac/.config/opencode/skills/local-dev-env
   install -m 0644 "${REPO_ROOT}/.codex/skills/local-dev-env/SKILL.md" /Users/mac/.codex/skills/local-dev-env/SKILL.md
   install -m 0644 "${REPO_ROOT}/.codex/skills/local-dev-env/SKILL.md" /Users/mac/.config/opencode/skills/local-dev-env/SKILL.md
-  executable="$(command -v local-dev-env-mcp)"
+  executable="$(command -v kubedeck-env-mcp)"
 
   codex_config="${LOCAL_DEV_ENV_CODEX_CONFIG:-/Users/mac/.codex/config.toml}"
   mkdir -p "$(dirname "${codex_config}")"

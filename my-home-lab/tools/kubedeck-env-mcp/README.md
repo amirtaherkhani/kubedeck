@@ -1,6 +1,6 @@
-# local-dev-env-mcp
+# kubedeck-env-mcp
 
-`local-dev-env-mcp` is the central, project-aware Infisical connector for
+`kubedeck-env-mcp` is the central, project-aware Infisical connector for
 local AI agents. Agents receive short `env_*` tools and do not need an
 Infisical password, token, project ID, environment, path, or profile.
 
@@ -26,9 +26,9 @@ scope.
 From the home-lab repository:
 
 ```sh
-make local-dev-env-bootstrap
-make local-dev-env-test
-make local-dev-env-doctor
+make kubedeck-env-bootstrap
+make kubedeck-env-test
+make kubedeck-env-doctor
 ```
 
 The bootstrap creates or reuses the `local-dev-agents` machine identity,
@@ -43,13 +43,13 @@ projects. Add more project IDs without changing the connector:
 
 ```sh
 INFISICAL_LOCAL_DEV_PROJECT_IDS=home-project-id,finance-project-id,other-project-id \
-  make local-dev-env-bootstrap
+  make kubedeck-env-bootstrap
 ```
 
 Register an additional local checkout without handling credentials:
 
 ```sh
-local-dev-env-mcp register \
+kubedeck-env-mcp register \
   --project-id PROJECT_ID \
   --environment development \
   --path /service \
@@ -60,6 +60,19 @@ The installed MCP configuration is global for the local AI clients. The
 connector reads the client ID and secret from
 `my-home-lab.infisical.agent.local-dev`; no interactive `infisical login` and
 no `.infisical.json` is required.
+
+The `local-dev-env-mcp` binary and `local-dev-env-*` Make targets remain
+compatibility aliases. Existing `~/.config/local-dev-env/projects.json`,
+Keychain credentials, and MCP client registrations are left in place. This
+source rename does not install or register a new global MCP server. A client
+using the old binary continues to work; changing global client registrations
+requires a separate review.
+
+The bootstrap configures a 365-day Universal Auth client credential and
+one-hour access tokens. The connector requests a new access token 30 seconds
+before expiry, retries once on an API 401, and shares a single refresh among
+concurrent callers. The long-lived Keychain credential is not auto-rotated;
+run the approved bootstrap/rotation flow before its expiry.
 
 ## Kubernetes contract
 

@@ -1,9 +1,10 @@
 {
-  "name": "@my-home-lab/local-dev-env-mcp",
+  "name": "@kubedeck/kubedeck-env-mcp",
   "version": "1.0.0",
   "description": "Project-aware Infisical MCP server for local development agents",
   "type": "module",
   "bin": {
+    "kubedeck-env-mcp": "src/cli.mjs",
     "local-dev-env-mcp": "src/cli.mjs"
   },
   "files": [

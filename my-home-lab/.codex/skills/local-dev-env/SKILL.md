@@ -1,6 +1,6 @@
 ---
 name: local-dev-env
-description: Read or change local-development environment values through the project-aware local-dev-env-mcp Infisical connector. Use whenever an agent needs env configuration, credentials, API keys, connection settings, or Kubernetes runtime values for a home-lab or registered local project.
+description: Read or change local-development environment values through the project-aware kubedeck-env-mcp Infisical connector. Use whenever an agent needs env configuration, credentials, API keys, connection settings, or Kubernetes runtime values for a home-lab or registered local project.
 ---
 
 # Local development environment values

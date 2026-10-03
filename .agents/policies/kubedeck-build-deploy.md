@@ -25,11 +25,15 @@ Rancher Desktop cluster and the local registry.
    gates.
 2. Build both images from that exact Git commit with Rancher Desktop
    `nerdctl`.
-3. Push both `dev-<semver>` images to `localhost:5001`.
-4. After the new deployment is healthy, remove old tags from only the two
-   KubeDeck repositories and remove old local Rancher Desktop images. Keep the
-   current tag. Set `KUBEDECK_CLEANUP_OLD_IMAGES=false` only when a rollback
-   image must be retained.
+3. For a registry release, push both `dev-<semver>` images to
+   `localhost:5001`. For an approved local-only install, load both images in
+   containerd's `k8s.io` namespace and verify their exact version tags there;
+   do not run the registry-pushing deployment script.
+4. After both new deployments and the dashboard-to-agent path are healthy,
+   remove old images only when that exact cleanup is authorized. Inventory
+   the two KubeDeck repositories and the relevant containerd namespace, check
+   delete permissions, and preserve the current image plus any active
+   rollback image. Use `KUBEDECK_CLEANUP_OLD_IMAGES=false` to skip deletion.
 
 Registry cleanup is limited to KubeDeck repositories. It must never remove an
 image referenced by a Ready KubeDeck pod, and it must never remove unrelated

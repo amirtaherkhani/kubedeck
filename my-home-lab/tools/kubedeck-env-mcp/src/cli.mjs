@@ -9,10 +9,10 @@ import { serve } from "./server.mjs";
 
 function usage() {
   console.log(`Usage:
-  local-dev-env-mcp serve
-  local-dev-env-mcp doctor [--root DIR]
-  local-dev-env-mcp register --project-id ID --environment SLUG [--path PATH] [--domain URL] [--root DIR]
-  local-dev-env-mcp unregister --root DIR
+  kubedeck-env-mcp serve
+  kubedeck-env-mcp doctor [--root DIR]
+  kubedeck-env-mcp register --project-id ID --environment SLUG [--path PATH] [--domain URL] [--root DIR]
+  kubedeck-env-mcp unregister --root DIR
 
 register stores non-secret project metadata in ~/.config/local-dev-env/projects.json.`);
 }
@@ -62,6 +62,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(`local-dev-env-mcp: ${String(error?.message ?? error)}`);
+  console.error(`kubedeck-env-mcp: ${String(error?.message ?? error)}`);
   process.exitCode = 1;
 });

@@ -9,7 +9,7 @@ const root = resolve(process.argv[2] ?? process.cwd());
 const serverCwd = resolve(process.argv[3] ?? root);
 const secretPath = process.argv[4];
 const scope = secretPath ? { path: secretPath } : {};
-const child = spawn("local-dev-env-mcp", ["serve"], {
+const child = spawn("kubedeck-env-mcp", ["serve"], {
   cwd: serverCwd,
   env: { ...process.env, NODE_USE_SYSTEM_CA: "1" },
   stdio: ["pipe", "pipe", "pipe"]
@@ -66,7 +66,7 @@ try {
     capabilities: { roots: { listChanged: true } },
     clientInfo: { name: "local-dev-env-live-smoke", version: "1.0.0" }
   });
-  assert.equal(initialized.serverInfo.name, "local-dev-env-mcp");
+  assert.equal(initialized.serverInfo.name, "kubedeck-env-mcp");
   child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`);
 
   const tools = await request("tools/list");

@@ -148,7 +148,7 @@ export async function serve() {
           result: {
             protocolVersion,
             capabilities: { tools: { listChanged: false } },
-            serverInfo: { name: "local-dev-env-mcp", version: "1.0.0" }
+            serverInfo: { name: "kubedeck-env-mcp", version: "1.0.0" }
           }
         });
         return;
@@ -190,7 +190,7 @@ export async function serve() {
             id: message.id,
             result: {
               isError: true,
-              content: [{ type: "text", text: `local-dev-env-mcp: ${String(error?.message ?? error)}` }]
+              content: [{ type: "text", text: `kubedeck-env-mcp: ${String(error?.message ?? error)}` }]
             }
           });
         }

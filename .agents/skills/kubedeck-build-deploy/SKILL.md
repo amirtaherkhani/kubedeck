@@ -12,13 +12,22 @@ made of two separately built and deployed components:
 - `kubedeck-agent/Dockerfile` and `charts/kubedeck-agent` for the Go cluster
   agent.
 
-Follow [the repository build and deploy policy](../../policies/kubedeck-build-deploy.md)
-and use the bundled deployment script instead of recreating the workflow with
-ad-hoc commands:
+Follow [the repository build and deploy policy](../../policies/kubedeck-build-deploy.md).
+For registry-backed releases, use the bundled deployment script:
 
 ```bash
 bash .agents/skills/kubedeck-build-deploy/scripts/deploy.sh --branch <branch>
 ```
+
+The script pushes to `localhost:5001` and always removes old non-running pods
+and zero-replica ReplicaSets after health verification; its image cleanup is
+controlled by `KUBEDECK_CLEANUP_OLD_IMAGES`. Run it only when that Kubernetes
+cleanup is authorized. For an
+approved local-only install, build the verified version-tagged images directly
+into Rancher Desktop's `k8s.io` containerd namespace and use those exact tags
+in Helm with `IfNotPresent`. Set `KUBEDECK_CLEANUP_OLD_IMAGES=false` when
+registry image deletion is not authorized. Never use
+the script to satisfy an image-load-only request.
 
 For a release, increase the version before running the deployment workflow:
 
@@ -51,12 +60,14 @@ Always keep this order:
 5. Validate the agent with Go race tests and `go vet`.
 6. Lint and render both Helm charts.
 7. Build both immutable images from Git archives of the verified commit.
-8. Push both versioned images to the local registry.
+8. Push both versioned images to the local registry for a registry release, or
+   verify both tags in `k8s.io` containerd for an approved local-only install.
 9. Deploy `kubedeck-agent` first and wait for readiness.
 10. Deploy `kubedeck` and wait for readiness.
 11. Verify workloads, endpoints, pod images, and recent logs.
 12. Verify authenticated dashboard requests can proxy a live agent snapshot and render the deployments catalog.
-13. Remove only old KubeDeck images, zero-replica ReplicaSets, and non-running old pods after the new rollout is healthy.
+13. When cleanup is authorized, remove only old KubeDeck images, zero-replica
+    ReplicaSets, and non-running old pods after the replacement is healthy.
 
 Do not reverse the deployment order. The dashboard proxies cluster requests to
 the agent and should roll out only after the agent is ready.
@@ -131,9 +142,17 @@ are applied last.
 - Preserve the dashboard PVC and existing Helm configuration.
 - Use Helm rollback-on-failure and wait for both releases.
 - After both releases are healthy and pod images are verified, remove old tags
-  from only the two KubeDeck repositories, old local builder images, old
-  zero-replica ReplicaSets, and non-running old pods. Set
-  `KUBEDECK_CLEANUP_OLD_IMAGES=false` to retain registry/local rollback images.
+  from only the two KubeDeck repositories and old local builder images when
+  cleanup is in scope. Enumerate tags and referenced digests first; verify the
+  new tag is present and that no Ready pod uses an old image. Check the exact
+  registry delete and local image removal permissions before deleting. Keep
+  the current version-tagged image and preserve any active rollback image.
+  `k8s.io` and the default containerd namespace are separate image stores;
+  check the namespace actually used for the release. Set
+  `KUBEDECK_CLEANUP_OLD_IMAGES=false` to skip image deletion.
+- Remove old zero-replica ReplicaSets and non-running old pods only when that
+  Kubernetes cleanup is also in scope; do not use image cleanup permission as
+  permission to delete Kubernetes objects.
 - Never delete namespaces, PVCs, Secrets, Infisical resources, Services,
   Ingresses, or platform-owned releases.
 - Do not modify Traefik, monitoring, or other platform-owned releases.
