@@ -19,10 +19,10 @@ postgresql:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: "4"
+      memory: 1Gi
 pgadmin:
   enabled: true
   name: pgadmin
