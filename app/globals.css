@@ -101,6 +101,7 @@
   --measure-narrow: 45ch;
   --measure-base: 65ch;
   --measure-wide: 75ch;
+  --layout-background: #090040;
   --background: #002029;
   --foreground: oklch(0.965 0.012 234);
   --card: #00303d;
@@ -363,7 +364,7 @@
   position: relative;
   isolation: isolate;
   overflow: clip;
-  background-color: #010736;
+  background-color: var(--layout-background);
   background-image:
     radial-gradient(
       90% 70% at 12% 8%,
