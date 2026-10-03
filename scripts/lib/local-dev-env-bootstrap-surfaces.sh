@@ -74,7 +74,10 @@ install_agent_surfaces() {
     'args = ["serve"]' \
     'enabled = true' \
     'startup_timeout_sec = 30.0' \
-    'tool_timeout_sec = 30.0' >>"${opencode_temp}"
+    'tool_timeout_sec = 30.0' \
+    '' \
+    '[mcp_servers.local-dev-env.env]' \
+    'NODE_USE_SYSTEM_CA = "1"' >>"${opencode_temp}"
   install -m 0600 "${opencode_temp}" "${codex_config}"
   rm -f "${opencode_temp}"
 
@@ -83,7 +86,7 @@ install_agent_surfaces() {
   [[ -f "${opencode_config}" ]] || printf '{}\n' >"${opencode_config}"
   opencode_temp="$(mktemp)"
   jq --arg executable "${executable}" \
-    '.mcp["local-dev-env"] = {type:"local",command:[$executable,"serve"],enabled:true,timeout:30000}' \
+    '.mcp["local-dev-env"] = {type:"local",command:[$executable,"serve"],environment:{NODE_USE_SYSTEM_CA:"1"},enabled:true,timeout:30000}' \
     "${opencode_config}" >"${opencode_temp}"
   install -m 0600 "${opencode_temp}" "${opencode_config}"
   rm -f "${opencode_temp}"

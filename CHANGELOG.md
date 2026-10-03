@@ -10,6 +10,7 @@
 
 - Extended the Keychain-held Universal Auth client credential to 365 days while keeping one-hour renewable access tokens.
 - Consolidated local AI environment access on one project-aware `local-dev-env-mcp` connector and removed per-project profile selection from the agent surface.
+- Configured the global MCP clients to use the macOS system CA store so `*.local.dev` HTTPS is trusted by Node.
 
 ### Removed
 
