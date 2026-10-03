@@ -829,358 +829,9 @@
   }
 }
 
-.kubedeck-banner {
-  position: relative;
-  display: block;
-  width: 100%;
-  aspect-ratio: 3 / 1;
-  isolation: isolate;
-  perspective: 1400px;
-  transform-style: preserve-3d;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.kubedeck-banner-stage {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-}
-
-.kubedeck-banner-layer {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: flex-end;
-  overflow: hidden;
-  padding: 0.2rem clamp(0.55rem, 1.6vw, 1.25rem);
-  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 35%);
-  border-radius: 0.85rem;
-  backface-visibility: hidden;
-  pointer-events: none;
-  transform-origin: center;
-  transition:
-    transform 620ms cubic-bezier(0.2, 0.75, 0.2, 1),
-    opacity 420ms ease;
-  will-change: transform;
-}
-
-.kubedeck-banner-layer span {
-  padding: 0.25rem 0.55rem;
-  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 50%);
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--background), transparent 22%);
-  color: color-mix(in oklch, var(--foreground), transparent 18%);
-  font-family: var(--font-mono);
-  font-size: clamp(0.55rem, 0.8vw, 0.7rem);
-  letter-spacing: 0.16em;
-}
-
-.kubedeck-banner-layer--data {
-  z-index: 0;
-  background:
-    radial-gradient(
-      ellipse at 82% 5%,
-      color-mix(in oklch, var(--chart-2), transparent 77%),
-      transparent 52%
-    ),
-    linear-gradient(
-      145deg,
-      color-mix(in oklch, var(--chart-2), var(--background) 82%),
-      var(--background)
-    );
-  box-shadow: 0 18px 38px color-mix(in oklch, black, transparent 48%);
-  opacity: 0.76;
-  transform: translate3d(0, 6px, -58px) rotateX(1.5deg) scale(0.96);
-}
-
-.kubedeck-banner-layer--api {
-  z-index: 1;
-  background:
-    radial-gradient(
-      ellipse at 22% 110%,
-      color-mix(in oklch, var(--primary), transparent 77%),
-      transparent 56%
-    ),
-    linear-gradient(
-      145deg,
-      color-mix(in oklch, var(--primary), var(--background) 88%),
-      color-mix(in oklch, var(--chart-2), var(--background) 91%)
-    );
-  box-shadow: 0 12px 28px color-mix(in oklch, black, transparent 40%);
-  opacity: 0.88;
-  transform: translate3d(0, 3px, -28px) rotateX(0.75deg) scale(0.98);
-}
-
-.kubedeck-banner-face {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 24%);
-  border-radius: 0.75rem;
-  background: var(--background);
-  box-shadow: 0 8px 30px color-mix(in oklch, black, transparent 42%);
-  transform: translate3d(0, 0, 0);
-  transform-origin: center;
-  transition: transform 620ms cubic-bezier(0.2, 0.75, 0.2, 1);
-  will-change: transform;
-}
-
-.kubedeck-banner-face::before {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklch, white, transparent 96%),
-      transparent 18% 82%,
-      color-mix(in oklch, black, transparent 76%)
-    );
-  content: "";
-  pointer-events: none;
-}
-
-.dashboard-banner:hover .kubedeck-banner-layer--data,
-.dashboard-banner:focus-within .kubedeck-banner-layer--data {
-  opacity: 1;
-  transform: translate3d(-8px, 48px, -76px) rotateX(3deg) rotateY(-0.8deg)
-    scale(0.94);
-}
-
-.dashboard-banner:hover .kubedeck-banner-layer--api,
-.dashboard-banner:focus-within .kubedeck-banner-layer--api {
-  opacity: 1;
-  transform: translate3d(5px, 32px, -38px) rotateX(1.8deg) rotateY(0.5deg)
-    scale(0.97);
-}
-
-.dashboard-banner:hover .kubedeck-banner-face,
-.dashboard-banner:focus-within .kubedeck-banner-face {
-  transform: translate3d(0, -4px, 22px) rotateX(-0.75deg);
-}
-
-.kubedeck-live-graph {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  overflow: hidden;
-  border-radius: inherit;
-  pointer-events: none;
-  transform-origin: 63% 50%;
-}
-
-.kubedeck-live-link {
-  --live-link-delay: 0s;
-  --live-link-duration: 3.8s;
-  position: absolute;
-  height: 1px;
-  overflow: visible;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    color-mix(in oklch, var(--chart-2), transparent 96%),
-    color-mix(in oklch, var(--chart-2), transparent 52%),
-    color-mix(in oklch, var(--primary), transparent 78%)
-  );
-  opacity: 0.85;
-  transform-origin: left center;
-}
-
-.kubedeck-live-link::after {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: clamp(0.28rem, 0.7vw, 0.7rem);
-  height: clamp(0.16rem, 0.32vw, 0.28rem);
-  border-radius: 999px;
-  background: white;
-  box-shadow:
-    0 0 0.3rem color-mix(in oklch, white, transparent 18%),
-    0 0 0.8rem color-mix(in oklch, var(--chart-2), transparent 8%),
-    0 0 1.4rem color-mix(in oklch, var(--primary), transparent 40%);
-  content: "";
-  opacity: 0;
-  transform: translate(-50%, -50%);
-  animation: kubedeck-packet-flow var(--live-link-duration) linear infinite;
-  animation-delay: var(--live-link-delay);
-}
-
-.kubedeck-live-link--top {
-  top: 50.8%;
-  left: 62.85%;
-  width: 9.1%;
-  transform: rotate(-90deg);
-}
-
-.kubedeck-live-link--left {
-  top: 43.8%;
-  left: 51%;
-  width: 12.4%;
-  transform: rotate(11deg);
-  --live-link-delay: -1.7s;
-  --live-link-duration: 3.2s;
-}
-
-.kubedeck-live-link--right {
-  top: 50.8%;
-  left: 62.85%;
-  width: 12%;
-  transform: rotate(-11deg);
-  --live-link-delay: -0.85s;
-  --live-link-duration: 3.4s;
-}
-
-.kubedeck-live-link--lower-left {
-  top: 78.2%;
-  left: 53.1%;
-  width: 13.3%;
-  transform: rotate(-43deg);
-  --live-link-delay: -2.35s;
-  --live-link-duration: 4.1s;
-}
-
-.kubedeck-live-link--lower-right {
-  top: 50.8%;
-  left: 62.85%;
-  width: 13.4%;
-  transform: rotate(43deg);
-  --live-link-delay: -1.15s;
-  --live-link-duration: 3.7s;
-}
-
-.kubedeck-live-link--bottom {
-  top: 50.8%;
-  left: 62.85%;
-  width: 10%;
-  transform: rotate(90deg);
-  --live-link-delay: -2.75s;
-  --live-link-duration: 4.4s;
-}
-
-.kubedeck-live-beacon {
-  --beacon-delay: 0s;
-  position: absolute;
-  width: clamp(0.34rem, 0.72vw, 0.72rem);
-  aspect-ratio: 1;
-  border: 1px solid color-mix(in oklch, white, transparent 22%);
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--chart-2), white 14%);
-  box-shadow:
-    0 0 0.45rem color-mix(in oklch, var(--chart-2), transparent 8%),
-    0 0 1rem color-mix(in oklch, var(--primary), transparent 48%);
-  transform: translate(-50%, -50%);
-  animation: kubedeck-beacon-breathe 2.8s ease-in-out infinite;
-  animation-delay: var(--beacon-delay);
-}
-
-.kubedeck-live-beacon::after {
-  position: absolute;
-  inset: -55%;
-  border: 1px solid color-mix(in oklch, var(--chart-2), transparent 36%);
-  border-radius: inherit;
-  content: "";
-  animation: kubedeck-beacon-ring 2.8s ease-out infinite;
-  animation-delay: var(--beacon-delay);
-}
-
-.kubedeck-live-beacon--core {
-  top: 50.8%;
-  left: 62.85%;
-  width: clamp(0.52rem, 1vw, 1rem);
-}
-
-.kubedeck-live-beacon--top {
-  top: 23.5%;
-  left: 62.85%;
-  --beacon-delay: -0.45s;
-}
-
-.kubedeck-live-beacon--left {
-  top: 43.8%;
-  left: 51%;
-  --beacon-delay: -1.3s;
-}
-
-.kubedeck-live-beacon--right {
-  top: 43.8%;
-  left: 74.3%;
-  --beacon-delay: -0.8s;
-}
-
-.kubedeck-live-beacon--lower-left {
-  top: 78.2%;
-  left: 53.1%;
-  --beacon-delay: -1.9s;
-}
-
-.kubedeck-live-beacon--lower-right {
-  top: 78.2%;
-  left: 72.6%;
-  --beacon-delay: -2.3s;
-}
-
-.kubedeck-live-beacon--bottom {
-  top: 80.7%;
-  left: 62.85%;
-  --beacon-delay: -1.05s;
-}
-
 .login-banner {
   align-self: center;
   animation: surface-reveal 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes kubedeck-packet-flow {
-  0%,
-  10% {
-    left: 0;
-    opacity: 0;
-  }
-
-  18%,
-  82% {
-    opacity: 1;
-  }
-
-  90%,
-  100% {
-    left: 100%;
-    opacity: 0;
-  }
-}
-
-@keyframes kubedeck-beacon-breathe {
-  0%,
-  100% {
-    filter: brightness(0.9);
-    opacity: 0.72;
-  }
-
-  50% {
-    filter: brightness(1.35);
-    opacity: 1;
-  }
-}
-
-@keyframes kubedeck-beacon-ring {
-  0% {
-    opacity: 0;
-    transform: scale(0.62);
-  }
-
-  28% {
-    opacity: 0.86;
-  }
-
-  82%,
-  100% {
-    opacity: 0;
-    transform: scale(1.9);
-  }
 }
 
 @keyframes surface-reveal {
@@ -2588,14 +2239,6 @@
   line-height: 1.65;
 }
 
-.dashboard-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: clamp(1rem, 2vw, 1.5rem);
-  align-items: stretch;
-  scroll-margin-top: 7rem;
-}
-
 .resource-meter {
   display: flex;
   flex-direction: column;
@@ -3847,20 +3490,12 @@
 }
 
 @media (min-width: 1181px) {
-  .dashboard-hero {
-    grid-template-columns: minmax(0, 2.15fr) minmax(21rem, 0.9fr);
-  }
-
   .resource-meter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1800px) {
-  .dashboard-hero {
-    grid-template-columns: minmax(0, 2.45fr) minmax(30rem, 0.82fr);
-  }
-
   .resource-meter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3900,10 +3535,6 @@
 
   .login-topology {
     min-height: 30rem;
-  }
-
-  .dashboard-hero {
-    grid-template-columns: 1fr;
   }
 
   .dashboard-page-heading {
@@ -4202,10 +3833,6 @@
     gap: 0.65rem;
   }
 
-  .kubedeck-banner {
-    aspect-ratio: 3 / 1;
-  }
-
   .resource-meter-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -4284,29 +3911,7 @@
   }
 }
 
-.kubedeck-motion-off .dashboard-banner:hover .kubedeck-banner-layer,
-.kubedeck-motion-off .dashboard-banner:focus-within .kubedeck-banner-layer,
-.kubedeck-motion-off .dashboard-banner:hover .kubedeck-banner-face,
-.kubedeck-motion-off .dashboard-banner:focus-within .kubedeck-banner-face {
-  transform: none;
-  transition: none;
-}
-
-.kubedeck-motion-off .kubedeck-banner-layer {
-  opacity: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .kubedeck-banner-layer,
-  .kubedeck-banner-face {
-    transform: none !important;
-    transition: none !important;
-  }
-
-  .kubedeck-banner-layer {
-    opacity: 0;
-  }
-
   *,
   *::before,
   *::after {
