@@ -363,23 +363,12 @@
   position: relative;
   isolation: isolate;
   overflow: clip;
-  background-color: #3b1e4a;
+  background-color: #010736;
   background-image:
     radial-gradient(
       90% 70% at 12% 8%,
       rgb(255 255 255 / 22%),
       rgb(255 255 255 / 0%) 60%
-    ),
-    linear-gradient(
-      135deg,
-      #460e44 12.5%,
-      #450f44 16.1%,
-      #441245 19.6%,
-      #421546 23.2%,
-      #401948 26.8%,
-      #3d1b49 30.4%,
-      #3c1d4a 33.9%,
-      #3b1e4a 37.5% 87.5%
     );
 }
 
