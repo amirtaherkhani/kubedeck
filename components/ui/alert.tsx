@@ -1,5 +1,8 @@
+"use client"
+
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { MotionDiv } from "@/components/ui/motion-props"
 
 import { cn } from "@/lib/utils"
 
@@ -25,9 +28,12 @@ function Alert({
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof alertVariants>) {
   return (
-    <div
+    <MotionDiv
       data-slot="alert"
       role="alert"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, ease: "easeOut" }}
       className={cn(alertVariants({ variant }), className)}
       {...props}
     />
