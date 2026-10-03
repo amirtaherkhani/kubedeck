@@ -2,6 +2,7 @@
 
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle"
 import { cva, type VariantProps } from "class-variance-authority"
+import { motion } from "motion/react"
 
 import { cn } from "@/lib/utils"
 
@@ -37,6 +38,13 @@ function Toggle({
     <TogglePrimitive
       data-slot="toggle"
       className={cn(toggleVariants({ variant, size, className }))}
+      render={
+        <motion.button
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.96 }}
+          transition={{ type: "spring", stiffness: 420, damping: 28 }}
+        />
+      }
       {...props}
     />
   )

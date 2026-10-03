@@ -2,6 +2,8 @@
 
 import { useMemo } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { AnimatePresence } from "motion/react"
+import { MotionDiv } from "@/components/ui/motion-props"
 
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
@@ -75,10 +77,13 @@ function Field({
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof fieldVariants>) {
   return (
-    <div
+    <MotionDiv
       role="group"
       data-slot="field"
       data-orientation={orientation}
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className={cn(fieldVariants({ orientation }), className)}
       {...props}
     />
@@ -213,14 +218,23 @@ function FieldError({
   }
 
   return (
-    <div
-      role="alert"
-      data-slot="field-error"
-      className={cn("text-sm font-normal text-destructive", className)}
-      {...props}
-    >
-      {content}
-    </div>
+    <AnimatePresence initial={false}>
+      {content && (
+        <MotionDiv
+          key="field-error"
+          role="alert"
+          data-slot="field-error"
+          className={cn("text-sm font-normal text-destructive", className)}
+          initial={{ opacity: 0, height: 0, y: -3 }}
+          animate={{ opacity: 1, height: "auto", y: 0 }}
+          exit={{ opacity: 0, height: 0, y: -3 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          {...props}
+        >
+          {content}
+        </MotionDiv>
+      )}
+    </AnimatePresence>
   )
 }
 

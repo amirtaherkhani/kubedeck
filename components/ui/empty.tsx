@@ -1,11 +1,17 @@
+"use client"
+
 import { cva, type VariantProps } from "class-variance-authority"
+import { MotionDiv } from "@/components/ui/motion-props"
 
 import { cn } from "@/lib/utils"
 
 function Empty({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div
+    <MotionDiv
       data-slot="empty"
+      initial={{ opacity: 0, y: 10, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.28, ease: "easeOut" }}
       className={cn(
         "flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border-dashed p-6 text-center text-balance",
         className

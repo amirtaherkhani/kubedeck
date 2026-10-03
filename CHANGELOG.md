@@ -8,6 +8,8 @@ All notable KubeDeck changes are documented in this file.
 
 - Enable the first administrator browser setup flow in local development while
   retaining verified workspace identity checks for hosted setup.
+- Add reduced-motion-aware entrance, hover, focus, and open/close transitions to
+  the shared shadcn-style UI components.
 
 ## [0.1.1] - 2026-08-01
 

@@ -1,6 +1,9 @@
+"use client"
+
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
+import { motion } from "motion/react"
 
 import { cn } from "@/lib/utils"
 
@@ -41,7 +44,14 @@ function Badge({
       },
       props
     ),
-    render,
+    render:
+      render ?? (
+        <motion.span
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+        />
+      ),
     state: {
       slot: "badge",
       variant,

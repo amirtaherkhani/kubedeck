@@ -3,6 +3,8 @@
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 import type { TooltipValueType } from "recharts"
+import { motion } from "motion/react"
+import { MotionDiv } from "@/components/ui/motion-props"
 
 import { cn } from "@/lib/utils"
 
@@ -61,9 +63,12 @@ function ChartContainer({
 
   return (
     <ChartContext.Provider value={{ config }}>
-      <div
+      <MotionDiv
         data-slot="chart"
         data-chart={chartId}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
         className={cn(
           "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
           className
@@ -76,7 +81,7 @@ function ChartContainer({
         >
           {children}
         </RechartsPrimitive.ResponsiveContainer>
-      </div>
+      </MotionDiv>
     </ChartContext.Provider>
   )
 }
@@ -189,11 +194,14 @@ function ChartTooltipContent({
   const nestLabel = payload.length === 1 && indicator !== "dot"
 
   return (
-    <div
+    <motion.div
       className={cn(
         "grid min-w-32 items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl",
         className
       )}
+      initial={{ opacity: 0, scale: 0.96, y: 3 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 320, damping: 26 }}
     >
       {!nestLabel ? tooltipLabel : null}
       <div className="grid gap-1.5">
@@ -266,7 +274,7 @@ function ChartTooltipContent({
             )
           })}
       </div>
-    </div>
+    </motion.div>
   )
 }
 

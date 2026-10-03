@@ -1,8 +1,12 @@
 "use client"
 
 import * as React from "react"
+import { motion } from "motion/react"
+import type { MotionHtmlElement } from "@/components/ui/motion-props"
 
 import { cn } from "@/lib/utils"
+
+const MotionTableRow = motion.tr as unknown as MotionHtmlElement<"tr">
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
@@ -54,8 +58,10 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
 
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
-    <tr
+    <MotionTableRow
       data-slot="table-row"
+      whileHover={{ x: 1 }}
+      transition={{ type: "spring", stiffness: 420, damping: 30 }}
       className={cn(
         "border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
         className
