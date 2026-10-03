@@ -51,7 +51,6 @@ function validateContext(raw, root, source) {
   const environment = raw.environment ?? raw.defaultEnvironment;
   const secretPath = raw.path ?? raw.secretPath ?? "/";
   const domain = raw.domain ?? DEFAULT_DOMAIN;
-  const credentialProfile = raw.credentialProfile ?? raw.profile ?? "home-lab";
 
   if (!projectId || !environment) {
     throw new Error(`${source} must define projectId/workspaceId and environment/defaultEnvironment`);
@@ -61,9 +60,7 @@ function validateContext(raw, root, source) {
   }
   if (domain !== DEFAULT_DOMAIN) throw new Error(`${source} domain must be ${DEFAULT_DOMAIN}`);
   if (!secretPath.startsWith("/")) throw new Error(`${source} path must start with /`);
-  if (!/^[a-z0-9-]+$/.test(credentialProfile)) throw new Error(`${source} credential profile is invalid`);
-
-  return { projectId, environment, path: secretPath, domain, credentialProfile, root, source };
+  return { projectId, environment, path: secretPath, domain, root, source };
 }
 
 export function resolveProjectContext({ roots = [], cwd = process.cwd(), registryPath = DEFAULT_REGISTRY_PATH } = {}) {
@@ -83,8 +80,8 @@ export function resolveProjectContext({ roots = [], cwd = process.cwd(), registr
       throw new Error("every workspace root must have an Infisical project mapping");
     }
     if (contexts.length > 0) {
-      const signatures = new Set(contexts.map(({ projectId, environment, path, domain, credentialProfile }) =>
-        JSON.stringify([projectId, environment, path, domain, credentialProfile])));
+      const signatures = new Set(contexts.map(({ projectId, environment, path, domain }) =>
+        JSON.stringify([projectId, environment, path, domain])));
       if (signatures.size > 1) {
         throw new Error("workspace roots resolve to different Infisical scopes; open one project scope per agent session");
       }
@@ -105,7 +102,7 @@ export function contextSummary(context) {
   };
 }
 
-export function projectRegistration({ root, projectId, environment, path = "/", domain = DEFAULT_DOMAIN, credentialProfile = "home-lab" }) {
+export function projectRegistration({ root, projectId, environment, path = "/", domain = DEFAULT_DOMAIN }) {
   if (!isAbsolute(root)) throw new Error("project root must be an absolute path");
-  return validateContext({ projectId, environment, path, domain, credentialProfile }, normalizeRoot(root), "registration");
+  return validateContext({ projectId, environment, path, domain }, normalizeRoot(root), "registration");
 }

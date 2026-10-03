@@ -11,8 +11,7 @@ export function registerProject(input, registryPath = DEFAULT_REGISTRY_PATH) {
     projectId: registration.projectId,
     environment: registration.environment,
     path: registration.path,
-    domain: registration.domain,
-    credentialProfile: registration.credentialProfile
+    domain: registration.domain
   });
   projects.sort((a, b) => a.root.localeCompare(b.root));
   mkdirSync(dirname(registryPath), { recursive: true, mode: 0o700 });

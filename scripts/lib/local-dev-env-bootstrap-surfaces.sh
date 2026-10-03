@@ -27,7 +27,7 @@ registration_path_for_file() {
 
 register_projects() {
   local token="$1" metadata service_path specific_path service_dir canonical_service_dir finance_dir
-  local command=(local-dev-env-mcp register --project-id "${HOME_LAB_PROJECT_ID}" --environment local --profile home-lab --domain "${DOMAIN}")
+  local command=(local-dev-env-mcp register --project-id "${HOME_LAB_PROJECT_ID}" --environment local --domain "${DOMAIN}")
   local-dev-env-mcp unregister --root "${PROJECT_ROOT}" >/dev/null
   if [[ "${REPO_ROOT}" != "${PROJECT_ROOT}" ]]; then local-dev-env-mcp unregister --root "${REPO_ROOT}" >/dev/null; fi
   "${command[@]}" --path / --root "${PROJECT_ROOT}" >/dev/null
@@ -46,7 +46,7 @@ register_projects() {
   finance_dir="${VERO_FINANCE_PROJECT_DIR:-/Users/mac/Documents/GitHub/verovault-finance}"
   if [[ -d "${finance_dir}" ]]; then
     local-dev-env-mcp register --project-id "${FINANCE_PROJECT_ID}" --environment development \
-      --path /finance --profile vero-finance --domain "${DOMAIN}" --root "${finance_dir}" >/dev/null
+      --path /finance --domain "${DOMAIN}" --root "${finance_dir}" >/dev/null
   fi
 }
 

@@ -1,20 +1,25 @@
 # local-dev-env-mcp
 
-`local-dev-env-mcp` is the home-lab's central, project-aware Infisical connector for local coding agents. Agents receive six short tools and do not need to know an Infisical password, token, project ID, environment, path, or CLI profile.
+`local-dev-env-mcp` is the central, project-aware Infisical connector for
+local AI agents. Agents receive short `env_*` tools and do not need an
+Infisical password, token, project ID, environment, path, or profile.
 
-The connector is intentionally limited to `local`, `development`, and `dev` environments. It automatically selects a project-scoped Universal Auth machine identity from macOS Keychain. Home-lab credentials live under `my-home-lab.infisical.agent.home-lab`; external projects keep their own identity and Keychain profile. Secret values are never stored in the project registry.
+The connector accepts only `local`, `development`, and `dev` environments. It
+selects the project and path from the registered workspace root, including Git
+worktrees, and uses one Keychain-held development machine identity for every
+explicitly approved project. Secret values are never stored in the registry.
 
 ## Tools
 
-- `env_context`: show the automatically selected non-secret context.
+- `env_context`: show the selected non-secret project context.
 - `env_list`: list names without values.
 - `env_get`: read one requested value.
 - `env_set` and `env_set_many`: create or update values.
 - `env_delete`: delete one explicitly requested value.
 
-Each data tool also accepts an optional `path`. It must stay beneath the automatically selected scope and is useful only for charts, such as platform-storage, that own several service folders.
-
-Project selection uses `~/.config/local-dev-env/projects.json`, choosing the longest matching workspace path. Git worktrees are mapped back to the corresponding registered path in the primary checkout. A multi-root session is rejected if its roots resolve to different Infisical scopes. Unregistered repositories cannot select a Keychain profile, and the connector accepts only `https://infisical.local.dev`. The repository bootstrap registers each home-lab chart directory with its literal `secretsPath` or safe common parent, plus `verovault-finance` with `/finance` when that checkout exists.
+Each data tool accepts an optional descendant `path`; it cannot escape the
+registered service scope. Multi-root sessions must resolve to one Infisical
+scope.
 
 ## Install and verify
 
@@ -26,16 +31,41 @@ make local-dev-env-test
 make local-dev-env-doctor
 ```
 
-The bootstrap creates or reuses the home-lab machine identity, grants it `member` access only to the `home-lab` project, stores a seven-day Universal Auth client secret and its ID in Keychain, installs the package globally, registers project paths, and installs the skill for Codex and OpenCode. Access tokens last 15 minutes. Re-running the bootstrap is safe and replaces expired or nonconforming credentials before revoking superseded connector credentials. The installed Infisical edition does not support custom Universal Auth IP ranges, so the fixed local domain, development-only environment guard, short credential lifetimes, project role, and Keychain storage provide the connector boundary. External registrations, such as Finance, select that project's existing profile instead of sharing the home-lab identity.
+The bootstrap creates or reuses the `local-dev-agents` machine identity,
+grants it `member` access to the explicitly configured development projects,
+stores a **365-day Universal Auth client credential** and its ID in macOS
+Keychain, installs the package globally, registers project paths, and
+installs the skill for Codex and OpenCode. Access tokens last one hour and are
+renewed automatically by the connector, so agents never ask for login again.
 
-Register another local checkout without handling credentials:
+By default the bootstrap includes the home-lab and Finance development
+projects. Add more project IDs without changing the connector:
 
 ```sh
-local-dev-env-mcp register --project-id PROJECT_ID --environment development --path /service --profile project-profile --root /absolute/project/path
+INFISICAL_LOCAL_DEV_PROJECT_IDS=home-project-id,finance-project-id,other-project-id \
+  make local-dev-env-bootstrap
 ```
+
+Register an additional local checkout without handling credentials:
+
+```sh
+local-dev-env-mcp register \
+  --project-id PROJECT_ID \
+  --environment development \
+  --path /service \
+  --root /absolute/project/path
+```
+
+The installed MCP configuration is global for the local AI clients. The
+connector reads the client ID and secret from
+`my-home-lab.infisical.agent.local-dev`; no interactive `infisical login` and
+no `.infisical.json` is required.
 
 ## Kubernetes contract
 
-The MCP server is not used inside Kubernetes. Each chart connects directly to Infisical through an `InfisicalSecret` with `includeAllSecrets: true`, scoped to that service path. The operator writes every folder value into a native Secret. Workloads consume that service-scoped Secret through `envFrom.secretRef` where the chart supports whole-Secret environment injection, or through the chart's native `existingSecret`/`secretKeyRef` interface when it requires named keys. The controller annotation `secrets.infisical.com/auto-reload: "true"` rolls pods when the native Secret changes.
-
-This separation keeps agent access simple while Kubernetes continues to use the official Infisical Secrets Operator and its own `credentialsRef`.
+The MCP server is not used inside Kubernetes. Each chart connects directly to
+Infisical through an `InfisicalSecret` with `includeAllSecrets: true`, scoped
+to its service path. The operator writes every folder value into a native
+Secret; workloads consume it through `envFrom.secretRef`, `existingSecret`, or
+`secretKeyRef`, with `secrets.infisical.com/auto-reload: "true"` where
+supported.

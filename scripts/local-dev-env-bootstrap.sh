@@ -4,12 +4,15 @@ set -euo pipefail
 
 readonly DOMAIN="https://infisical.local.dev"
 readonly IDENTITY_NAME="local-dev-agents"
-readonly KEYCHAIN_SERVICE="my-home-lab.infisical.agent.home-lab"
+readonly KEYCHAIN_SERVICE="my-home-lab.infisical.agent.local-dev"
 readonly ADMIN_KEYCHAIN_SERVICE="my-home-lab.infisical.admin"
 readonly ADMIN_EMAIL="admin@local.dev"
 readonly CLIENT_SECRET_DESCRIPTION="local-dev-env-mcp on this Mac"
 readonly HOME_LAB_PROJECT_ID="e064fd84-b51e-4318-8442-8f30fec2b316"
 readonly FINANCE_PROJECT_ID="4574398d-423d-49bc-90e0-1e6a57a20c23"
+readonly CLIENT_SECRET_TTL="31536000"
+readonly ACCESS_TOKEN_TTL="3600"
+readonly LOCAL_DEV_PROJECT_IDS="${INFISICAL_LOCAL_DEV_PROJECT_IDS:-${HOME_LAB_PROJECT_ID},${FINANCE_PROJECT_ID}}"
 readonly REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly PROJECT_ROOT="$(git -C "${REPO_ROOT}" worktree list --porcelain | awk '/^worktree / {sub(/^worktree /, ""); print; exit}')"
 
@@ -124,7 +127,7 @@ credentials_are_valid() {
   client_secret_id="$(keychain_optional client-secret-id)"
   [[ -n "${client_id}" && -n "${client_secret}" && -n "${client_secret_id}" ]] || return 1
   client_secret_prefix="$(admin_api "${token}" GET "/auth/universal-auth/identities/${expected_identity_id}/client-secrets" |
-    jq -er --arg id "${client_secret_id}" '.clientSecretData[] | select(.id == $id and (.isClientSecretRevoked | not) and .clientSecretTTL == 604800) | .clientSecretPrefix')" || return 1
+    jq -er --arg id "${client_secret_id}" --argjson ttl "${CLIENT_SECRET_TTL}" '.clientSecretData[] | select(.id == $id and (.isClientSecretRevoked | not) and .clientSecretTTL == $ttl) | .clientSecretPrefix')" || return 1
   [[ "${client_secret}" == "${client_secret_prefix}"* ]] || return 1
   response="$(printf '%s\n%s\n' "${client_id}" "${client_secret}" | jq -Rn '[inputs] | {clientId:.[0],clientSecret:.[1]}' |
     curl -fsS -X POST "${DOMAIN}/api/v1/auth/universal-auth/login" -H 'Content-Type: application/json' --data-binary @-)" || return 1
@@ -147,9 +150,10 @@ configure_universal_auth() {
   local token="$1" identity_id="$2" method="POST"
   if universal_auth_is_attached "${token}" "${identity_id}"; then method="PATCH"; fi
   # This self-hosted edition rejects custom IP ranges. The endpoint remains local-only,
-  # while seven-day client secrets and 15-minute access tokens limit credential exposure.
+  # while the one-year client credential is stored only in Keychain and access tokens
+  # remain short-lived and are renewed by the connector.
   admin_api "${token}" "${method}" "/auth/universal-auth/identities/${identity_id}" \
-    '{"clientSecretTrustedIps":[{"ipAddress":"0.0.0.0/0"},{"ipAddress":"::/0"}],"accessTokenTrustedIps":[{"ipAddress":"0.0.0.0/0"},{"ipAddress":"::/0"}],"accessTokenTTL":900,"accessTokenMaxTTL":900,"accessTokenNumUsesLimit":0,"accessTokenPeriod":0,"lockoutEnabled":true,"lockoutThreshold":5,"lockoutDurationSeconds":60,"lockoutCounterResetSeconds":30}'
+    "$(jq -cn --argjson ttl "${ACCESS_TOKEN_TTL}" '{clientSecretTrustedIps:[{ipAddress:"0.0.0.0/0"},{ipAddress:"::/0"}],accessTokenTrustedIps:[{ipAddress:"0.0.0.0/0"},{ipAddress:"::/0"}],accessTokenTTL:$ttl,accessTokenMaxTTL:$ttl,accessTokenNumUsesLimit:0,accessTokenPeriod:0,lockoutEnabled:true,lockoutThreshold:5,lockoutDurationSeconds:60,lockoutCounterResetSeconds:30}')"
 }
 
 revoke_superseded_client_secrets() {
@@ -167,7 +171,7 @@ ensure_connector_credentials() {
   if ! credentials_are_valid "${token}" "${identity_id}"; then
     client_id="$(jq -er '.identityUniversalAuth.clientId' <<<"${identity}")"
     identity="$(admin_api "${token}" POST "/auth/universal-auth/identities/${identity_id}/client-secrets" \
-      "$(jq -cn --arg description "${CLIENT_SECRET_DESCRIPTION}" '{description:$description,numUsesLimit:0,ttl:604800}')")"
+      "$(jq -cn --arg description "${CLIENT_SECRET_DESCRIPTION}" --argjson ttl "${CLIENT_SECRET_TTL}" '{description:$description,numUsesLimit:0,ttl:$ttl}')")"
     client_secret="$(jq -er '.clientSecret' <<<"${identity}")"
     client_secret_id="$(jq -er '.clientSecretData.id' <<<"${identity}")"
     keychain_put client-id "${client_id}"
@@ -188,11 +192,14 @@ main() {
   identity_id="$(jq -r '.identities[0].identity.id // empty' <<<"${search}")"
   if [[ -z "${identity_id}" ]]; then
     identity="$(admin_api "${token}" POST /identities "$(jq -cn --arg name "${IDENTITY_NAME}" --arg org "${organization_id}" \
-      '{name:$name,organizationId:$org,role:"no-access",hasDeleteProtection:false,metadata:[{key:"owner",value:"my-home-lab"},{key:"scope",value:"local-development-only"},{key:"rotation",value:"manual-local"}]}')")"
+      '{name:$name,organizationId:$org,role:"no-access",hasDeleteProtection:false,metadata:[{key:"owner",value:"my-home-lab"},{key:"scope",value:"approved-development-projects-only"},{key:"rotation",value:"365-days"}]}')")"
     identity_id="$(jq -er '.identity.id' <<<"${identity}")"
   fi
 
-  for project_id in "${HOME_LAB_PROJECT_ID}"; do
+  local project_ids=()
+  IFS=',' read -r -a project_ids <<<"${LOCAL_DEV_PROJECT_IDS}"
+  for project_id in "${project_ids[@]}"; do
+    [[ -n "${project_id}" ]] || continue
     admin_api "${token}" GET "/projects/${project_id}" >/dev/null
     ensure_membership "${token}" "${project_id}" "${identity_id}"
   done
