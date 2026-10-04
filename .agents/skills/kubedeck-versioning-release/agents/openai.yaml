@@ -1,0 +1,4 @@
+interface:
+  display_name: "KubeDeck Versioning & Releases"
+  short_description: "Version KubeDeck components and maintain changelogs"
+  default_prompt: "Use $kubedeck-versioning-release to choose a KubeDeck component version, changelog entry, tag name, and release channel."
