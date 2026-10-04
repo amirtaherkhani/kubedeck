@@ -11,7 +11,7 @@ This roadmap is the operating record for future Codex/Nova sessions. It does not
 
 ## Checkpoint history
 
-- **2026-10-04:** Read-only check verified `lima-rancher-desktop` Ready on `rancher-desktop` (`v1.36.4+k3s1`, ARM64, containerd `2.3.2`); this supersedes earlier Broken status. Docker Desktop app bundle reports `4.93.0`, but daemon/Kubernetes health is unverified. The Infisical UI showed pending, unsaved KubeDeck-folder changes and missing identity key names; treat required KubeDeck Infisical entries as a blocker until saved and metadata-verified. No runtime, backup, DNS/network, or deletion changes were made.
+- **2026-10-04:** Read-only check verified `lima-rancher-desktop` Ready on `rancher-desktop` (`v1.36.4+k3s1`, ARM64, containerd `2.3.2`); this supersedes earlier Broken status. Docker Desktop app bundle reports `4.93.0`, but daemon/Kubernetes health is unverified. A prior session reported pending KubeDeck-folder changes and missing identity key names in the Infisical UI; this is a historical observation only, its exact observation timestamp is unavailable here, and current saved state has not been rechecked. Verify required key names through a metadata-only check before treating this as a current blocker; do not inspect values. No runtime, backup, DNS/network, or deletion changes were made.
 
 ## Migration record
 
