@@ -39,7 +39,7 @@ Talos, MicroK8s, kind, managed Kubernetes, and other conformant clusters.
 
 ## Project status
 
-KubeDeck `v0.1.2` is an early, Kubernetes-native foundation.
+KubeDeck `v0.1.3` is an early, Kubernetes-native foundation.
 
 The repository includes the dashboard, responsive liquid-glass interface,
 authentication, Kubernetes catalog, multi-node review, notifications, settings,
@@ -233,7 +233,7 @@ cluster:
 ```bash
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  --tag ghcr.io/your-user/kubedeck:0.1.2 \
+  --tag ghcr.io/your-user/kubedeck:0.1.3 \
   --push .
 ```
 
@@ -259,8 +259,8 @@ print replacement credentials. Set `KUBEDECK_INFISICAL_ENABLED=false` only
 for a standalone installation that supplies these Secrets separately.
 
 Release images use the same semantic version for the dashboard and agent, for
-example `localhost:5001/kubedeck:dev-0.1.2` and
-`localhost:5001/kubedeck-agent:dev-0.1.2`. Increase the version before
+example `localhost:5001/kubedeck:dev-0.1.3` and
+`localhost:5001/kubedeck-agent:dev-0.1.3`. Increase the version before
 building:
 
 ```bash
@@ -315,7 +315,7 @@ Install without an Ingress:
 helm upgrade --install kubedeck-agent ./charts/kubedeck-agent \
   --namespace kubedeck \
   --set image.repository=ghcr.io/your-user/kubedeck-agent \
-  --set image.tag=0.1.2 \
+  --set image.tag=0.1.3 \
   --set infisical.enabled=false \
   --set auth.existingSecret=kubedeck-agent-auth \
   --set auth.tokenKey=token \
@@ -328,7 +328,7 @@ Then install the app:
 helm upgrade --install kubedeck ./charts/kubedeck \
   --namespace kubedeck \
   --set image.repository=ghcr.io/your-user/kubedeck \
-  --set image.tag=0.1.2 \
+  --set image.tag=0.1.3 \
   --set infisical.enabled=false \
   --set agent.existingSecret=kubedeck-agent-auth \
   --set agent.tokenKey=token \
@@ -349,7 +349,7 @@ Create a values file for your domain:
 ```yaml
 image:
   repository: ghcr.io/your-user/kubedeck
-  tag: 0.1.2
+  tag: 0.1.3
 
 ingress:
   enabled: true
@@ -389,7 +389,7 @@ ConfigMap integration when installing the agent:
 helm upgrade --install kubedeck-agent ./charts/kubedeck-agent \
   --namespace kubedeck \
   --set image.repository=ghcr.io/your-user/kubedeck-agent \
-  --set image.tag=0.1.2 \
+  --set image.tag=0.1.3 \
   --set infisical.enabled=false \
   --set auth.existingSecret=kubedeck-agent-auth \
   --set auth.tokenKey=token \
