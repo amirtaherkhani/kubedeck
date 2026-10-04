@@ -115,6 +115,10 @@ flowchart LR
     Agent -. "opt-in scoped write" .-> CoreDNS["CoreDNS custom ConfigMap"]
 ```
 
+## Operations roadmaps
+
+- [Rancher Desktop to Docker Desktop migration](docs/migration/rancher-to-docker-desktop.md) — planning and acceptance record for moving the local cluster, Infisical-backed environments, and developer DNS to Docker Desktop and Technitium. It does not authorize running the migration.
+
 The current Helm release runs one application replica because its embedded D1
 database uses a single-writer persistent volume. A future external database
 backend can enable horizontally scaled application replicas.
