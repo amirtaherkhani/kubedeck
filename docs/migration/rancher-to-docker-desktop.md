@@ -220,10 +220,10 @@ Do not declare migration complete until each required item has a dated result an
 
 ## Source references
 
-- [Homelab DNS design](../../my-home-lab/core/dns/README.md), [custom CoreDNS ConfigMap](../../my-home-lab/core/dns/coredns-custom.yaml), [CoreDNS Service](../../my-home-lab/core/dns/service.yaml), [Mac DNS forwarding helper](../../my-home-lab/core/host/macos/configure-local-dev-dns-forwarding.sh), and [scoped-resolver helper](../../my-home-lab/core/host/macos/configure-local-dev-resolver.sh).
-- [Traefik configuration](../../my-home-lab/core/ingress/traefik-helmchartconfig.yaml), [TLS issuers/certificates](../../my-home-lab/core/tls/clusterissuer.yaml) and [wildcard certificates](../../my-home-lab/core/tls/certificates.yaml), and [Mac CA-trust helper](../../my-home-lab/core/host/macos/trust-local-dev-tls.sh).
-- [KubeDeck app values](../../my-home-lab/apps/dev/kubedeck/values.yaml), [KubeDeck agent values](../../my-home-lab/apps/dev/kubedeck-agent/values.yaml), [release inventory](../../my-home-lab/core/helm/releases.conf), and [platform storage chart](../../my-home-lab/apps/platform/storage/Chart.yaml).
-- [Infisical deployment](../../my-home-lab/apps/platform/infisical/values.yaml), [Infisical operator](../../my-home-lab/apps/platform/infisical-operator/values.yaml), [KubeDeck agent DNS API contract](../../kubedeck-agent/README.md), and [`kubedeck-env-mcp`](../../my-home-lab/tools/kubedeck-env-mcp/README.md).
+- [Homelab DNS design](../../lab/core/dns/README.md), [custom CoreDNS ConfigMap](../../lab/core/dns/coredns-custom.yaml), [CoreDNS Service](../../lab/core/dns/service.yaml), [Mac DNS forwarding helper](../../lab/core/host/macos/configure-local-dev-dns-forwarding.sh), and [scoped-resolver helper](../../lab/core/host/macos/configure-local-dev-resolver.sh).
+- [Traefik configuration](../../lab/core/ingress/traefik-helmchartconfig.yaml), [TLS issuers/certificates](../../lab/core/tls/clusterissuer.yaml) and [wildcard certificates](../../lab/core/tls/certificates.yaml), and [Mac CA-trust helper](../../lab/core/host/macos/trust-local-dev-tls.sh).
+- [KubeDeck app values](../../lab/apps/dev/kubedeck/values.yaml), [KubeDeck agent values](../../lab/apps/dev/kubedeck-agent/values.yaml), [release inventory](../../lab/core/helm/releases.conf), and [platform storage chart](../../lab/apps/platform/storage/Chart.yaml).
+- [Infisical deployment](../../lab/apps/platform/infisical/values.yaml), [Infisical operator](../../lab/apps/platform/infisical-operator/values.yaml), [KubeDeck agent DNS API contract](../../kubedeck-agent/README.md), and [`kubedeck-env-mcp`](../../lab/tools/kubedeck-env-mcp/README.md).
 
 
 ## Roadmap retirement condition

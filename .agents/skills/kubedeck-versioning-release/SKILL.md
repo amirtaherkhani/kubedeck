@@ -15,8 +15,8 @@ Inspect the target branch, working-tree state, release history, tags, manifests,
 | --- | --- | --- |
 | KubeDeck application | Root `package.json` and lockfile; `charts/kubedeck/Chart.yaml` | Keep dashboard package and chart `appVersion` aligned. The chart's `version` is the Helm chart package version and can change independently when chart packaging changes. |
 | KubeDeck agent | `kubedeck-agent` release metadata and `charts/kubedeck-agent/Chart.yaml` | Check agent image/version metadata and chart `appVersion`; align them with the application release when the release process ships both together. |
-| `platform-storage` Helm release | Its own chart `Chart.yaml` and deployment configuration under `my-home-lab/apps/platform/storage/` | Independent platform release. Do not bump it just because KubeDeck changes. |
-| KubeDeck environment MCP tool | `my-home-lab/tools/kubedeck-env-mcp/package.json` and lockfile | Independent local tool version. It is currently marked `private`; do not publish it to npm unless its package policy and publication workflow are deliberately changed. Record its changes in `my-home-lab/CHANGELOG.md`. |
+| `platform-storage` Helm release | Its own chart `Chart.yaml` and deployment configuration under `lab/apps/platform/storage/` | Independent platform release. Do not bump it just because KubeDeck changes. |
+| KubeDeck environment MCP tool | `lab/tools/kubedeck-env-mcp/package.json` and lockfile | Independent local tool version. It is currently marked `private`; do not publish it to npm unless its package policy and publication workflow are deliberately changed. Record its changes in `lab/CHANGELOG.md`. |
 
 Use current repository evidence for every release. For example, KubeDeck `0.1.2`, the proposed KubeDeck `0.1.3` in PR #15, `platform-storage` `0.1.8`, and the environment MCP tool `1.0.0` describe separate version lines; these are examples, not defaults or current-state assertions.
 
@@ -38,7 +38,7 @@ Words such as “beta,” “stable,” “latest,” and “production” in a 
 
 ## Changelog is part of every version
 
-Before creating **any version tag or release, including a beta tag**, add and review a dated entry for that exact version in the component's changelog. For KubeDeck, use the root `CHANGELOG.md`; for platform-storage and the local MCP tool, use `my-home-lab/CHANGELOG.md`. Follow the existing Keep a Changelog headings. Include user-visible changes, fixes, compatibility or migration notes, and known limitations. Keep `[Unreleased]` separate; retain all prior entries and links. A stable release after prereleases summarizes all changes since the previous stable release.
+Before creating **any version tag or release, including a beta tag**, add and review a dated entry for that exact version in the component's changelog. For KubeDeck, use the root `CHANGELOG.md`; for platform-storage and the local MCP tool, use `lab/CHANGELOG.md`. Follow the existing Keep a Changelog headings. Include user-visible changes, fixes, compatibility or migration notes, and known limitations. Keep `[Unreleased]` separate; retain all prior entries and links. A stable release after prereleases summarizes all changes since the previous stable release.
 
 Example heading:
 
