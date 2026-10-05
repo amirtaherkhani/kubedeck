@@ -13,7 +13,7 @@ This guide describes the first, local-only module contract. A module is declarat
 | `examples/service-modules/*.example.yaml` | Generic, non-installed examples for managed and external ownership. |
 | `examples/installation-profiles/*.example.yaml` | Generic, non-installed profile example. |
 
-Existing charts and upstream values remain in `my-home-lab/apps/{platform,observability,dev,ai}/<module>`. Keep their vendor-specific structure and validate their values with the chart's own `values.schema.json` and Helm tooling. `my-home-lab/core/helm/releases.conf` and `repositories.conf` remain the current deployment source of truth; adding a descriptor does not install or migrate a release. A module may describe multiple components when one current chart/release bundles several tools, as `apps/platform/storage` does.
+Existing charts and upstream values remain in `lab/apps/{platform,observability,dev,ai}/<module>`. Keep their vendor-specific structure and validate their values with the chart's own `values.schema.json` and Helm tooling. `lab/core/helm/releases.conf` and `repositories.conf` remain the current deployment source of truth; adding a descriptor does not install or migrate a release. A module may describe multiple components when one current chart/release bundles several tools, as `apps/platform/storage` does.
 
 ## Add a module descriptor
 

@@ -8,7 +8,7 @@ tokens without an interactive login.
 ## One-time setup
 
 ```bash
-cd my-home-lab
+cd lab
 INFISICAL_LOCAL_DEV_PROJECT_IDS=<home-lab-id>,<other-dev-project-id> \
   make kubedeck-env-bootstrap
 ```

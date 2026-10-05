@@ -8,8 +8,8 @@ V1 targets one local single-node Kubernetes environment. The contract must disti
 
 ## Existing architecture
 
-- Homelab modules currently live under `my-home-lab/apps/{platform,observability,dev,ai}/<module>` and vary by local Helm chart, upstream Helm chart, values, manifests, and templates.
-- `my-home-lab/core/helm/releases.conf` defines deployment order, release name, namespace, chart reference/version, values path, and timeout; `repositories.conf` maps remote chart repositories. These remain the current deployment source of truth.
+- Homelab modules currently live under `lab/apps/{platform,observability,dev,ai}/<module>` and vary by local Helm chart, upstream Helm chart, values, manifests, and templates.
+- `lab/core/helm/releases.conf` defines deployment order, release name, namespace, chart reference/version, values path, and timeout; `repositories.conf` maps remote chart repositories. These remain the current deployment source of truth.
 - Some current modules bundle multiple components in one chart/release. `apps/platform/storage` is the relevant example; a module therefore cannot be assumed to represent exactly one Kubernetes workload or one chart component.
 - The Go agent exposes versioned live cluster snapshots (`kubedeck.io/v1alpha1`) over its API/SSE and discovers Kubernetes resources. It has no declarative service metadata catalog today. Its discovery remains read-only.
 - The UI consumes the agent's current model. This milestone adds stable shared declarations and types but does not yet add a catalog-serving endpoint or change UI inventory behavior.
@@ -37,8 +37,8 @@ templates/installation-profile/local-single-node.yaml
 examples/service-modules/managed.example.yaml
 examples/service-modules/external.example.yaml
 examples/installation-profiles/local-single-node.example.yaml
-my-home-lab/apps/<existing-domain>/<existing-module>/  # existing vendor/chart layout unchanged
-my-home-lab/core/helm/{releases,repositories}.conf     # existing deployment truth unchanged in this phase
+lab/apps/<existing-domain>/<existing-module>/  # existing vendor/chart layout unchanged
+lab/core/helm/{releases,repositories}.conf     # existing deployment truth unchanged in this phase
 ```
 
 Templates and examples are non-installed reference files, not catalog entries. Real service registration or migration requires separate explicit review. Existing modules can adopt descriptors incrementally after approval; the foundation does not move charts or redefine the existing storage release.
