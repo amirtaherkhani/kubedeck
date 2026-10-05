@@ -14,7 +14,9 @@ import (
 	"github.com/amirtaherkhani/kubedeck-agent/internal/config"
 	"github.com/amirtaherkhani/kubedeck-agent/internal/dnsconfig"
 	"github.com/amirtaherkhani/kubedeck-agent/internal/httpapi"
+	"github.com/amirtaherkhani/kubedeck-agent/internal/management"
 	"github.com/amirtaherkhani/kubedeck-agent/internal/stream"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	metricsclient "k8s.io/metrics/pkg/client/clientset/versioned"
 )
@@ -67,6 +69,13 @@ func run(logger *slog.Logger) error {
 		cfg.SSEHeartbeat,
 		logger,
 	)
+	if cfg.ManagementEnabled {
+		dynamicClient, err := dynamic.NewForConfig(restConfig)
+		if err != nil {
+			return err
+		}
+		api.SetManagementHandler((&management.Manager{Dynamic: dynamicClient, Discovery: kube.Discovery(), Kube: kube, Logger: logger}).Handler())
+	}
 	server := &http.Server{
 		Addr:              cfg.ListenAddress,
 		Handler:           api.Handler(),
@@ -97,6 +106,7 @@ func run(logger *slog.Logger) error {
 			"clusterId", cfg.ClusterID,
 			"authenticationEnabled", cfg.BearerToken != "",
 			"dnsManagementEnabled", cfg.DNSManagementEnabled,
+			"managementEnabled", cfg.ManagementEnabled,
 		)
 		serverErrors <- server.ListenAndServe()
 	}()

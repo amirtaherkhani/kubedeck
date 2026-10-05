@@ -372,6 +372,9 @@ test("authenticates the configured admin and protects the dashboard", async (t) 
   const deniedDNSConfig = await runtime.request("/api/cluster/dns/config");
   assert.equal(deniedDNSConfig.status, 401);
 
+  const deniedManagement = await runtime.request("/api/cluster/manage/capabilities");
+  assert.equal(deniedManagement.status, 401);
+
   const invalidLogin = await runtime.request("/api/auth/login", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -587,6 +590,19 @@ test("proxies authenticated cluster snapshots and SSE without exposing the agent
       });
       return;
     }
+    if (request.url === "/v1/manage/capabilities" && request.method === "GET") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ managementEnabled: true, metricsAvailable: false }));
+      return;
+    }
+    if (request.url === "/v1/manage/resources/core/v1/configmaps?namespace=apps&name=sample" && request.method === "DELETE") {
+      assert.equal(request.headers["if-match-uid"], "uid-1");
+      assert.equal(request.headers["if-match"], "4");
+      assert.equal(request.headers["x-kubedeck-confirm"], "apps/sample");
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ status: "accepted" }));
+      return;
+    }
     response.writeHead(404).end();
   });
   agentServer.listen(0, "127.0.0.1");
@@ -646,6 +662,25 @@ test("proxies authenticated cluster snapshots and SSE without exposing the agent
   });
   assert.equal(replaceDNS.status, 200);
   assert.equal((await replaceDNS.json()).aliases[0].hostname, "grafana.home.arpa");
+
+  const capabilities = await runtime.request("/api/cluster/manage/capabilities", {
+    headers: { cookie: loginCookie },
+  });
+  assert.equal(capabilities.status, 200);
+  assert.deepEqual(await capabilities.json(), { managementEnabled: true, metricsAvailable: false });
+
+  const unconfirmedDelete = await runtime.request("/api/cluster/manage/resources/core/v1/configmaps?namespace=apps&name=sample", {
+    method: "DELETE",
+    headers: { cookie: loginCookie, "if-match-uid": "uid-1" },
+  });
+  assert.equal(unconfirmedDelete.status, 409);
+
+  const deleted = await runtime.request("/api/cluster/manage/resources/core/v1/configmaps?namespace=apps&name=sample", {
+    method: "DELETE",
+    headers: { cookie: loginCookie, "if-match-uid": "uid-1", "if-match": "4", "x-kubedeck-confirm": "apps/sample" },
+  });
+  assert.equal(deleted.status, 200);
+  assert.equal((await deleted.json()).status, "accepted");
 
   const dashboard = await runtime.request("/dashboard", {
     headers: { cookie: loginCookie },
@@ -835,7 +870,7 @@ test("ships the versioned cleanup policy and release helper", async () => {
   assert.match(versionHelper, /charts\/kubedeck-agent\/Chart\.yaml/);
 });
 
-test("keeps the v0.1.4 package and Helm versions aligned", async () => {
+test("keeps the v0.2.0 package and Helm versions aligned", async () => {
   const [packageSource, dashboardChart, agentChart] = await Promise.all([
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../charts/kubedeck/Chart.yaml", import.meta.url), "utf8"),
@@ -846,7 +881,7 @@ test("keeps the v0.1.4 package and Helm versions aligned", async () => {
   ]);
   const releaseVersion = JSON.parse(packageSource).version;
 
-  assert.equal(releaseVersion, "0.1.4");
+  assert.equal(releaseVersion, "0.2.0");
   for (const chart of [dashboardChart, agentChart]) {
     assert.match(chart, new RegExp(`^version: ${releaseVersion}$`, "m"));
     assert.match(chart, new RegExp(`^appVersion: "${releaseVersion}"$`, "m"));

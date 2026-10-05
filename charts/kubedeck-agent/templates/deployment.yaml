@@ -13,6 +13,12 @@
 {{- if and .Values.rbac.clusterAdmin (not .Values.auth.existingSecret) }}
 {{- fail "auth.existingSecret is required when rbac.clusterAdmin=true." }}
 {{- end }}
+{{- if and .Values.agent.managementEnabled (not .Values.auth.existingSecret) }}
+{{- fail "auth.existingSecret is required when agent.managementEnabled=true." }}
+{{- end }}
+{{- if and .Values.agent.managementEnabled (not .Values.rbac.clusterAdmin) }}
+{{- fail "rbac.clusterAdmin is required when agent.managementEnabled=true." }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -76,6 +82,8 @@ spec:
               value: {{ .Values.agent.eventLimit | quote }}
             - name: KUBEDECK_DNS_MANAGEMENT_ENABLED
               value: {{ .Values.dnsManagement.enabled | quote }}
+            - name: KUBEDECK_MANAGEMENT_ENABLED
+              value: {{ .Values.agent.managementEnabled | quote }}
             - name: KUBEDECK_COREDNS_NAMESPACE
               value: {{ required "dnsManagement.namespace is required" .Values.dnsManagement.namespace | quote }}
             - name: KUBEDECK_COREDNS_CUSTOM_CONFIGMAP

@@ -425,3 +425,28 @@ func readSSEBlock(t *testing.T, scanner *bufio.Scanner) string {
 	t.Fatal("SSE stream ended before the next block")
 	return ""
 }
+
+func TestManagementHandlerRemainsDisabledUntilConfiguredAndUsesBearerAuth(t *testing.T) {
+	server := New(staticSource{ready: true}, stream.NewBroker("test", 8), dnsconfig.New(kubernetesfake.NewSimpleClientset(), dnsconfig.Options{}), "test-token", time.Second, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	path := "/v1/manage/capabilities"
+	request := httptest.NewRequest(http.MethodGet, path, nil)
+	request.Header.Set("Authorization", "Bearer test-token")
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, request)
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("disabled status = %d", response.Code)
+	}
+	server.SetManagementHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+	response = httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthorized status = %d", response.Code)
+	}
+	request = httptest.NewRequest(http.MethodGet, path, nil)
+	request.Header.Set("Authorization", "Bearer test-token")
+	response = httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, request)
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("authorized status = %d", response.Code)
+	}
+}
