@@ -9,6 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	appsv1 "k8s.io/api/apps/v1"
+	authv1 "k8s.io/api/authorization/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -27,7 +30,7 @@ func testManager(t *testing.T) *Manager {
 		t.Fatal(err)
 	}
 	discovery := kubefake.NewSimpleClientset().Discovery().(*discoveryfake.FakeDiscovery)
-	discovery.Resources = []*metav1.APIResourceList{{GroupVersion: "v1", APIResources: []metav1.APIResource{{Name: "configmaps", Kind: "ConfigMap", Namespaced: true, Verbs: metav1.Verbs{"get", "list", "create", "update", "patch", "delete", "watch"}}, {Name: "secrets", Kind: "Secret", Namespaced: true}}}}
+	discovery.Resources = []*metav1.APIResourceList{{GroupVersion: "v1", APIResources: []metav1.APIResource{{Name: "configmaps", Kind: "ConfigMap", Namespaced: true, Verbs: metav1.Verbs{"get", "list", "create", "update", "patch", "delete", "watch"}}, {Name: "configmaps/status", Kind: "ConfigMap", Namespaced: true, Verbs: metav1.Verbs{"get"}}, {Name: "secrets", Kind: "Secret", Namespaced: true}, {Name: "secrets/status", Kind: "Secret", Namespaced: true, Verbs: metav1.Verbs{"get"}}}}}
 	item := &unstructured.Unstructured{Object: map[string]any{"apiVersion": "v1", "kind": "ConfigMap", "metadata": map[string]any{"name": "sample", "namespace": "apps", "resourceVersion": "4", "uid": "uid-1"}, "data": map[string]any{"a": "b"}}}
 	dyn := dynamicfake.NewSimpleDynamicClient(scheme, item)
 	return &Manager{Dynamic: dyn, Discovery: discovery, Kube: kubefake.NewSimpleClientset(), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
@@ -113,6 +116,95 @@ func TestCapabilitiesExcludeSecrets(t *testing.T) {
 	}
 	if !bytes.Contains(response.Body.Bytes(), []byte(`"resource":"configmaps"`)) {
 		t.Fatalf("ConfigMap missing: %s", response.Body.String())
+	}
+	if !bytes.Contains(response.Body.Bytes(), []byte(`"resource":"configmaps/status"`)) || bytes.Contains(response.Body.Bytes(), []byte(`"resource":"secrets/status"`)) {
+		t.Fatalf("subresource filtering incorrect: %s", response.Body.String())
+	}
+}
+
+func TestCapabilitiesCheckNamespaceAndSubresourceAuthorization(t *testing.T) {
+	m := testManager(t)
+	var checked []authv1.ResourceAttributes
+	m.Kube.(*kubefake.Clientset).PrependReactor("create", "selfsubjectaccessreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		attrs := *action.(k8stesting.CreateAction).GetObject().(*authv1.SelfSubjectAccessReview).Spec.ResourceAttributes
+		checked = append(checked, attrs)
+		return true, &authv1.SelfSubjectAccessReview{Status: authv1.SubjectAccessReviewStatus{Allowed: attrs.Verb == "get"}}, nil
+	})
+	response := request(m, "GET", "/v1/manage/capabilities?namespace=apps", nil, nil)
+	if response.Code != http.StatusOK {
+		t.Fatalf("capabilities status %d: %s", response.Code, response.Body.String())
+	}
+	var body struct {
+		Resources []struct {
+			Resource     string          `json:"resource"`
+			AllowedVerbs map[string]bool `json:"allowedVerbs"`
+		} `json:"resources"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	var found bool
+	for _, res := range body.Resources {
+		if res.Resource == "configmaps/status" {
+			found = true
+			if !res.AllowedVerbs["get"] {
+				t.Fatal("authorized status read omitted")
+			}
+		}
+		if res.Resource == "configmaps" && res.AllowedVerbs["delete"] {
+			t.Fatal("denied delete advertised as allowed")
+		}
+	}
+	if !found {
+		t.Fatal("status subresource missing")
+	}
+	var checkedStatus bool
+	for _, attrs := range checked {
+		if attrs.Namespace != "apps" || attrs.Resource != "configmaps" || attrs.Group != "" || attrs.Version != "v1" {
+			t.Fatalf("incorrect review attributes: %+v", attrs)
+		}
+		if attrs.Subresource == "status" && attrs.Verb == "get" {
+			checkedStatus = true
+		}
+	}
+	if !checkedStatus {
+		t.Fatal("no status subresource authorization review")
+	}
+}
+
+func TestCapabilitiesWithoutNamespaceDoNotInferNamespacedAccess(t *testing.T) {
+	m := testManager(t)
+	m.Kube.(*kubefake.Clientset).PrependReactor("create", "selfsubjectaccessreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		t.Fatal("unexpected authorization review without namespace")
+		return true, nil, nil
+	})
+	response := request(m, "GET", "/v1/manage/capabilities", nil, nil)
+	if response.Code != http.StatusOK || !bytes.Contains(response.Body.Bytes(), []byte(`"allowedVerbs":{}`)) {
+		t.Fatalf("capabilities status %d: %s", response.Code, response.Body.String())
+	}
+	if response := request(m, "GET", "/v1/manage/capabilities?namespace=invalid_name", nil, nil); response.Code != http.StatusBadRequest {
+		t.Fatalf("invalid namespace status %d", response.Code)
+	}
+}
+
+func TestReadWorkloadStatusAndScale(t *testing.T) {
+	m := testManager(t)
+	m.Kube.(*kubefake.Clientset).PrependReactor("get", "deployments", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		if action.GetSubresource() == "scale" {
+			return true, &autoscalingv1.Scale{ObjectMeta: metav1.ObjectMeta{Name: "sample", Namespace: "apps", ResourceVersion: "7"}, Spec: autoscalingv1.ScaleSpec{Replicas: 3}}, nil
+		}
+		return true, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "sample", Namespace: "apps"}, Status: appsv1.DeploymentStatus{AvailableReplicas: 2}}, nil
+	})
+	status := request(m, "GET", "/v1/manage/workloads/deployments/apps/sample/status", nil, nil)
+	if status.Code != http.StatusOK || !bytes.Contains(status.Body.Bytes(), []byte(`"availableReplicas":2`)) {
+		t.Fatalf("status read %d: %s", status.Code, status.Body.String())
+	}
+	scale := request(m, "GET", "/v1/manage/workloads/deployments/apps/sample/scale", nil, nil)
+	if scale.Code != http.StatusOK || !bytes.Contains(scale.Body.Bytes(), []byte(`"replicas":3`)) || !bytes.Contains(scale.Body.Bytes(), []byte(`"resourceVersion":"7"`)) {
+		t.Fatalf("scale read %d: %s", scale.Code, scale.Body.String())
+	}
+	if response := request(m, "GET", "/v1/manage/workloads/daemonsets/apps/sample/scale", nil, nil); response.Code != http.StatusBadRequest {
+		t.Fatalf("DaemonSet scale status %d", response.Code)
 	}
 }
 

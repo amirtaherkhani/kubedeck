@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,6 +38,7 @@ type Manager struct {
 func (m *Manager) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/manage/capabilities", m.capabilities)
+	mux.HandleFunc("GET /v1/manage/workloads/{kind}/{namespace}/{name}/{action}", m.readWorkload)
 	mux.HandleFunc("/v1/manage/resources/{group}/{version}/{resource}", m.resource)
 	mux.HandleFunc("GET /v1/manage/pods/{namespace}/{name}/logs", m.logs)
 	mux.HandleFunc("GET /v1/manage/events/{namespace}", m.events)
@@ -45,40 +47,127 @@ func (m *Manager) Handler() http.Handler {
 }
 
 func (m *Manager) capabilities(w http.ResponseWriter, r *http.Request) {
+	namespace := r.URL.Query().Get("namespace")
+	if namespace != "" && !segment.MatchString(namespace) {
+		http.Error(w, "invalid namespace", http.StatusBadRequest)
+		return
+	}
 	groups, err := m.Discovery.ServerGroups()
 	if err != nil {
 		writeError(w, err)
 		return
 	}
 	resources := make([]map[string]any, 0)
+	seen := make(map[string]bool)
+	appendResources := func(list *metav1.APIResourceList) error {
+		gv, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			return err
+		}
+		for _, res := range list.APIResources {
+			parts := strings.Split(res.Name, "/")
+			if parts[0] == "secrets" || len(parts) > 2 {
+				continue
+			}
+			key := list.GroupVersion + "/" + res.Name
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			subresource := ""
+			if len(parts) == 2 {
+				subresource = parts[1]
+			}
+			allowed := make(map[string]bool)
+			for _, verb := range res.Verbs {
+				// A namespaced review needs a concrete namespace to be meaningful.
+				if res.Namespaced && namespace == "" {
+					continue
+				}
+				review, err := m.Kube.AuthorizationV1().SelfSubjectAccessReviews().Create(r.Context(), &authv1.SelfSubjectAccessReview{Spec: authv1.SelfSubjectAccessReviewSpec{ResourceAttributes: &authv1.ResourceAttributes{Namespace: namespaceForReview(res.Namespaced, namespace), Verb: verb, Group: gv.Group, Version: gv.Version, Resource: parts[0], Subresource: subresource}}}, metav1.CreateOptions{})
+				if err != nil {
+					return err
+				}
+				allowed[verb] = review.Status.Allowed && !review.Status.Denied && review.Status.EvaluationError == ""
+			}
+			resources = append(resources, map[string]any{"groupVersion": list.GroupVersion, "resource": res.Name, "kind": res.Kind, "namespaced": res.Namespaced, "verbs": res.Verbs, "allowedVerbs": allowed})
+		}
+		return nil
+	}
 	for _, group := range groups.Groups {
 		for _, version := range group.Versions {
 			list, err := m.Discovery.ServerResourcesForGroupVersion(version.GroupVersion)
 			if err != nil {
 				continue
 			}
-			for _, res := range list.APIResources {
-				if strings.Contains(res.Name, "/") || res.Name == "secrets" {
-					continue
-				}
-				resources = append(resources, map[string]any{"groupVersion": version.GroupVersion, "resource": res.Name, "kind": res.Kind, "namespaced": res.Namespaced, "verbs": res.Verbs})
+			if err := appendResources(list); err != nil {
+				writeError(w, err)
+				return
 			}
 		}
 	}
 	// Core v1 may not appear in ServerGroups on every API server.
 	if list, err := m.Discovery.ServerResourcesForGroupVersion("v1"); err == nil {
-		for _, res := range list.APIResources {
-			if strings.Contains(res.Name, "/") || res.Name == "secrets" {
-				continue
-			}
-			resources = append(resources, map[string]any{"groupVersion": "v1", "resource": res.Name, "kind": res.Kind, "namespaced": res.Namespaced, "verbs": res.Verbs})
+		if err := appendResources(list); err != nil {
+			writeError(w, err)
+			return
 		}
 	}
 	metrics := false
 	if _, err := m.Discovery.ServerResourcesForGroupVersion("metrics.k8s.io/v1beta1"); err == nil {
 		metrics = true
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"managementEnabled": true, "metricsAvailable": metrics, "resources": resources, "workloadActions": []string{"scale", "restart", "status"}, "podLogs": true, "events": true, "note": "resource verbs describe API-server support; Kubernetes RBAC authorizes each request"})
+	writeJSON(w, http.StatusOK, map[string]any{"managementEnabled": true, "metricsAvailable": metrics, "resources": resources, "authorizationNamespace": namespace, "workloadActions": []string{"scale", "restart", "status"}, "podLogs": true, "events": true, "note": "allowedVerbs are point-in-time authorization checks; each operation is authorized again by Kubernetes"})
+}
+
+func namespaceForReview(namespaced bool, namespace string) string {
+	if namespaced {
+		return namespace
+	}
+	return ""
+}
+
+func (m *Manager) readWorkload(w http.ResponseWriter, r *http.Request) {
+	kind, namespace, name, action := r.PathValue("kind"), r.PathValue("namespace"), r.PathValue("name"), r.PathValue("action")
+	if !segment.MatchString(namespace) || !segment.MatchString(name) {
+		http.Error(w, "invalid workload", http.StatusBadRequest)
+		return
+	}
+	if action != "status" && action != "scale" {
+		http.Error(w, "unsupported read action", http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+	var value any
+	var err error
+	switch kind {
+	case "deployments":
+		if action == "scale" {
+			value, err = m.Kube.AppsV1().Deployments(namespace).GetScale(ctx, name, metav1.GetOptions{})
+		} else {
+			value, err = m.Kube.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+		}
+	case "statefulsets":
+		if action == "scale" {
+			value, err = m.Kube.AppsV1().StatefulSets(namespace).GetScale(ctx, name, metav1.GetOptions{})
+		} else {
+			value, err = m.Kube.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
+		}
+	case "daemonsets":
+		if action == "scale" {
+			http.Error(w, "DaemonSet scale unsupported", http.StatusBadRequest)
+			return
+		}
+		value, err = m.Kube.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
+	default:
+		http.Error(w, "unsupported workload", http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, value)
 }
 
 func (m *Manager) resource(w http.ResponseWriter, r *http.Request) {
