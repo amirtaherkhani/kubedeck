@@ -20,6 +20,7 @@ type Config struct {
 	Kubeconfig             string
 	BearerToken            string
 	DNSManagementEnabled   bool
+	ManagementEnabled      bool
 	CoreDNSNamespace       string
 	CoreDNSCustomConfigMap string
 	CoreDNSOverrideKey     string
@@ -50,6 +51,9 @@ func Load() (Config, error) {
 
 	var err error
 	if cfg.DNSManagementEnabled, err = boolEnv("KUBEDECK_DNS_MANAGEMENT_ENABLED", false); err != nil {
+		return Config{}, err
+	}
+	if cfg.ManagementEnabled, err = boolEnv("KUBEDECK_MANAGEMENT_ENABLED", false); err != nil {
 		return Config{}, err
 	}
 	if cfg.MetricsInterval, err = durationEnv("KUBEDECK_METRICS_INTERVAL", cfg.MetricsInterval); err != nil {
@@ -85,6 +89,9 @@ func Load() (Config, error) {
 			return Config{}, errors.New("KUBEDECK_COREDNS_OVERRIDE_KEY must end with .override")
 		}
 	}
+	if cfg.ManagementEnabled && cfg.BearerToken == "" {
+		return Config{}, errors.New("KUBEDECK_AGENT_TOKEN is required when management is enabled")
+	}
 	return cfg, nil
 }
 
@@ -102,7 +109,7 @@ func RESTConfig(cfg Config) (*rest.Config, error) {
 		return nil, fmt.Errorf("load Kubernetes client configuration: %w", err)
 	}
 
-	restConfig.UserAgent = "kubedeck-agent/0.1.1"
+	restConfig.UserAgent = "kubedeck-agent/0.2.0"
 	restConfig.QPS = 30
 	restConfig.Burst = 60
 	restConfig.Timeout = 30 * time.Second

@@ -16,6 +16,7 @@ cluster:
 
 agent:
   listenAddress: ":8080"
+  managementEnabled: false
   metricsInterval: 10s
   refreshDebounce: 250ms
   sseHeartbeat: 15s

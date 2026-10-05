@@ -11,7 +11,7 @@ const AGENT_TOKEN_KEY = "KUBEDECK_AGENT_TOKEN"
 export class AgentConfigurationError extends Error {}
 
 export function requestClusterAgent(
-  pathname: "/v1/snapshot" | "/v1/events" | "/v1/dns/config",
+  pathname: "/v1/snapshot" | "/v1/events" | "/v1/dns/config" | `/v1/manage/${string}`,
   init: RequestInit = {}
 ) {
   const environment = cloudflareEnv as unknown as Record<string, unknown>
@@ -31,8 +31,12 @@ export function requestClusterAgent(
       "KUBEDECK_AGENT_URL must use HTTP or HTTPS."
     )
   }
-  baseURL.pathname = `${baseURL.pathname.replace(/\/+$/u, "")}${pathname}`
-  baseURL.search = ""
+  const agentPath = new URL(pathname, "http://agent.invalid")
+  if (agentPath.pathname.includes("..") || agentPath.pathname.includes("%2f")) {
+    throw new AgentConfigurationError("Invalid agent path.")
+  }
+  baseURL.pathname = `${baseURL.pathname.replace(/\/+$/u, "")}${agentPath.pathname}`
+  baseURL.search = agentPath.search
   baseURL.hash = ""
 
   const headers = new Headers(init.headers)

@@ -4,6 +4,18 @@ All notable KubeDeck changes are documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-05
+
+### Added
+
+- Add an opt-in, bearer-authenticated Kubernetes management API for discovery,
+  bounded resource reads and writes, watches, pod logs, events, and workload
+  scale, restart, and status actions.
+- Add an authenticated dashboard management proxy and chart configuration.
+  Resource writes require identity checks, version preconditions, and explicit
+  confirmation; generic Secret access remains excluded.
+
+
 ## [0.1.4] - 2026-10-05
 
 ### Added
@@ -61,3 +73,4 @@ All notable KubeDeck changes are documented in this file.
 [0.1.2]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.1...v0.1.2
 [0.1.3]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.2...v0.1.3
 [0.1.4]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.3...v0.1.4
+[0.2.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.4...v0.2.0

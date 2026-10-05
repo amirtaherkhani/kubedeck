@@ -62,6 +62,37 @@ permission to scrape kubelet Summary APIs.
 | `GET /v1/events` | Reconnecting SSE stream |
 | `GET /v1/dns/config` | CoreDNS management state and service aliases |
 | `PUT /v1/dns/config` | Validate, preview, or replace managed service aliases |
+| `GET /v1/manage/capabilities` | Served resource verbs and Metrics API availability |
+| `GET/POST/PUT/PATCH/DELETE /v1/manage/resources/{group}/{version}/{resource}` | Bounded Kubernetes resource operations; use `core` for the core API group |
+| `GET /v1/manage/pods/{namespace}/{name}/logs` | Up to 1 MiB and 1,000 tail lines of pod logs |
+| `GET /v1/manage/events/{namespace}` | Up to 100 namespace events |
+| `POST /v1/manage/workloads/{kind}/{namespace}/{name}/{action}` | Deployment/StatefulSet scale, restart, status; DaemonSet restart/status |
+
+Management is disabled by default with `KUBEDECK_MANAGEMENT_ENABLED=false`.
+It requires a non-empty bearer token and an intentionally granted Kubernetes
+ServiceAccount role. The Helm chart requires `rbac.clusterAdmin=true` when
+management is enabled. The dashboard exposes an authenticated
+`/api/cluster/manage/...` proxy; management responses are never cached.
+
+Resource operations use discovery for served resource scope. `GET` supports
+`name` or a paginated list (`continue`), and a bounded newline-delimited watch
+with `watch=true&resourceVersion=...`. Namespace-scoped writes require
+`namespace`; `PUT` requires `metadata.resourceVersion`; merge `PATCH` and
+server-side apply require `If-Match` with the resource version. Apply also
+requires `fieldManager`. Write operations require exact
+`X-KubeDeck-Confirm: namespace/name`; `DELETE` additionally requires
+`If-Match-UID` and `If-Match` with the current resource version. Pass
+`dryRun=true` to ask the API server to validate without
+persisting a write. Scale accepts JSON `replicas` (0–100) and
+`resourceVersion`; restart requires `If-Match` and patches only the workload's
+pod-template restart annotation. The API server still enforces its own RBAC.
+
+Raw Secret resources are excluded from generic discovery and operations. Logs,
+events, ConfigMaps, and other resources can contain sensitive content; limit
+dashboard administrator access and avoid saving these responses. Audit logs
+record action metadata and request IDs, not request or response bodies.
+Exec, attach, port-forward, Helm operations, and generic subresource writes
+are not implemented; each needs separate streaming and authorization design.
 
 The stream sends an initial snapshot, debounced resource-change snapshots,
 metrics snapshots, and heartbeat comments. It supports the standard

@@ -29,7 +29,11 @@ type Server struct {
 	bearerToken string
 	heartbeat   time.Duration
 	logger      *slog.Logger
+	management  http.Handler
 }
+
+// SetManagementHandler enables the separately configured management API.
+func (s *Server) SetManagementHandler(handler http.Handler) { s.management = handler }
 
 func New(
 	source SnapshotSource,
@@ -57,6 +61,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /v1/events", s.authenticate(http.HandlerFunc(s.events)))
 	mux.Handle("GET /v1/dns/config", s.authenticate(http.HandlerFunc(s.dnsConfig)))
 	mux.Handle("PUT /v1/dns/config", s.authenticate(http.HandlerFunc(s.replaceDNSConfig)))
+	if s.management != nil {
+		mux.Handle("/v1/manage/", s.authenticate(s.management))
+	}
 	return s.recover(mux)
 }
 

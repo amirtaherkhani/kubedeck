@@ -33,3 +33,16 @@ func TestDNSManagementLoadsCoreDNSTarget(t *testing.T) {
 		t.Fatalf("unexpected DNS configuration: %#v", cfg)
 	}
 }
+
+func TestManagementRequiresBearerToken(t *testing.T) {
+	t.Setenv("KUBEDECK_MANAGEMENT_ENABLED", "true")
+	t.Setenv("KUBEDECK_AGENT_TOKEN", "")
+	if _, err := Load(); err == nil {
+		t.Fatal("management started without bearer token")
+	}
+	t.Setenv("KUBEDECK_AGENT_TOKEN", "test-token")
+	cfg, err := Load()
+	if err != nil || !cfg.ManagementEnabled {
+		t.Fatalf("management config: %v, %#v", err, cfg)
+	}
+}
