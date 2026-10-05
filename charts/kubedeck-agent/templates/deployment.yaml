@@ -4,6 +4,15 @@
 {{- if and .Values.dnsManagement.enabled (not .Values.auth.existingSecret) }}
 {{- fail "auth.existingSecret is required when dnsManagement.enabled=true." }}
 {{- end }}
+{{- if and .Values.rbac.clusterAdmin (not .Values.rbac.create) }}
+{{- fail "rbac.create is required when rbac.clusterAdmin=true." }}
+{{- end }}
+{{- if and .Values.rbac.clusterAdmin (not .Values.serviceAccount.create) }}
+{{- fail "serviceAccount.create is required when rbac.clusterAdmin=true to use a dedicated identity." }}
+{{- end }}
+{{- if and .Values.rbac.clusterAdmin (not .Values.auth.existingSecret) }}
+{{- fail "auth.existingSecret is required when rbac.clusterAdmin=true." }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
