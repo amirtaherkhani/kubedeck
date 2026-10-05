@@ -835,7 +835,7 @@ test("ships the versioned cleanup policy and release helper", async () => {
   assert.match(versionHelper, /charts\/kubedeck-agent\/Chart\.yaml/);
 });
 
-test("keeps the v0.1.3 package and Helm versions aligned", async () => {
+test("keeps the v0.1.4 package and Helm versions aligned", async () => {
   const [packageSource, dashboardChart, agentChart] = await Promise.all([
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../charts/kubedeck/Chart.yaml", import.meta.url), "utf8"),
@@ -846,7 +846,7 @@ test("keeps the v0.1.3 package and Helm versions aligned", async () => {
   ]);
   const releaseVersion = JSON.parse(packageSource).version;
 
-  assert.equal(releaseVersion, "0.1.3");
+  assert.equal(releaseVersion, "0.1.4");
   for (const chart of [dashboardChart, agentChart]) {
     assert.match(chart, new RegExp(`^version: ${releaseVersion}$`, "m"));
     assert.match(chart, new RegExp(`^appVersion: "${releaseVersion}"$`, "m"));

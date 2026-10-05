@@ -49,6 +49,9 @@ serviceAccount:
 
 rbac:
   create: true
+  # Grants this agent ServiceAccount every Kubernetes API permission.
+  # Enable only for a cluster where KubeDeck administrators are trusted.
+  clusterAdmin: false
 
 podAnnotations: {}
 podLabels: {}

@@ -42,6 +42,40 @@ agent:
 For a standalone installation that uses the `token` key above, set the
 application's `agent.tokenKey` to `token` as well.
 
+## Cluster administrator access
+
+The default ClusterRole allows discovery and metrics reads only. To grant this
+agent's ServiceAccount full Kubernetes API access on a dedicated cluster, set:
+
+```yaml
+rbac:
+  create: true
+  clusterAdmin: true
+```
+
+This binds the agent ServiceAccount to Kubernetes' built-in `cluster-admin`
+ClusterRole. It can then read Secrets and change or delete resources in every
+namespace. Keep the bearer token Secret configured, limit access to the
+internal agent Service, and review Kubernetes audit logs for this identity.
+The current HTTP API still exposes snapshot/SSE reads and the separately
+enabled, validated CoreDNS alias operation; this setting does not add generic
+Kubernetes write endpoints. Any future destructive operation needs its own
+authenticated API, authorization checks, dry-run/confirmation flow, and tests.
+
+For Docker Desktop KIND, leave `dnsManagement.enabled=false`: the K3s
+`coredns-custom` import is not part of KIND's default CoreDNS configuration.
+Load or publish a `linux/arm64` agent image into the Docker Desktop Kubernetes
+image store, and set `image.repository` and immutable `image.tag` to that image.
+The agent starts without `metrics.k8s.io`; node and pod CPU/memory usage stay
+unavailable until a compatible metrics-server is installed.
+Verify the rendered binding before installing:
+
+```bash
+helm template kubedeck-agent ./charts/kubedeck-agent \
+  --namespace development-tools --set rbac.clusterAdmin=true \
+  --set image.tag=IMMUTABLE_TAG
+```
+
 ## CoreDNS aliases
 
 K3s mounts the optional `kube-system/coredns-custom` ConfigMap and imports

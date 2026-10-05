@@ -4,6 +4,16 @@ All notable KubeDeck changes are documented in this file.
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-05
+
+### Added
+
+- Add an opt-in cluster-admin binding for the KubeDeck agent ServiceAccount,
+  with chart guards requiring a bearer token Secret and RBAC creation.
+- Document Docker Desktop KIND deployment constraints and the optional
+  Metrics API dependency.
+
+
 ## [0.1.3] - 2026-10-05
 
 ### Changed
@@ -49,3 +59,4 @@ All notable KubeDeck changes are documented in this file.
 [0.1.1]: https://github.com/amirtaherkhani/kubedeck/releases/tag/v0.1.1
 [0.1.2]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.1...v0.1.2
 [0.1.3]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.2...v0.1.3
+[0.1.4]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.3...v0.1.4

@@ -2,13 +2,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "kubedeck-agent.fullname" . }}
+  name: {{ include "kubedeck-agent.fullname" . }}{{ if .Values.rbac.clusterAdmin }}-admin{{ end }}
   labels:
     {{- include "kubedeck-agent.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "kubedeck-agent.fullname" . }}
+  name: {{ ternary "cluster-admin" (include "kubedeck-agent.fullname" .) .Values.rbac.clusterAdmin }}
 subjects:
   - kind: ServiceAccount
     name: {{ include "kubedeck-agent.serviceAccountName" . }}
