@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -126,5 +127,22 @@ func TestCreateRequiresExactConfirmation(t *testing.T) {
 	response = request(m, "POST", path, body, map[string]string{"X-KubeDeck-Confirm": "apps/other"})
 	if response.Code != 409 {
 		t.Fatalf("wrong create confirmation status %d", response.Code)
+	}
+}
+
+func TestMergePatchRejectsNullDocument(t *testing.T) {
+	m := testManager(t)
+	path := "/v1/manage/resources/core/v1/configmaps?namespace=apps&name=sample"
+	response := request(m, "PATCH", path, []byte("null"), map[string]string{"If-Match": "4", "X-KubeDeck-Confirm": "apps/sample"})
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("null patch status %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestScaleRequiresExplicitReplicas(t *testing.T) {
+	m := testManager(t)
+	response := request(m, "POST", "/v1/manage/workloads/deployments/apps/sample/scale", []byte(`{"resourceVersion":"4"}`), map[string]string{"X-KubeDeck-Confirm": "deployments/apps/sample"})
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("missing replicas status %d: %s", response.Code, response.Body.String())
 	}
 }

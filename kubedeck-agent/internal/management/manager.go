@@ -211,7 +211,7 @@ func (m *Manager) resource(w http.ResponseWriter, r *http.Request) {
 		}
 		if patchType == types.MergePatchType {
 			var patch map[string]any
-			if json.Unmarshal(body, &patch) != nil {
+			if json.Unmarshal(body, &patch) != nil || patch == nil {
 				http.Error(w, "invalid merge patch", 400)
 				return
 			}
@@ -381,10 +381,10 @@ func (m *Manager) workload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var req struct {
-			Replicas        int32  `json:"replicas"`
+			Replicas        *int32 `json:"replicas"`
 			ResourceVersion string `json:"resourceVersion"`
 		}
-		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&req) != nil || req.Replicas < 0 || req.Replicas > 100 || req.ResourceVersion == "" {
+		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&req) != nil || req.Replicas == nil || *req.Replicas < 0 || *req.Replicas > 100 || req.ResourceVersion == "" {
 			http.Error(w, "replicas 0..100 and resourceVersion required", 400)
 			return
 		}
@@ -398,7 +398,7 @@ func (m *Manager) workload(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "stale resourceVersion", 409)
 				return
 			}
-			current.Spec.Replicas = req.Replicas
+			current.Spec.Replicas = *req.Replicas
 			result, err := m.Kube.AppsV1().Deployments(namespace).UpdateScale(ctx, name, current, metav1.UpdateOptions{DryRun: dryRun(r)})
 			if err != nil {
 				writeError(w, err)
@@ -416,7 +416,7 @@ func (m *Manager) workload(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "stale resourceVersion", 409)
 			return
 		}
-		current.Spec.Replicas = req.Replicas
+		current.Spec.Replicas = *req.Replicas
 		result, err := m.Kube.AppsV1().StatefulSets(namespace).UpdateScale(ctx, name, current, metav1.UpdateOptions{DryRun: dryRun(r)})
 		if err != nil {
 			writeError(w, err)
