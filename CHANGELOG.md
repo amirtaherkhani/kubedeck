@@ -9,7 +9,8 @@ All notable KubeDeck changes are documented in this file.
 ### Added
 
 - Add an opt-in cluster-admin binding for the KubeDeck agent ServiceAccount,
-  with chart guards requiring a bearer token Secret and RBAC creation.
+  with chart guards requiring a bearer token Secret, RBAC creation, and a
+  dedicated ServiceAccount.
 - Document Docker Desktop KIND deployment constraints and the optional
   Metrics API dependency.
 

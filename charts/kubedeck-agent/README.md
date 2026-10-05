@@ -51,11 +51,14 @@ agent's ServiceAccount full Kubernetes API access on a dedicated cluster, set:
 rbac:
   create: true
   clusterAdmin: true
+serviceAccount:
+  create: true
 ```
 
 This binds the agent ServiceAccount to Kubernetes' built-in `cluster-admin`
 ClusterRole. It can then read Secrets and change or delete resources in every
-namespace. Keep the bearer token Secret configured, limit access to the
+namespace. The chart requires a dedicated ServiceAccount in this mode. Keep
+the bearer token Secret configured, limit access to the
 internal agent Service, and review Kubernetes audit logs for this identity.
 The current HTTP API still exposes snapshot/SSE reads and the separately
 enabled, validated CoreDNS alias operation; this setting does not add generic
