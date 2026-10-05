@@ -4,10 +4,13 @@ All notable KubeDeck changes are documented in this file.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-05
+
 ### Changed
 
-- Replace animated liquid grid and orbit backdrops with the supplied static
-  purple gradient and grain texture.
+- Refresh the dashboard visual style and KubeDeck brand, including a static
+  purple gradient with grain texture and a simplified logo mark.
+- Align the dashboard package and both Helm charts at version `0.1.3`.
 
 ## [0.1.2] - 2026-10-03
 
@@ -45,3 +48,4 @@ All notable KubeDeck changes are documented in this file.
 
 [0.1.1]: https://github.com/amirtaherkhani/kubedeck/releases/tag/v0.1.1
 [0.1.2]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.1...v0.1.2
+[0.1.3]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.2...v0.1.3
