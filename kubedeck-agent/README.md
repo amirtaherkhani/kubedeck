@@ -62,10 +62,11 @@ permission to scrape kubelet Summary APIs.
 | `GET /v1/events` | Reconnecting SSE stream |
 | `GET /v1/dns/config` | CoreDNS management state and service aliases |
 | `PUT /v1/dns/config` | Validate, preview, or replace managed service aliases |
-| `GET /v1/manage/capabilities` | Served resource verbs and Metrics API availability |
+| `GET /v1/manage/capabilities?namespace=apps` | Served resources and subresources, their verbs, point-in-time authorization checks, and Metrics API availability |
 | `GET/POST/PUT/PATCH/DELETE /v1/manage/resources/{group}/{version}/{resource}` | Bounded Kubernetes resource operations; use `core` for the core API group |
 | `GET /v1/manage/pods/{namespace}/{name}/logs` | Up to 1 MiB and 1,000 tail lines of pod logs |
 | `GET /v1/manage/events/{namespace}` | Up to 100 namespace events |
+| `GET /v1/manage/workloads/{kind}/{namespace}/{name}/{action}` | Deployment/StatefulSet status or scale; DaemonSet status |
 | `POST /v1/manage/workloads/{kind}/{namespace}/{name}/{action}` | Deployment/StatefulSet scale, restart, status; DaemonSet restart/status |
 
 Management is disabled by default with `KUBEDECK_MANAGEMENT_ENABLED=false`.
@@ -86,6 +87,12 @@ requires `fieldManager`. Write operations require exact
 persisting a write. Scale accepts JSON `replicas` (0–100) and
 `resourceVersion`; restart requires `If-Match` and patches only the workload's
 pod-template restart annotation. The API server still enforces its own RBAC.
+Capabilities include `allowedVerbs` from SelfSubjectAccessReviews for the
+agent ServiceAccount. Pass a concrete `namespace` to evaluate namespaced
+resources; without one, their `allowedVerbs` are empty. Authorization results
+are informational snapshots, not grants, and Kubernetes checks every actual
+operation again. `GET` workload status returns the typed workload object;
+`GET` scale returns the typed Scale object with its resource version.
 
 Raw Secret resources are excluded from generic discovery and operations. Logs,
 events, ConfigMaps, and other resources can contain sensitive content; limit
