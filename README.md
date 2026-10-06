@@ -117,6 +117,7 @@ flowchart LR
 
 ## Operations roadmaps
 
+- [Versioned delivery roadmap, status, and history](docs/roadmap/README.md) — v0.2.0 baseline through v1.0.0, v1.1.0–v1.4.0, and v2.0.0.
 - [Rancher Desktop to Docker Desktop migration](docs/migration/rancher-to-docker-desktop.md) — planning and acceptance record for moving the local cluster, Infisical-backed environments, and developer DNS to Docker Desktop and Technitium. It does not authorize running the migration.
 
 The current Helm release runs one application replica because its embedded D1
