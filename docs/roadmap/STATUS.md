@@ -1,20 +1,20 @@
 # Roadmap status
 
-**As of:** 2026-10-06 (Asia/Tehran). **Current:** Phase 0 — inventory and recovery planning; step V1-01 is in progress. No roadmap release has been implemented or verified by this planning update.
+**As of:** 2026-10-06 (Asia/Tehran). **Current:** V1 recovery implementation is in progress. The [live recovery record](v1-recovery-2026-10-06.md) separates verified paths from open gates. v1.0.0 is not released.
 
 | ID | Target | State | Last evidence | Next action |
 | --- | --- | --- | --- | --- |
-| V1-01 | v1.0.0 | In progress | [2026-10-06 baseline](baseline-2026-10-06.md): partial read-only inventory | Reconcile all release manifests, actual services, dependencies, data, host ports, and consumer projects |
-| V1-02 | v1.0.0 | Not started | — | Prove backups, Infisical development restore, and per-PVC data policy |
-| V1-03 | v1.0.0 | Not started | Docker Desktop node Ready only | Validate Docker profile, context, capacity, storage, restart behavior |
-| V1-04 | v1.0.0 | Not started | CoreDNS, Traefik, Technitium pods Running only | Design/test LAN DNS bootstrap, dynamic IP, ingress, TLS, and client reachability |
-| V1-05 | v1.0.0 | Not started | Five Helm releases deployed; application inventory incomplete | Restore selected platform and developer tools in dependency order |
-| V1-06 | v1.0.0 | Not started | — | Deploy KubeDeck and verify agent/UI authenticated path |
+| V1-01 | v1.0.0 | In progress | [Live recovery record](v1-recovery-2026-10-06.md): runtime, listeners, Helm, PVCs and secret dependency checked | Confirm active client consumers, service ownership, exact data policy |
+| V1-02 | v1.0.0 | In progress | 51 home-lab and 347 Finance export records exactly matched live `dev` targets; connector and Operator identity work | Prove isolated DB backup with original key and per-PVC policy |
+| V1-03 | v1.0.0 | In progress | Docker Desktop runtime, node allocatable resources, PVCs and host 80/443 checked | Validate restart persistence, disk and selected workload budget |
+| V1-04 | v1.0.0 | In progress | TCP/UDP 53, localhost resolver, Host Agent, and trusted Infisical HTTPS 200 pass on Mac | Verify router/client DNS bootstrap, IP change, restart and other routes |
+| V1-05 | v1.0.0 | In progress | PostgreSQL, Redis, RabbitMQ and NATS are Ready; authenticated PostgreSQL/RabbitMQ/NATS paths pass; unauthenticated Redis LAN listener removed; MinIO image digest unavailable | Restore compatible S3, prove persistence and external project workflows, select remaining tools |
+| V1-06 | v1.0.0 | In progress | KubeDeck and Kubernetes Agent are Ready; trusted HTTPS login, cluster snapshot and SSE pass; Metrics Server reports node/Pod usage | Verify UI management workflows, restart persistence and scope of Agent permissions |
 | V1-07 | v1.0.0 | Not started | — | Verify other-project connections and end-to-end workflows |
 | V1-08 | v1.0.0 | Not started | — | Record rollback, release acceptance, and tag/release evidence |
 | V11-01 | v1.1.0 | Not started | — | Define agent boundaries and capability contract |
 | V11-02 | v1.1.0 | Not started | — | Extend Kubernetes and Helm operations |
-| V11-03 | v1.1.0 | Not started | — | Implement Go Host Agent and macOS adapter |
+| V11-03 | v1.1.0 | In progress | Go DNS reconciler and launchd installer implemented early for V1-04 | Extend host-control capabilities and supported OS adapters after V1 |
 | V11-04 | v1.1.0 | Not started | — | Connect REST, SSE, and interactive streams |
 | V12-01 | v1.2.0 | Not started | — | Adopt approved module descriptors |
 | V12-02 | v1.2.0 | Not started | — | Build independent Helm lifecycle reconciler |
