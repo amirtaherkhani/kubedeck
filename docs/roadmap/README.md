@@ -20,22 +20,22 @@ For v1.0.0, Phase 0 is inventory (V1-01); Phase 1 is data and Docker prerequisit
 ## Boundaries
 
 ```text
-macOS host: Host Agent (Go) -> Docker Desktop / Docker Engine / host network
+macOS host: browser + scoped resolver -> Technitium DNS -> Traefik ingress
+            Host Agent (Go) -> Docker Desktop / Docker Engine / host network
                                         |
 Docker Desktop Kubernetes: Traefik -> managed tools and client workloads
                            CoreDNS -> *.svc.cluster.local
                            Kubernetes Agent (Go) -> Kubernetes API
-LAN clients -> Technitium DNS -> current Traefik host endpoint
 Web/desktop UI -> authenticated KubeDeck API -> agents
 ```
 
 - Docker Desktop and its **built-in** Kubernetes are prerequisites. Docker Desktop may report its internal mode as `kind`; KubeDeck does not create or own a separate kind cluster.
-- CoreDNS resolves Kubernetes services. Technitium owns the developer LAN zone. Traefik owns HTTP(S) ingress. These roles must remain distinct.
+- CoreDNS resolves Kubernetes services. Technitium owns Mac-local developer names. Traefik owns HTTP(S) ingress. These roles must remain distinct.
 - The Kubernetes Agent manages cluster resources; the Host Agent manages macOS network state, Docker Desktop/Engine, and DNS reconciliation. Technitium is the DNS server, not a host-control agent.
 - V1 is one local Mac and one Docker Desktop Kubernetes cluster. Other Macs must be installable from the same portable project; remote host enrollment and multiple clusters are later design decisions.
 - Existing `lab/core/helm/releases.conf` remains the deployment source of truth until a reviewed module lifecycle replaces it. `ServiceModule` and `InstallationProfile` schemas are already present but do not deploy services by themselves.
 - Finance and other applications are **external client workloads**. Their ownership, charts, secrets, and acceptance remain with those projects; KubeDeck exposes and validates their dependencies without silently absorbing them.
-- Do not treat `Running` pods, `deployed` Helm releases, or a DNS answer alone as service acceptance. Verify the intended client path and application behavior.
+- Do not treat `Running` pods, `deployed` Helm releases, or a DNS answer alone as service acceptance. Verify the Mac-local path and application behavior.
 
 ## How to maintain this roadmap
 

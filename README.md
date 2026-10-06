@@ -99,6 +99,18 @@ intranet portal:
 6. **Settings** prepare the application for users, roles, cluster connections,
    discovery rules, and application preferences.
 
+## Local DNS names
+
+The local `*.local.dev` names are for opening services from the Mac that runs
+the development cluster. Technitium resolves the names to the Mac's local
+ingress address, and Traefik routes each configured hostname to its service
+over HTTPS. The Host Agent updates the wildcard address when the Mac's active
+IPv4 address changes.
+
+A new service can use a hostname under `local.dev` through the wildcard DNS
+record. It still needs a matching Ingress host and TLS configuration. Services
+that need a distinct DNS answer can use an explicit Technitium record.
+
 ## Architecture
 
 ```mermaid
