@@ -8,7 +8,7 @@
 | V1-02 | v1.0.0 | In progress | 51 home-lab and 347 Finance export records exactly matched live `dev` targets; connector and Operator identity work | Prove isolated DB backup with original key and per-PVC policy |
 | V1-03 | v1.0.0 | In progress | Docker Desktop runtime, node allocatable resources, PVCs and host 80/443 checked | Validate restart persistence, disk and selected workload budget |
 | V1-04 | v1.0.0 | In progress | TCP/UDP 53, localhost resolver, Host Agent, and trusted Infisical HTTPS 200 pass on Mac | Verify router/client DNS bootstrap, IP change, restart and other routes |
-| V1-05 | v1.0.0 | In progress | PostgreSQL, Redis, RabbitMQ and NATS are Ready; authenticated PostgreSQL/RabbitMQ/NATS paths pass; unauthenticated Redis LAN listener removed; MinIO image digest unavailable | Restore compatible S3, prove persistence and external project workflows, select remaining tools |
+| V1-05 | v1.0.0 | In progress | PostgreSQL, Redis, RabbitMQ, NATS and SeaweedFS S3 are Ready; S3 contract and Pod restart persistence pass; unauthenticated Redis LAN listener removed | Prove external project workflows and backups; select remaining required tools |
 | V1-06 | v1.0.0 | In progress | KubeDeck and Kubernetes Agent are Ready; trusted HTTPS login, cluster snapshot and SSE pass; Metrics Server reports node/Pod usage | Verify UI management workflows, restart persistence and scope of Agent permissions |
 | V1-07 | v1.0.0 | Not started | — | Verify other-project connections and end-to-end workflows |
 | V1-08 | v1.0.0 | Not started | — | Record rollback, release acceptance, and tag/release evidence |

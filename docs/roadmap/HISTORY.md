@@ -14,6 +14,7 @@ Append new entries. Record observation, implementation, target verification, mer
 | 2026-10-06 | V1-05 | PostgreSQL, RabbitMQ and NATS became Ready; authenticated cluster and Mac client protocol checks passed | [Live recovery record](v1-recovery-2026-10-06.md); PostgreSQL query, RabbitMQ HTTPS API, NATS `PONG` | Restore compatible S3 and prove application workflows/persistence |
 | 2026-10-06 | V1-05 | Rejected incompatible PostgreSQL image change and restored the original image without deleting its PVC | [Live recovery record](v1-recovery-2026-10-06.md); existing PostgreSQL 18 data and Ready Pod | Back up and plan migration before any image family or major version change |
 | 2026-10-06 | V1-04/V1-06 | Traefik namespace watch expanded; KubeDeck Agent/dashboard and Metrics Server became Ready | [Live recovery record](v1-recovery-2026-10-06.md); trusted dashboard login, snapshot, SSE, `kubectl top` | LAN client DNS, application workflows, and restart gates remain open |
+| 2026-10-06 | V1-05 | Separate SeaweedFS S3 module deployed without changing the retained MinIO PVC; HTTPS API contract and Pod restart readback passed | [Live recovery record](v1-recovery-2026-10-06.md); `object-storage` Helm release, versioned checksum/SSE/tag/multipart checks | Validate backup/restore, external project workflow, and a second LAN client |
 
 ## Entry template
 
