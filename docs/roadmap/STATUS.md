@@ -7,7 +7,7 @@
 | V1-01 | v1.0.0 | In progress | [Live recovery record](v1-recovery-2026-10-06.md): runtime, listeners, Helm, PVCs and secret dependency checked | Confirm active client consumers, service ownership, exact data policy |
 | V1-02 | v1.0.0 | In progress | 51 home-lab and 347 Finance export records exactly matched live `dev` targets; connector and Operator identity work | Prove isolated DB backup with original key and per-PVC policy |
 | V1-03 | v1.0.0 | In progress | Docker Desktop runtime, node allocatable resources, PVCs and host 80/443 checked | Validate restart persistence, disk and selected workload budget |
-| V1-04 | v1.0.0 | In progress | TCP/UDP 53, localhost resolver, Host Agent, and trusted Infisical HTTPS 200 pass on Mac | Verify router/client DNS bootstrap, IP change, restart and other routes |
+| V1-04 | v1.0.0 | In progress | TCP/UDP 53, localhost resolver, Host Agent, and trusted Infisical HTTPS 200 pass on Mac | Verify Mac-local DNS after IP change and Docker Desktop restart; check all required local routes |
 | V1-05 | v1.0.0 | In progress | PostgreSQL, Redis, RabbitMQ, NATS and SeaweedFS S3 are Ready; S3 contract and Pod restart persistence pass; unauthenticated Redis LAN listener removed | Prove external project workflows and backups; select remaining required tools |
 | V1-06 | v1.0.0 | In progress | KubeDeck and Kubernetes Agent are Ready; trusted HTTPS login, cluster snapshot and SSE pass; Metrics Server reports node/Pod usage | Verify UI management workflows, restart persistence and scope of Agent permissions |
 | V1-07 | v1.0.0 | Not started | — | Verify other-project connections and end-to-end workflows |
@@ -35,4 +35,4 @@
 
 **Gate rule:** A parent version is `Verified` only when every required task in its version file is verified and its release acceptance checklist passes. `Released` requires the tag and GitHub release URL. A blocked task records the exact obstacle and owner in the history entry.
 
-**Known risk:** Technitium is currently a ClusterIP Service. A changing Mac LAN IP cannot automatically be a stable DNS server address for other LAN devices unless router DHCP/DNS is updated automatically or clients use a stable resolver endpoint. V1-04 must prove one supported end-to-end path; simply changing A records is insufficient.
+**Scope decision (2026-10-06):** v1.0.0 serves the Mac that runs Docker Desktop. Phone and other LAN-client browsing, router DHCP/DNS integration, and remote resolver bootstrap are out of scope. The required path is the Mac's scoped resolver to Technitium, local ingress, and service hostname. The Host Agent must keep DNS answers aligned with the Mac's current address.
