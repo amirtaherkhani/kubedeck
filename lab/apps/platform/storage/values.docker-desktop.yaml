@@ -1,0 +1,38 @@
+# Docker Desktop's built-in Kubernetes uses the default `standard` StorageClass.
+# The Infisical project slug and environment are resolved at deployment time.
+postgresql:
+  persistence:
+    storageClass: standard
+pgadmin:
+  persistence:
+    storageClass: standard
+redis:
+  persistence:
+    storageClass: standard
+rabbitmq:
+  image:
+    repository: rabbitmq
+    tag: 3-management
+  persistence:
+    storageClass: standard
+kafka:
+  persistence:
+    storageClass: standard
+mongodb:
+  persistence:
+    storageClass: standard
+nats:
+  persistence:
+    storageClass: standard
+natsUi:
+  persistence:
+    storageClass: standard
+minio:
+  persistence:
+    storageClass: standard
+mailpit:
+  persistence:
+    storageClass: standard
+jaeger:
+  image:
+    repository: jaegertracing/jaeger
