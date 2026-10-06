@@ -1,0 +1,20 @@
+# KubeDeck macOS Host Agent: V1 DNS reconciler
+
+This small Go process runs in the signed-in macOS user's `launchd` session. It discovers the default-route LAN interface and private IPv4 address, opens a localhost-only Kubernetes port-forward to Technitium's admin API, and reconciles `*.local.dev` with a 30-second TTL. It reads the existing `technitium-admin` Secret through the user's `docker-desktop` kubeconfig; no credential or host IP is stored in this repository or process arguments. It skips writes when the DNS record is already current. `RunAtLoad` and a 30-second launchd interval cover IP changes and restart recovery.
+
+Prerequisites: Docker Desktop Kubernetes running in the `docker-desktop` context, a healthy Technitium Service, `kubectl`, Go for installation, and access to the Technitium Secret. Install for the current macOS user:
+
+```sh
+./host-agent/install-macos.sh
+launchctl print "gui/$(id -u)/dev.kubedeck.host-agent"
+```
+
+For a single reconciliation without installing launchd:
+
+```sh
+cd host-agent && go run ./cmd/kubedeck-host-agent
+```
+
+If a VPN changes the default route to `utun`, the agent refuses to publish that address. On a multi-interface Mac, run the binary with `-interface en0` or another actual LAN interface after checking the routing profile. The agent currently handles IPv4 only. It updates DNS **answers**; it cannot update the DNS **server address** previously handed to LAN clients by router DHCP. That bootstrap still requires a stable router DNS endpoint, DHCP reservation, or verified router integration.
+
+The agent's Kubernetes credential can read the existing admin Secret. Treat that user account and kubeconfig as privileged; a dedicated scoped Technitium API credential and finer host permissions belong to later hardening work. The admin API is never published by the LAN overlay.

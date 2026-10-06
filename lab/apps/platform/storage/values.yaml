@@ -2,6 +2,10 @@
 ## credentials are synchronized from Infisical into namespace-local Secrets.
 inlineSecrets: false
 
+infisical:
+  projectSlug: home-lab
+  envSlug: local
+
 postgresql:
   enabled: true
   name: postgresql

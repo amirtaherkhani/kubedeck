@@ -1,0 +1,5 @@
+# Docker Desktop's built-in kind kubelet presents a serving certificate
+# without an IP SAN for its advertised InternalIP. This exception is scoped
+# to the local development cluster; do not reuse it for remote clusters.
+args:
+  - --kubelet-insecure-tls

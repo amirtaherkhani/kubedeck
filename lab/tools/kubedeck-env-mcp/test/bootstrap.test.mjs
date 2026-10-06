@@ -39,7 +39,7 @@ test("credential reconciliation revokes only superseded connector credentials", 
       fi
     }
     revoke_superseded_client_secrets token identity current
-  `, "test", bootstrap], { env: { ...process.env, TEST_LOG: log } });
+  `, "test", bootstrap], { env: { ...process.env, TEST_LOG: log, INFISICAL_CLIENT_SECRET_DESCRIPTION: "local-dev-env-mcp on this Mac" } });
   assert.equal(readFileSync(log, "utf8").trim(), "/auth/universal-auth/identities/identity/client-secrets/old/revoke");
 });
 

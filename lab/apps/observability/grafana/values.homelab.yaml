@@ -1,5 +1,9 @@
 replicas: 1
 
+infisical:
+  projectSlug: home-lab
+  envSlug: local
+
 envFromSecret: grafana-admin
 
 admin:

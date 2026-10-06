@@ -1,0 +1,33 @@
+# V1 recovery profile: start shared development dependencies before optional UIs.
+# Enable further modules after the consuming projects and image pulls are checked.
+redis:
+  # This chart has no Redis password; do not publish unauthenticated Redis
+  # on every LAN interface through Docker Desktop's LoadBalancer.
+  service:
+    type: ClusterIP
+pgadmin:
+  enabled: false
+redisCommander:
+  enabled: false
+kafka:
+  enabled: false
+kafkaUi:
+  enabled: false
+schemaRegistry:
+  enabled: false
+mongodb:
+  enabled: false
+mongoku:
+  enabled: false
+natsUi:
+  enabled: false
+jaeger:
+  enabled: false
+mailpit:
+  enabled: false
+grpcui:
+  enabled: false
+# The pinned MinIO digest no longer resolves. Keep its PVC intact while
+# selecting and validating an S3-compatible replacement/image.
+minio:
+  enabled: false
