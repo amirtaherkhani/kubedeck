@@ -7,7 +7,7 @@ readonly IDENTITY_NAME="local-dev-agents"
 readonly KEYCHAIN_SERVICE="my-home-lab.infisical.agent.local-dev"
 readonly ADMIN_KEYCHAIN_SERVICE="my-home-lab.infisical.admin"
 readonly ADMIN_EMAIL="admin@local.dev"
-readonly CLIENT_SECRET_DESCRIPTION="local-dev-env-mcp on this Mac"
+readonly CLIENT_SECRET_DESCRIPTION="${INFISICAL_CLIENT_SECRET_DESCRIPTION:-local-dev-env-mcp on $(hostname -s)}"
 readonly HOME_LAB_PROJECT_ID="e064fd84-b51e-4318-8442-8f30fec2b316"
 readonly FINANCE_PROJECT_ID="4574398d-423d-49bc-90e0-1e6a57a20c23"
 readonly CLIENT_SECRET_TTL="31536000"
@@ -212,4 +212,9 @@ main() {
   printf 'kubedeck-env-mcp is installed, registered, and authenticated for local development.\n'
 }
 
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  if command -v kubectl >/dev/null 2>&1 && [[ "$(kubectl config current-context 2>/dev/null)" == docker-desktop ]]; then
+    exec "${REPO_ROOT}/scripts/docker-desktop-infisical-access.sh" "$@"
+  fi
+  main "$@"
+fi

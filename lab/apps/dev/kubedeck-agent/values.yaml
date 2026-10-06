@@ -1,5 +1,9 @@
 replicaCount: 1
 
+infisical:
+  projectSlug: home-lab
+  envSlug: local
+
 image:
   repository: localhost:5001/homelab/dev/kubedeck-agent
   tag: "v0.1.0"
