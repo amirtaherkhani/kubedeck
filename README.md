@@ -245,7 +245,8 @@ the agent before the dashboard; and runs an authenticated dashboard-to-agent
 snapshot smoke test before reporting success:
 
 ```bash
-bash .agents/skills/kubedeck-build-deploy/scripts/deploy.sh --branch main
+KUBEDECK_CLEANUP_OLD_IMAGES=false \
+  bash .agents/skills/kubedeck-build-deploy/scripts/deploy.sh --branch main
 ```
 
 The default deployment targets the home-lab contract: namespace
@@ -267,9 +268,14 @@ building:
 bash .agents/skills/kubedeck-build-deploy/scripts/bump-version.sh patch
 ```
 
-After a healthy rollout, the release workflow removes old KubeDeck registry
-tags, local builder images, zero-replica ReplicaSets, and non-running old pods.
-Set `KUBEDECK_CLEANUP_OLD_IMAGES=false` when a rollback image must be retained.
+This script targets the legacy Rancher Desktop deployment. After a healthy
+KubeDeck or owned subservice deployment, follow the
+[post-deployment image cleanup procedure](.agents/skills/kubedeck-build-deploy/SKILL.md#post-deployment-image-cleanup).
+It checks Docker Desktop's image store and the KIND node cache separately and
+removes only unused, recoverable versions by exact identifier. The legacy
+script's automatic image sweep stays disabled. Its Kubernetes object cleanup
+still removes old zero-replica ReplicaSets and non-running pods after health
+verification, so run it only when that cleanup is in scope.
 
 The runtime forwards `KUBEDECK_AGENT_URL` and `KUBEDECK_AGENT_TOKEN` into the
 local Wrangler Worker as server-only bindings. The bearer token is never sent

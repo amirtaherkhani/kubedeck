@@ -1,7 +1,8 @@
 # KubeDeck Build and Deploy Policy
 
-This policy governs releases of the dashboard and `kubedeck-agent` to the
-Rancher Desktop cluster and the local registry.
+This policy governs releases of the dashboard, `kubedeck-agent`, and
+KubeDeck-owned subservices. Verify the active Kubernetes context and image
+store; do not assume the legacy Rancher Desktop defaults match Docker Desktop.
 
 ## Version and image identity
 
@@ -29,15 +30,25 @@ Rancher Desktop cluster and the local registry.
    `localhost:5001`. For an approved local-only install, load both images in
    containerd's `k8s.io` namespace and verify their exact version tags there;
    do not run the registry-pushing deployment script.
-4. After both new deployments and the dashboard-to-agent path are healthy,
-   remove old images only when that exact cleanup is authorized. Inventory
-   the two KubeDeck repositories and the relevant containerd namespace, check
-   delete permissions, and preserve the current image plus any active
-   rollback image. Use `KUBEDECK_CLEANUP_OLD_IMAGES=false` to skip deletion.
+4. After the new deployment, readiness, endpoints, logs, and any dependent
+   application path are healthy, inspect older versions of only the
+   deployed KubeDeck-owned components. Use
+   `KUBEDECK_CLEANUP_OLD_IMAGES=false` with the legacy deployment script;
+   perform image cleanup as a separate reviewed step because its automatic
+   tag sweep does not establish the safeguards below.
 
-Registry cleanup is limited to KubeDeck repositories. It must never remove an
-image referenced by a Ready KubeDeck pod, and it must never remove unrelated
-repositories or credentials.
+For each exact tag and digest candidate, inventory Docker Desktop's local
+image store and the KIND node's containerd `k8s.io` cache separately, plus
+any registry used for that deployment. Check all namespaces and running
+containers/workloads for references by tag, digest, and image ID. Keep the
+current image, images in use, and any required rollback image. Remove an older
+unused image only after proving it is recoverable from its exact source commit
+or a verified registry digest, checking delete permissions, and confirming the
+target store and image ID/digest. Delete only explicit candidates; never use
+`prune`, wildcard deletes, or force. Preserve unique or unrecoverable images,
+volumes, Secrets, other projects' images, and unrelated registry repositories.
+Record cleaned and retained versions, stores, identifiers, and reasons. If a
+check is unavailable, retain the image and report why.
 
 ## Kubernetes rollout cleanup
 
