@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Added the version-matched Traefik provider CRDs to Docker Desktop core setup so middleware-backed Ingress routes, including NATS Monitor, can reconcile.
+
 ### Added
 
 - Added explicit multi-project bootstrap through `INFISICAL_LOCAL_DEV_PROJECT_IDS` for the central local development agent identity.
