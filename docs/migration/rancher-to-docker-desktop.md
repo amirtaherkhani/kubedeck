@@ -4,10 +4,10 @@
 **Target:** Docker Desktop with one local Kubernetes cluster, subject to host-feasibility and runtime-choice gates.
 **Required developer DNS target:** Technitium.
 **Keep:** Kubernetes CoreDNS for internal cluster DNS, Traefik for ingress, and cert-manager for TLS; verify each live role before cutover.
-**DNS access scope:** Mac-local development only. The Mac running Docker Desktop must open `*.local.dev` through its scoped resolver. Phone and other LAN-client browsing is out of scope.
+**DNS access scope:** local development on the current Mac only. The Mac running Docker Desktop opens `*.local.dev` through its scoped resolver.
 **Current source state:** Rancher `rancher-desktop` node was read-only verified Ready on Kubernetes `v1.36.4+k3s1` (ARM64, containerd `2.3.2`). Docker Desktop app bundle is `4.93.0`; daemon/Kubernetes health remains unverified.
 
-This roadmap is the operating record for future Codex/Nova sessions. It does not authorize starting either desktop, resetting or installing a cluster, backing up/restoring data, changing DNS/firewall/router settings, moving volumes, publishing a release, or deleting the old environment. Preserve Rancher and the old DNS chain as rollback resources until all migration gates pass. WAN exposure is out of scope unless separately requested. Never put secret values in this document or evidence.
+This roadmap is the operating record for future Codex/Nova sessions. It does not authorize starting either desktop, resetting or installing a cluster, backing up/restoring data, changing DNS/firewall settings, moving volumes, publishing a release, or deleting the old environment. Preserve Rancher and the old DNS chain as rollback resources until all migration gates pass. Never put secret values in this document or evidence.
 
 ## Checkpoint history
 
@@ -85,7 +85,7 @@ This map intentionally leaves long-term consolidation open. A future category re
 
 ## DNS, ingress, TLS and Mac-local access
 
-Technitium is the **required final developer/local DNS service** for the Mac running Docker Desktop. Configure the Mac's scoped `local.dev` resolver to reach it, and resolve service names to the Mac's current local ingress address. Phone and other LAN-client access, router DHCP/DNS integration, and WAN exposure are out of scope. The existing dnsmasq/CoreDNS `local.dev` forwarding chain is a rollback path only; it must not remain the final source of developer DNS records. CoreDNS itself remains in the target cluster for `*.svc.cluster.local` and Kubernetes DNS. Keep Traefik and cert-manager, but verify actual live routing/issuance roles before cutover.
+Technitium is the **required final developer/local DNS service** for the current Mac running Docker Desktop. Configure the scoped `local.dev` resolver to reach it and resolve service names to the current local ingress address. The existing dnsmasq/CoreDNS `local.dev` forwarding chain is a rollback path only; it must not remain the final source of developer DNS records. CoreDNS itself remains in the target cluster for `*.svc.cluster.local` and Kubernetes DNS. Keep Traefik and cert-manager, but verify actual live routing/issuance roles before cutover.
 
 ### Existing local DNS contract
 
@@ -101,7 +101,7 @@ Technitium is the **required final developer/local DNS service** for the Mac run
 
 1. Run Technitium with persistent configuration and a secure admin path from the Mac. Avoid a DNS bootstrap loop: keep its UI/API reachable by a fixed local bootstrap address while its own zone is being configured.
 2. Configure Technitium as the Mac's authoritative local resolver for `local.dev`. Add the existing service records or a documented wildcard plus explicit exceptions, pointing to the current Docker Desktop/Traefik ingress endpoint. Do not carry forward old fixed IPs blindly. Forward unrelated DNS zones to the selected upstream.
-3. Configure only the Mac's scoped resolver to use Technitium. Router DHCP, per-device DNS setup, phone Private DNS/VPN handling, and other LAN-client delivery are out of scope. Remove/disable the old dnsmasq forwarding path only in the final retirement phase, after a rollback window and after resolver tests pass. Store DNS administration credentials in an approved secret store, never in the repo or command output.
+3. Configure the current Mac's scoped resolver to use Technitium. Remove/disable the old dnsmasq forwarding path only in the final retirement phase, after a rollback window and after resolver tests pass. Store DNS administration credentials in an approved secret store, never in the repo or command output.
 4. Verify UDP and TCP DNS queries, every required hostname, expected A records, non-local forwarding, behavior after Docker Desktop restart, and no dependency on the old `home-lab-dns` ServiceLB IP. Test macOS resolution with `dscacheutil` as well as direct `dig @<Technitium-address>`.
 5. Keep `cluster.local` queries served by Kubernetes CoreDNS. Verify from a pod that core Kubernetes Service names resolve. Do not route cluster Service DNS through Technitium or remove CoreDNS.
 6. Verify every existing Ingress still matches its unchanged hostname; confirm Traefik entrypoints, redirects, certificate chain, wildcard hostname coverage, macOS CA trust, and HTTPS responses. Reconfigure app URLs only if an existing hostname cannot be preserved, and update each callback/CORS/tool reference in the owning source/config.
@@ -201,7 +201,7 @@ Do not declare migration complete until each required item has a dated result an
 ## Decisions still required
 
 1. Docker Desktop Kubernetes implementation/version, resource limits, disk quota and entitlement; Mac capacity measurements and essential always-on versus on-demand profile.
-2. Technitium placement, Mac-local bootstrap address, DNS zone/record strategy, forwarding upstreams, and local listener scope. Verify host port bindings and minimum local firewall requirements. Router DHCP, per-device setup, phone DNS/VPN behavior, and WAN access are out of scope.
+2. Technitium placement, Mac-local bootstrap address, DNS zone/record strategy, forwarding upstreams, and local listener scope. Verify host port bindings and minimum local firewall requirements.
 3. Infisical-only backup destination, original key custody/restore operators, retention period and Finance decryption verifier. Other database volumes are not part of this backup.
 4. Reuse the original local CA versus issue a new CA and re-trust macOS; keep the same `*.local.dev` names either way.
 5. Final data policy for each non-Infisical PVC; fresh data is allowed in principle but no old data may be destroyed until each item is confirmed.

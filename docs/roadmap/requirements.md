@@ -16,7 +16,7 @@ Combine KubeDeck and the homelab repository into a usable local platform for inv
 - Surface logs, monitoring data, metric dashboards, uptime, and service stability.
 - Support incident notification delivery through Slack, Telegram, and WhatsApp, subject to user-approved credentials and audiences.
 - Keep both the UI and backend/agent modular and plugin-based, so plugins can be added and deployed for later platform deployments.
-- Keep the code clean, maintainable, reusable, performant, and portable for other developers. Do not bind workflows to one developer's Mac or local paths.
+- Keep the code clean, maintainable, reusable, and performant for the current Docker Desktop system. Keep machine-specific values in local configuration rather than shared assets.
 - Treat Node.js, Go, and Python as examples of possible application stacks, not a requirement to rewrite components or support multiple languages in the platform itself.
 - Verify architecture and engineering recommendations against current authoritative documentation when design begins.
 
@@ -37,9 +37,7 @@ The exact directory layout and contract format are design decisions for review; 
 - Separate portable configuration from secrets; use reproducible setup and do not check credentials into source control.
 - Do not add, remove, or redefine service catalog entries without the user's explicit confirmation.
 - Do not classify Vero Finance client workloads as KubeDeck's own platform services.
-- Version 1 is limited to one local, single-node Kubernetes environment; do not implement remote multi-node discovery in V1.
-- Later versions may cover multiple Linux servers or Mac minis, each running an agent, with UI discovery and communication over the internet. Preserve the goal of easy discovery through a future secure enrollment/registry and outbound authenticated connections; do not use arbitrary internet scanning or expose cluster APIs.
-- Clarify whether later multi-node means multiple nodes in one Kubernetes cluster, independent clusters, or both before designing that phase.
+- The roadmap targets the current single-node Docker Desktop Kubernetes environment. Discovery, control, and service workflows stay scoped to this cluster.
 - Local runtime validation must verify the intended local cluster/context and avoid disrupting existing workloads. Staging/production actions require separate authorization.
 - Notification credentials, destination audiences, and authorization are not presumed to exist.
 
@@ -56,6 +54,6 @@ This is an ordering of work areas, not an approved implementation plan:
 7. Design and implement delivery integrations for approved notification providers and audiences.
 8. Validate a portable setup from a clean developer environment and document local-only operation separately from staging/production.
 
-V1 scope is limited to the local single-node environment. Remote/multi-host discovery and communication belongs to later versions and requires clarification of the target topology.
+V1 targets the current local single-node Docker Desktop environment. Discovery, control, and service workflows are scoped to this cluster.
 
 Each work area needs its own reviewed design and execution plan before invasive implementation. No feature implementation is authorized by this requirements capture alone.

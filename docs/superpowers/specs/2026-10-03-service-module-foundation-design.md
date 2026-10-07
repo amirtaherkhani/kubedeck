@@ -58,7 +58,7 @@ This phase provides versioned Go and TypeScript value types and schema-valid exa
 
 - Shared files contain relative repository paths only. Local overrides and cluster context live outside committed profile/module files.
 - Keep environment data in profiles and secret values in Infisical-backed Kubernetes Secrets; module metadata records references only.
-- No internet scanning, exposed Kubernetes API, arbitrary executable modules, remote host enrollment, or staging/production actions are part of V1.
+- V1 remains scoped to the current Docker Desktop cluster; internet scanning, exposed Kubernetes API, arbitrary executable modules, and staging/production actions are outside its local development workflow.
 - Future remote Linux/Mac hosts require a separate reviewed design for enrollment, authentication, topology, and failure isolation.
 
 ## Acceptance criteria
