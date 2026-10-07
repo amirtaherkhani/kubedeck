@@ -31,4 +31,4 @@ npm run catalog:validate -- --module path/to/service.yaml --profile path/to/loca
 
 The validator checks schemas, duplicate IDs, unknown module references, external-module installations, and local path safety. It does not verify a running Kubernetes cluster or install anything. The current agent snapshot API is `kubedeck.io/v1alpha1`; these declarations use `catalog.kubedeck.io/v1alpha1` and need a later reviewed reconciliation adapter before they affect the UI.
 
-Real service registration and migration require a separately reviewed entry. V1 covers one local single-node cluster. Remote hosts, runtime plugin loading, service operations, and incident delivery follow later designs.
+Real service registration and migration require a separately reviewed entry. V1 covers the current local single-node Docker Desktop cluster. Runtime plugin loading, service operations, and incident delivery follow later designs.

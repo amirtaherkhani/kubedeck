@@ -81,7 +81,7 @@
 - Modify: `docs/roadmap/requirements.md`
 
 - [ ] Document how to create a module, validate it, add a separate environment profile installation, use vendor charts without flattening values, and store only secret references.
-- [ ] Document that real service registration, chart migration, runtime catalog serving, plugin execution, and remote hosts require separate user-reviewed phases.
+- [ ] Document that real service registration, chart migration, runtime catalog serving, and plugin execution require separate user-reviewed phases for the current Docker Desktop system.
 - [ ] Verify the documented commands exactly match repository scripts and fixtures.
 
 ### Task 4: Full verification and review

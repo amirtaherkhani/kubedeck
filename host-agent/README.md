@@ -15,6 +15,6 @@ For a single reconciliation without installing launchd:
 cd host-agent && go run ./cmd/kubedeck-host-agent
 ```
 
-If a VPN changes the default route to `utun`, the agent refuses to publish that address. On a multi-interface Mac, run the binary with `-interface en0` or another interface that reaches the local ingress after checking the routing profile. The agent currently handles IPv4 only. It updates the `local.dev` DNS **answer** for use from this Mac; router DHCP, per-device DNS delivery, and other LAN-client bootstrap are outside the V1 scope.
+If a VPN changes the default route to `utun`, the agent refuses to publish that address. On a multi-interface Mac, run the binary with `-interface en0` or another interface that reaches the local ingress after checking the routing profile. The agent currently handles IPv4 only. It updates the `local.dev` DNS **answer** for use by the current Mac.
 
-The agent's Kubernetes credential can read the existing admin Secret. Treat that user account and kubeconfig as privileged; a dedicated scoped Technitium API credential and finer host permissions belong to later hardening work. The admin API is never published by the LAN overlay.
+The agent's Kubernetes credential can read the existing admin Secret. Treat that user account and kubeconfig as privileged; a dedicated scoped Technitium API credential and finer host permissions belong to later hardening work. The admin API is reachable only through a localhost port-forward.

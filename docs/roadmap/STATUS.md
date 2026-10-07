@@ -1,11 +1,11 @@
 # Roadmap status
 
-**As of:** 2026-10-07 (Asia/Tehran). **Current:** V1 recovery is still in progress; the [latest live recovery record](v1-recovery-2026-10-07.md) records post-restart results and remaining blockers. v1.0.0 is not released.
+**As of:** 2026-10-07 (Asia/Tehran). **Current:** V1 recovery is still in progress; the [latest live recovery record](v1.0.0-recovery.md) records post-restart results and remaining blockers. v1.0.0 is not released.
 
 | ID | Target | State | Last evidence | Next action |
 | --- | --- | --- | --- | --- |
-| V1-01 | v1.0.0 | In progress | [2026-10-07 recovery record](v1-recovery-2026-10-07.md): live Helm/PVC/Ingress inventory and all 24 historic Mac-local service names checked | Confirm required service owners/consumers and settle remaining observability scope |
-| V1-02 | v1.0.0 | In progress | Prior export-to-live target comparisons and connector auth remain recorded in [2026-10-06 evidence](v1-recovery-2026-10-06.md) | Still no protected Infisical DB backup plus isolated restore evidence; obtain data/reseed decisions for each PVC |
+| V1-01 | v1.0.0 | In progress | [Live recovery record](v1.0.0-recovery.md): live Helm/PVC/Ingress inventory and all 24 historic Mac-local service names checked | Confirm required service owners and settle observability scope |
+| V1-02 | v1.0.0 | In progress | Prior export-to-live target comparisons and connector auth remain recorded in [initial recovery evidence](v1.0.0-recovery-initial.md) | Still no protected Infisical DB backup plus isolated restore evidence; obtain data/reseed decisions for each PVC |
 | V1-03 | v1.0.0 | In progress | 2026-10-07 Docker Desktop restart completed; node Ready, 30/30 Pods Running, 15/15 PVCs Bound afterward | Measure workload/storage use and finish data policy; restart recovery included temporary readiness failures |
 | V1-04 | v1.0.0 | In progress | All 24 Mac-local names resolve; trusted HTTPS works; NATS Monitor now returns HTTP 401 with a Basic Auth challenge | Verify Host Agent reconciliation after a Mac IP change |
 | V1-05 | v1.0.0 | In progress | Core database/broker Pods recovered; Redis PING, PostgreSQL readiness, RabbitMQ ping and direct NATS health checks pass | Revalidate storage data workflow/backup and determine required observability tools and project consumers |
@@ -27,12 +27,12 @@
 | V14-01 | v1.4.0 | Not started | — | Remove machine-specific assumptions |
 | V14-02 | v1.4.0 | Not started | — | Package and install Host Agent on macOS |
 | V14-03 | v1.4.0 | Not started | — | Enforce UI policy in API and agents |
-| V14-04 | v1.4.0 | Not started | — | Validate setup and recovery on a second Mac |
+| V14-04 | v1.4.0 | Not started | — | Validate setup and recovery on the current Docker Desktop system |
 | V2-01 | v2.0.0 | Not started | — | Build reproducible project workflows |
 | V2-02 | v2.0.0 | Not started | — | Pilot and decide Tekton/Buildkite/native coordination |
 | V2-03 | v2.0.0 | Not started | — | Connect workflow history and observability |
-| V2-04 | v2.0.0 | Not started | — | Decide any multi-host topology and enrollment |
+| V2-04 | v2.0.0 | Not started | — | Define resource limits and recovery boundaries for the current Docker Desktop cluster |
 
 **Gate rule:** A parent version is `Verified` only when every required task in its version file is verified and its release acceptance checklist passes. `Released` requires the tag and GitHub release URL. A blocked task records the exact obstacle and owner in the history entry.
 
-**Scope decision (2026-10-06):** v1.0.0 serves the Mac that runs Docker Desktop. Phone and other LAN-client browsing, router DHCP/DNS integration, and remote resolver bootstrap are out of scope. The required path is the Mac's scoped resolver to Technitium, local ingress, and service hostname. The Host Agent must keep DNS answers aligned with the Mac's current address.
+**Scope:** The roadmap targets the current Mac and its running Docker Desktop Kubernetes cluster. The required path is the Mac's scoped resolver to Technitium, local ingress, and service hostname. The Host Agent keeps DNS answers aligned with the current Mac address.
