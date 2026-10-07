@@ -7,10 +7,17 @@ Base home-lab configuration shared by all applications.
 - `dns/` — `*.local.dev` naming and CoreDNS/macOS resolution rules.
 - `tls/` — shared local HTTPS certificate contract.
 - `host/` — macOS host exporters and host integration.
+- `ingress/traefik-provider-crds.yaml` — Traefik v3 provider CRDs used by the Docker Desktop Traefik release.
 
 Rancher Desktop owns the `kube-system` Traefik, CoreDNS, local-path-provisioner,
 metrics-server, Flannel, and ServiceLB components. They are observed and
 configured here only where the ownership boundary permits it.
+
+The Docker Desktop Traefik release needs the matching `traefik.io` CRDs before
+it can load middleware references from Ingress resources. Apply or repair
+them with `make -C lab docker-desktop-traefik-crds`; the script verifies the
+active Docker Desktop context and a Ready node before applying the pinned
+Traefik v3.6.12 CRD bundle.
 
 ## Application onboarding
 
