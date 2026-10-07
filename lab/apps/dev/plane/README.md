@@ -9,8 +9,8 @@ service for personal projects.
 | Namespace | `development-tools` |
 | UI | Yes: `https://plane.local.dev` |
 | Primary port | HTTPS `443`; service HTTP is internal to the chart |
-| Dependencies | PostgreSQL, Valkey, RabbitMQ, MinIO, Traefik, Infisical |
-| Storage | `local-path`: PostgreSQL 1 Gi, MinIO 1 Gi, Valkey 100 Mi, RabbitMQ 100 Mi |
+| Dependencies | Shared platform PostgreSQL and Redis, RabbitMQ, MinIO, Traefik, Infisical |
+| Storage | `local-path`: MinIO 1 Gi, RabbitMQ 100 Mi; PostgreSQL and Redis use `platform-storage` |
 | Chart | `makeplane/plane-ce` `1.6.2`, app `v1.4.1` |
 | Credentials | Generated credentials are stored in Infisical under `/apps/development-tools/plane/*` |
 | Initial administrator | `admin@local.dev`; first name `admin`, last name `admin` |
@@ -23,6 +23,13 @@ Traefik `IngressRoute` resources. Create a GitHub App after deployment using
 Plane's documented callback URLs, then store its credentials in Infisical.
 Plane signs users in with the administrator email; its first-run flow generates
 an internal username automatically.
+
+Plane's chart must keep `postgres.local_setup` and `redis.local_setup` disabled.
+The shared PostgreSQL and Redis endpoints are supplied as `DATABASE_URL` and
+`REDIS_URL` in the Plane app/live secrets synchronized from Infisical. Before
+applying this topology, migrate the existing Plane database into the shared
+PostgreSQL instance; switching endpoints without that migration would make
+existing Plane data unavailable.
 
 ## GitHub connection
 

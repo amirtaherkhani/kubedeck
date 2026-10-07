@@ -17,19 +17,16 @@ ssl:
   generateCerts: false
 
 redis:
-  local_setup: true
-  image: valkey/valkey:7.2.11-alpine
-  storageClass: local-path
-  volumeSize: 100Mi
+  # Use the shared platform-storage Redis instance. Connection URL is supplied
+  # through the Plane app/live secrets synchronized from Infisical.
+  local_setup: false
   annotations: &infisicalAutoReload
     secrets.infisical.com/auto-reload: "true"
 
 postgres:
-  local_setup: true
-  image: postgres:15.7-alpine
-  storageClass: local-path
-  volumeSize: 1Gi
-  annotations: *infisicalAutoReload
+  # Use the shared platform-storage PostgreSQL instance. Plane's connection
+  # URL is supplied through the app secret synchronized from Infisical.
+  local_setup: false
 
 rabbitmq:
   local_setup: true
@@ -70,7 +67,6 @@ beatworker:
 
 external_secrets:
   rabbitmq_existingSecret: plane-rabbitmq
-  pgdb_existingSecret: plane-postgres
   doc_store_existingSecret: plane-storage
   app_env_existingSecret: plane-app
   live_env_existingSecret: plane-live

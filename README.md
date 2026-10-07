@@ -127,6 +127,10 @@ flowchart LR
     Agent -. "opt-in scoped write" .-> CoreDNS["CoreDNS custom ConfigMap"]
 ```
 
+The homelab's PostgreSQL and Redis sharing rule, including Infisical's isolated
+backing stores and the Plane migration gate, is documented in
+[Shared data services](docs/architecture/shared-data-services.md).
+
 ## Operations roadmaps
 
 - [Versioned delivery roadmap, status, and history](docs/roadmap/README.md) — v0.2.0 baseline through v1.0.0, v1.1.0–v1.4.0, and v2.0.0.

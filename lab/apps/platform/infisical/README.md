@@ -7,7 +7,7 @@ configuration.
 |---|---|
 | Namespace | `platform-secrets` |
 | UI | Yes: `https://infisical.local.dev` |
-| Storage | PostgreSQL and Redis in `platform-storage` |
+| Storage | Dedicated PostgreSQL and Redis in `platform-secrets` (Infisical exception to shared data services) |
 | HTTPS | Traefik and `local-dev-tls` |
 | Integration | Infisical Secrets Operator |
 
