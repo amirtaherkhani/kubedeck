@@ -271,10 +271,6 @@ validate_manifests() {
     kubectl apply --dry-run=server -f apps/dev/plane/manifests/https-redirect.yaml >/dev/null
     kubectl apply --dry-run=server -f apps/dev/plane/manifests/god-mode-redirect.yaml >/dev/null
   fi
-  if [[ "${target}" == "all" || "${target}" == "temporal" ]]; then
-    kubectl apply --dry-run=server -f apps/dev/temporal/manifests/https-redirect.yaml >/dev/null
-    kubectl apply --dry-run=server -f apps/dev/temporal/manifests/infisicalsecret.yaml >/dev/null
-  fi
   if [[ "${target}" == "all" || "${target}" == "infisical" ]]; then
     kubectl apply --dry-run=server -f apps/platform/infisical/manifests/https-redirect.yaml >/dev/null
   fi
@@ -308,10 +304,6 @@ apply_manifests() {
     kubectl apply -f apps/dev/plane/manifests/infisicalsecrets.yaml
     kubectl apply -f apps/dev/plane/manifests/https-redirect.yaml
     kubectl apply -f apps/dev/plane/manifests/god-mode-redirect.yaml
-  fi
-  if [[ "${target}" == "all" || "${target}" == "temporal" ]]; then
-    kubectl apply -f apps/dev/temporal/manifests/https-redirect.yaml
-    kubectl apply -f apps/dev/temporal/manifests/infisicalsecret.yaml
   fi
   if [[ "${target}" == "all" || "${target}" == "infisical" ]]; then
     kubectl apply -f apps/platform/infisical/manifests/https-redirect.yaml
