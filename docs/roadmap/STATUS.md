@@ -1,16 +1,16 @@
 # Roadmap status
 
-**As of:** 2026-10-06 (Asia/Tehran). **Current:** V1 recovery implementation is in progress. The [live recovery record](v1-recovery-2026-10-06.md) separates verified paths from open gates. v1.0.0 is not released.
+**As of:** 2026-10-07 (Asia/Tehran). **Current:** V1 recovery is still in progress; the [latest live recovery record](v1-recovery-2026-10-07.md) records post-restart results and remaining blockers. v1.0.0 is not released.
 
 | ID | Target | State | Last evidence | Next action |
 | --- | --- | --- | --- | --- |
-| V1-01 | v1.0.0 | In progress | [Live recovery record](v1-recovery-2026-10-06.md): runtime, listeners, Helm, PVCs and secret dependency checked | Confirm active client consumers, service ownership, exact data policy |
-| V1-02 | v1.0.0 | In progress | 51 home-lab and 347 Finance export records exactly matched live `dev` targets; connector and Operator identity work | Prove isolated DB backup with original key and per-PVC policy |
-| V1-03 | v1.0.0 | In progress | Docker Desktop runtime, node allocatable resources, PVCs and host 80/443 checked | Validate restart persistence, disk and selected workload budget |
-| V1-04 | v1.0.0 | In progress | TCP/UDP 53, localhost resolver, Host Agent, and trusted Infisical HTTPS 200 pass on Mac | Verify Mac-local DNS after IP change and Docker Desktop restart; check all required local routes |
-| V1-05 | v1.0.0 | In progress | PostgreSQL, Redis, RabbitMQ, NATS and SeaweedFS S3 are Ready; S3 contract and Pod restart persistence pass; unauthenticated Redis LAN listener removed | Prove external project workflows and backups; select remaining required tools |
-| V1-06 | v1.0.0 | In progress | KubeDeck and Kubernetes Agent are Ready; trusted HTTPS login, cluster snapshot and SSE pass; Metrics Server reports node/Pod usage | Verify UI management workflows, restart persistence and scope of Agent permissions |
-| V1-07 | v1.0.0 | Not started | — | Verify other-project connections and end-to-end workflows |
+| V1-01 | v1.0.0 | In progress | [2026-10-07 recovery record](v1-recovery-2026-10-07.md): live Helm/PVC/Ingress inventory and all 24 historic Mac-local service names checked | Confirm required service owners/consumers and settle remaining observability scope |
+| V1-02 | v1.0.0 | In progress | Prior export-to-live target comparisons and connector auth remain recorded in [2026-10-06 evidence](v1-recovery-2026-10-06.md) | Still no protected Infisical DB backup plus isolated restore evidence; obtain data/reseed decisions for each PVC |
+| V1-03 | v1.0.0 | In progress | 2026-10-07 Docker Desktop restart completed; node Ready, 30/30 Pods Running, 15/15 PVCs Bound afterward | Measure workload/storage use and finish data policy; restart recovery included temporary readiness failures |
+| V1-04 | v1.0.0 | In progress | All 24 Mac-local names resolve to current Mac IP; DNS UDP/TCP and normal trusted HTTPS to KubeDeck/Infisical pass after restart | NATS Monitor hostname still returns Traefik 404; Host Agent IP-change acceptance remains untested |
+| V1-05 | v1.0.0 | In progress | Core database/broker Pods recovered; Redis PING, PostgreSQL readiness, RabbitMQ ping and direct NATS health checks pass | Revalidate storage data workflow/backup and determine required observability tools and project consumers |
+| V1-06 | v1.0.0 | In progress | KubeDeck endpoint serves HTTPS 200; current live Helm app is 0.1.0 while repository target is 0.2.0 | Authenticated dashboard/agent workflows remain unverified after restart; resolve data gate before upgrade |
+| V1-07 | v1.0.0 | Not started | No Finance client workload or process was found in the Docker Desktop cluster | Have the project owner select/approve a development smoke workflow and run it against the platform |
 | V1-08 | v1.0.0 | Not started | — | Record rollback, release acceptance, and tag/release evidence |
 | V11-01 | v1.1.0 | Not started | — | Define agent boundaries and capability contract |
 | V11-02 | v1.1.0 | Not started | — | Extend Kubernetes and Helm operations |
