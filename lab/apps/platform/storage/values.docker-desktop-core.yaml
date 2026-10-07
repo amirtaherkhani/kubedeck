@@ -7,8 +7,6 @@ redis:
     type: ClusterIP
 pgadmin:
   enabled: false
-redisCommander:
-  enabled: false
 kafka:
   enabled: false
 kafkaUi:

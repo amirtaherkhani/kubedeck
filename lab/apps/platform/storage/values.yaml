@@ -77,31 +77,6 @@ redis:
     limits:
       cpu: 500m
       memory: 512Mi
-redisCommander:
-  enabled: true
-  name: redis-commander
-  image:
-    repository: rediscommander/redis-commander
-    tag: "latest@sha256:19cd0c49f418779fa2822a0496c5e6516d0c792effc39ed20089e6268477e40a"
-    pullPolicy: IfNotPresent
-  service:
-    type: ClusterIP
-    port: 80
-    targetPort: 8081
-  ingress:
-    enabled: true
-    className: traefik
-    host: redis-ui.local.dev
-    tls:
-      enabled: true
-      secretName: local-dev-tls
-  resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 300m
-      memory: 384Mi
 rabbitmq:
   enabled: true
   name: rabbitmq
