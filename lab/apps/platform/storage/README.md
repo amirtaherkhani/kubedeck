@@ -39,6 +39,11 @@ Deploy with `make helm-validate RELEASE=platform-storage` and
 `make helm-apply RELEASE=platform-storage` after Infisical-backed secrets are
 available.
 
+Templated Infisical secrets such as Basic Auth `users` files include only the
+rendered data key; ordinary application secrets continue to include all keys
+from their Infisical path. Verify this contract with
+`make platform-storage-test`.
+
 MinIO's bucket/user bootstrap Job runs on the initial chart installation. It
 does not run on routine upgrades; set `minio.initOnUpgrade=true` only when its
 bucket or policy setup must be refreshed. Validate that lifecycle with

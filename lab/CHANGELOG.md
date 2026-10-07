@@ -5,6 +5,7 @@
 ### Fixed
 
 - Added the version-matched Traefik provider CRDs to Docker Desktop core setup so middleware-backed Ingress routes, including NATS Monitor, can reconcile.
+- Limit templated Infisical Secrets to their rendered key, giving Traefik Basic Auth the single `users` key it requires.
 
 ### Added
 
