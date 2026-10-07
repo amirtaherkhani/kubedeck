@@ -12,12 +12,15 @@
 | [v1.3.0](v1.3.0.md) | Logs, volumes, builds, histories, and container metadata | v1.1.0 agents; v1.2.0 module identity |
 | [v1.4.0](v1.4.0.md) | Repeatable setup on the current Docker Desktop system and enforceable GUI policies | v1.0.0 bootstrap; v1.1.0 host agent |
 | [v2.0.0](v2.0.0.md) | Mature build/test/observe workflows and optional CI integrations | v1.2.0–v1.4.0 contracts |
+| [v3.0.0 — KubeDeck core](v3.0.0-kubedeck-core.md) | Reintroduce the KubeDeck dashboard and Kubernetes Agent as a verified paired deployment | v2.0.0 workflows and V1 platform readiness |
 
 The version sequence is an order of delivery, not a calendar promise. v1.0.0 is the release gate for actual dependent-project development; later versions must not delay it. A release can ship only after its acceptance evidence is recorded in [STATUS.md](STATUS.md). Cross-version work may proceed in parallel if it does not change the v1.0.0 critical path.
 
-For v1.0.0, Phase 0 is inventory (V1-01); Phase 1 is data and Docker prerequisites (V1-02–03); Phase 2 is DNS/ingress (V1-04); Phase 3 is tool recovery (V1-05); Phase 4 is KubeDeck and client validation (V1-06–07); Phase 5 is release acceptance (V1-08). These phase numbers stay stable in status reports. Calendar dates for later releases are set after V1-01 measures actual service scope and V1-08 verifies recovery.
+For v1.0.0, Phase 0 is inventory (V1-01); Phase 1 is data and Docker prerequisites (V1-02–03); Phase 2 is DNS/ingress (V1-04); Phase 3 is tool recovery (V1-05); Phase 4 is service-traffic visibility and client validation (V1-06–07); Phase 5 is release acceptance (V1-08). KubeDeck's dashboard and Kubernetes Agent are V3 core deliverables and do not gate V1. These phase numbers stay stable in status reports. Calendar dates for later releases are set after V1-01 measures actual service scope and V1-08 verifies recovery.
 
 ## Boundaries
+
+KubeDeck dashboard and Agent code/charts remain core project assets, with runtime reintroduction sequenced in [v3.0.0 — KubeDeck core](v3.0.0-kubedeck-core.md).
 
 ```text
 macOS host: browser + scoped resolver -> Technitium DNS -> Traefik ingress

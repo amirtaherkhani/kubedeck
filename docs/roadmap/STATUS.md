@@ -9,7 +9,7 @@
 | V1-03 | v1.0.0 | In progress | 2026-10-07 Docker Desktop restart completed; node Ready, 30/30 Pods Running, 15/15 PVCs Bound afterward | Measure workload/storage use and finish data policy; restart recovery included temporary readiness failures |
 | V1-04 | v1.0.0 | In progress | All 24 Mac-local names resolve; trusted HTTPS works; NATS Monitor now returns HTTP 401 with a Basic Auth challenge | Verify Host Agent reconciliation after a Mac IP change |
 | V1-05 | v1.0.0 | In progress | Core database/broker Pods recovered; Redis PING, PostgreSQL readiness, RabbitMQ ping and direct NATS health checks pass | Revalidate storage data workflow/backup and determine required observability tools and project consumers |
-| V1-06 | v1.0.0 | In progress | KubeDeck endpoint serves HTTPS 200; current live Helm app is 0.1.0 while repository target is 0.2.0 | Authenticated dashboard/agent workflows remain unverified after restart; resolve data gate before upgrade |
+| V1-06 | v1.0.0 | In progress | Caretta and Radar are approved for local traffic visibility; Radar is being deployed; Caretta's eBPF compatibility with Docker Desktop is unverified and upstream currently documents Docker for Mac as unsupported | Verify Radar's trusted HTTPS/UI and prove a compatible traffic collector on this target before claiming traffic visibility |
 | V1-07 | v1.0.0 | Not started | No Finance client workload or process was found in the Docker Desktop cluster | Have the project owner select/approve a development smoke workflow and run it against the platform |
 | V1-08 | v1.0.0 | Not started | — | Record rollback, release acceptance, and tag/release evidence |
 | V11-01 | v1.1.0 | Not started | — | Define agent boundaries and capability contract |
@@ -32,6 +32,8 @@
 | V2-02 | v2.0.0 | Not started | — | Pilot and decide Tekton/Buildkite/native coordination |
 | V2-03 | v2.0.0 | Not started | — | Connect workflow history and observability |
 | V2-04 | v2.0.0 | Not started | — | Define resource limits and recovery boundaries for the current Docker Desktop cluster |
+| V3-01 | v3.0.0 | Deferred | KubeDeck dashboard and Kubernetes Agent source/charts remain in the project; runtime releases and their app images are removed from V1 | Reintroduce the dashboard and Agent together after V2 workflows, data protection, and deployment acceptance are defined |
+| V3-02 | v3.0.0 | Deferred | Existing KubeDeck PVC and Infisical-managed credentials are retained while runtime workloads are removed | Verify backup/restore policy, supported image versions, authentication, live events, and safe management reads before V3 rollout |
 
 **Gate rule:** A parent version is `Verified` only when every required task in its version file is verified and its release acceptance checklist passes. `Released` requires the tag and GitHub release URL. A blocked task records the exact obstacle and owner in the history entry.
 

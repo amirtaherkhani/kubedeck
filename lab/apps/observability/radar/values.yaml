@@ -35,7 +35,7 @@ timeline:
 
 persistence:
   enabled: true
-  storageClassName: local-path
+  storageClassName: standard
   accessMode: ReadWriteOnce
   size: 1Gi
 
