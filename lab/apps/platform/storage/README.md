@@ -11,12 +11,12 @@ Shared development dependencies for personal projects.
 | Configuration | Infisical; no credentials in Git |
 | Observability | Prometheus metrics, Grafana dashboards where supported; Alloy/Loki logs |
 
-Services include PostgreSQL, pgAdmin, Redis, Redis Commander, RabbitMQ,
+Services include PostgreSQL, pgAdmin, Redis, RabbitMQ,
 Kafka, Kafka UI, MongoDB, Mongoku, NATS, NATS UI, MinIO, Jaeger, Mailpit,
 Apicurio Registry, and grpcui.
 
 UI domains are defined in `values.yaml`; common routes include:
-`pgadmin.local.dev`, `redis-ui.local.dev`, `rabbitmq-ui.local.dev`,
+`pgadmin.local.dev`, `rabbitmq-ui.local.dev`,
 `kafka-ui.local.dev`, `mongo-ui.local.dev`, `nats-ui.local.dev`,
 `nats-monitor.local.dev`, `s3-ui.local.dev`, `jaeger-ui.local.dev`,
 `mailpit-ui.local.dev`, `schema-registry-ui.local.dev`, and

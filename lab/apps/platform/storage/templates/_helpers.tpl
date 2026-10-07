@@ -39,16 +39,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: cache
 {{- end -}}
 
-{{- define "platform-storage.redisCommanderName" -}}
-{{- .Values.redisCommander.name | default "redis-commander" | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{- define "platform-storage.redisCommanderLabels" -}}
-app.kubernetes.io/name: redis-commander
-app.kubernetes.io/instance: {{ .Release.Name }}
-app.kubernetes.io/component: cache-admin
-{{- end -}}
-
 {{- define "platform-storage.rabbitmqName" -}}
 {{- .Values.rabbitmq.name | default "rabbitmq" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
