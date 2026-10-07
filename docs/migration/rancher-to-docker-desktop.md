@@ -7,6 +7,11 @@
 **DNS access scope:** local development on the current Mac only. The Mac running Docker Desktop opens `*.local.dev` through its scoped resolver.
 **Current source state:** Rancher `rancher-desktop` node was read-only verified Ready on Kubernetes `v1.36.4+k3s1` (ARM64, containerd `2.3.2`). Docker Desktop app bundle is `4.93.0`; daemon/Kubernetes health remains unverified.
 
+**Catalog update:** Optional app releases were removed from the
+project-managed service catalog on 2026-10-07. Older inventory notes below are
+historical snapshots; only restore services explicitly approved in the current
+catalog.
+
 This roadmap is the operating record for future Codex/Nova sessions. It does not authorize starting either desktop, resetting or installing a cluster, backing up/restoring data, changing DNS/firewall settings, moving volumes, publishing a release, or deleting the old environment. Preserve Rancher and the old DNS chain as rollback resources until all migration gates pass. Never put secret values in this document or evidence.
 
 ## Checkpoint history
@@ -49,11 +54,10 @@ This is a review proposal for catalog grouping and namespace boundaries. It does
 | --- | --- | --- | --- |
 | PostgreSQL, MongoDB, Redis, MinIO, Kafka, NATS, RabbitMQ and related UIs | `data`, `cache`, `object-storage`, or `messaging` per component | Keep the current `platform-storage` release/namespace initially | One chart/release currently groups different products. Preserve Helm/PVC ownership; expose components separately in the catalog rather than splitting resources during migration. |
 | Prometheus, Grafana, Loki, Tempo, Alloy, Caretta/VictoriaMetrics | `observability` | Keep `observability` and `observability-tests` as currently configured | Keep test/load tooling distinct from monitoring services. |
-| KubeDeck, n8n, Plane, Mailpit and developer UIs | `developer-tools` or `workflow` | Keep `development-tools` and existing source namespaces pending inventory | Group by purpose in the UI; do not rename or merge namespaces based on category. |
+| KubeDeck, Mailpit and developer UIs | `developer-tools` or `workflow` | Keep `development-tools` and existing source namespaces pending inventory | Group by purpose in the UI; do not rename or merge namespaces based on category. |
 | Finance API, file worker, RabbitMQ consumers/relays | `external-application` / `backend` / `worker` | Preserve the verified Finance-owned namespace (`vero-vault-finance-load-test` was previously observed) | Finance remains an external client workload with separate source, ownership and Infisical access; do not import it into KubeDeck or the platform chart. |
 | Infisical and its operator | `secrets-and-identity` | Keep `platform-secrets` | Treat as a protected stateful boundary; back up only Infisical PostgreSQL plus its original key/config, and complete isolated restore before any old data loss. |
 | CoreDNS, Traefik, cert-manager; required Technitium | `networking`, `ingress`, or `certificate-management` | Keep distro-owned CoreDNS in `kube-system`; preserve existing Traefik/cert-manager namespaces pending inventory; Technitium placement remains undecided | Technitium is developer/local DNS; CoreDNS remains internal Kubernetes DNS. Do not place unrelated workloads in `kube-system`. |
-| Cognee | `ai` | Keep `ai-tools` pending inventory | No namespace change implied. |
 | KEDA | `platform-automation` | No install assumed; source config only | Defer unless an app owner identifies a required scaler and credential scope. |
 
 Before any later namespace redesign, produce an explicit old-to-proposed namespace map from live ownership evidence and review cross-namespace dependencies: service FQDNs, NetworkPolicies, RBAC, Infisical sync scopes, ServiceMonitor/Prometheus selectors, Helm release ownership, PVCs, Ingress/DNS/TLS and the `kubedeck-env-mcp` URL. The first Docker migration should retain existing namespace names and Helm ownership wherever feasible; any exceptions need a separate review and rollback plan. No workloads have been moved as part of this roadmap.
@@ -69,8 +73,7 @@ This is the initial mapping proposal, based on the checked-in namespace and rele
 | `platform-secrets` | `platform-secrets` | Infisical and secrets operator | Retain. Protected restore and decryption gate applies. |
 | `observability` | `observability` | Prometheus stack, Grafana, Loki, Tempo, Alloy, Caretta/Radar | Retain. Validate monitoring selectors and scrape targets. |
 | `observability-tests` | `observability-tests` | k6 operator and test resources | Retain separately from production-like observability services. |
-| `development-tools` | `development-tools` | KubeDeck, KubeDeck agent, n8n, Plane | Retain; verify actual release values and PVC ownership. |
-| `ai-tools` | `ai-tools` | Cognee | Retain. |
+| `development-tools` | `development-tools` | KubeDeck, KubeDeck agent | Retain; verify actual release values and PVC ownership. |
 | `kube-system` | Docker Kubernetes `kube-system` | Distribution CoreDNS | Do not replace or route internal cluster DNS through Technitium. |
 | Finance namespace (previously observed as `vero-vault-finance-load-test`) | Same verified Finance-owned namespace | Finance API, file worker, RabbitMQ consumers/relays | Treat as external client workload; verify namespace and Finance owner before deploy. |
 | Technitium (placement undecided) | Not selected | Developer/local DNS | Decide host/container versus a dedicated cluster namespace, bootstrap address and listener scope at Step 3. It must remain reachable when Kubernetes is stopped. |
@@ -89,7 +92,7 @@ Technitium is the **required final developer/local DNS service** for the current
 
 ### Existing local DNS contract
 
-- User-facing hostname suffix is `local.dev`; the app configurations contain 23 distinct names: `cognee`, `grafana`, `grpcui`, `infisical`, `jaeger-ui`, `k6-dashboard`, `k6-live`, `kafka-ui`, `kubedeck`, `mailpit-ui`, `mongo-ui`, `n8n`, `nats-monitor`, `nats-ui`, `pgadmin`, `plane`, `rabbitmq-ui`, `radar`, `redis-ui`, `s3-ui`, `s3`, `schema-registry-ui`, and `schema-registry` (all with `.local.dev`). Preserve these hostnames initially so callbacks, CORS, dashboards, tools and service links continue to work.
+- User-facing hostname suffix is `local.dev`; the remaining project-managed app configs list 20 names: `grafana`, `grpcui`, `infisical`, `jaeger-ui`, `k6-dashboard`, `k6-live`, `kafka-ui`, `kubedeck`, `mailpit-ui`, `mongo-ui`, `nats-monitor`, `nats-ui`, `pgadmin`, `rabbitmq-ui`, `radar`, `redis-ui`, `s3-ui`, `s3`, `schema-registry-ui`, and `schema-registry` (all with `.local.dev`). Preserve configured hostnames only where their services remain in scope.
 - Current repo custom CoreDNS ConfigMap returns a legacy private address for the `local.dev` wildcard. `home-lab-dns` exposes CoreDNS over UDP/TCP 53 using a LoadBalancer Service. The repo describes Rancher Desktop forwarding web traffic to the Mac host and macOS Homebrew dnsmasq forwarding `local.dev` to that CoreDNS Service. Treat endpoint values as private preflight evidence, not public roadmap content.
 - Prior read-only host-file inspection found a scoped `/etc/resolver/local.dev` route and Homebrew dnsmasq forwarding to a legacy private endpoint; `/etc/hosts` had no `local.dev` entries. This historical host snapshot does not establish current resolver/service health. Recheck the Mac's active interface, resolver path, port-53 listener and DNS answers in the private preflight before choosing target values; do not publish private IPs or carry legacy addresses forward blindly.
 - `core/host/macos/configure-local-dev-resolver.sh` discovers the Rancher `home-lab-dns` ServiceLB address and writes `/etc/resolver/local.dev`; `configure-local-dev-dns-forwarding.sh` configures Homebrew dnsmasq and edits the project PF anchor references. `make macos-dns` runs both. The checked-in README's resolver flow and the actual host resolver file differ; reconcile this before cutover, but do not run the repair while Rancher is Broken.

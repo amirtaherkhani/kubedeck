@@ -263,14 +263,6 @@ validate_manifests() {
   if [[ "${target}" == "all" || "${target}" == "k6-operator" ]]; then
     kubectl apply --dry-run=server --kustomize apps/observability/k6/dashboard >/dev/null
   fi
-  if [[ "${target}" == "all" || "${target}" == "n8n" ]]; then
-    kubectl apply --dry-run=server -f apps/dev/n8n/manifests/https-redirect.yaml >/dev/null
-  fi
-  if [[ "${target}" == "all" || "${target}" == "plane" ]]; then
-    kubectl apply --dry-run=server -f apps/dev/plane/manifests/infisicalsecrets.yaml >/dev/null
-    kubectl apply --dry-run=server -f apps/dev/plane/manifests/https-redirect.yaml >/dev/null
-    kubectl apply --dry-run=server -f apps/dev/plane/manifests/god-mode-redirect.yaml >/dev/null
-  fi
   if [[ "${target}" == "all" || "${target}" == "infisical" ]]; then
     kubectl apply --dry-run=server -f apps/platform/infisical/manifests/https-redirect.yaml >/dev/null
   fi
@@ -296,14 +288,6 @@ apply_manifests() {
   fi
   if [[ "${target}" == "all" || "${target}" == "k6-operator" ]]; then
     kubectl apply --kustomize apps/observability/k6/dashboard
-  fi
-  if [[ "${target}" == "all" || "${target}" == "n8n" ]]; then
-    kubectl apply -f apps/dev/n8n/manifests/https-redirect.yaml
-  fi
-  if [[ "${target}" == "all" || "${target}" == "plane" ]]; then
-    kubectl apply -f apps/dev/plane/manifests/infisicalsecrets.yaml
-    kubectl apply -f apps/dev/plane/manifests/https-redirect.yaml
-    kubectl apply -f apps/dev/plane/manifests/god-mode-redirect.yaml
   fi
   if [[ "${target}" == "all" || "${target}" == "infisical" ]]; then
     kubectl apply -f apps/platform/infisical/manifests/https-redirect.yaml

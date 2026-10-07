@@ -16,14 +16,10 @@ function registrationPath(metadata) {
   }).trim();
 }
 
-test("discovers literal and templated chart scopes", () => {
+test("discovers the platform storage chart scope", () => {
   assert.equal(
     registrationPath(join(repositoryRoot, "apps", "platform", "storage", "templates", "infisicalsecrets.yaml")),
     "/apps/platform-storage"
-  );
-  assert.equal(
-    registrationPath(join(repositoryRoot, "apps", "dev", "n8n", "templates", "infisicalsecret.yaml")),
-    "/apps/development-tools/n8n"
   );
 });
 
