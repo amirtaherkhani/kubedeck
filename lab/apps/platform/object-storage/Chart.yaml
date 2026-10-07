@@ -1,6 +1,0 @@
-apiVersion: v2
-name: object-storage
-description: Single-node S3 storage for the Docker Desktop development cluster.
-type: application
-version: 0.1.0
-appVersion: "4.48"
