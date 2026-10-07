@@ -4,8 +4,7 @@
 
 ### Fixed
 
-- Added the version-matched Traefik provider CRDs to Docker Desktop core setup so middleware-backed Ingress routes, including NATS Monitor, can reconcile.
-- Limit templated Infisical Secrets to their rendered key, giving Traefik Basic Auth the single `users` key it requires.
+- Added the version-matched Traefik provider CRDs to Docker Desktop core setup so Traefik can watch its complete CRD API set.
 
 ### Added
 
@@ -24,6 +23,12 @@
 
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
+
+## [platform-storage 0.1.9] - 2026-10-07
+
+### Fixed
+
+- Limit templated Infisical Basic Auth Secrets to the rendered `users` key so Traefik accepts the middleware and routes NATS Monitor.
 
 ## [platform-storage 0.1.8] - 2026-10-03
 
