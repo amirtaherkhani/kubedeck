@@ -1,6 +1,6 @@
 RELEASE ?= all
 
-.PHONY: core-validate core-apply docker-desktop-traefik-crds macos-dns macos-dns-check macos-trust-tls infisical-bootstrap infisical-admin-bootstrap kubedeck-env-bootstrap kubedeck-env-test kubedeck-env-doctor local-dev-env-bootstrap local-dev-env-test local-dev-env-doctor helm-inventory helm-repos helm-status helm-validate helm-apply helm-values helm-remove helm-lint nats-ha-test tempo-smoke
+.PHONY: core-validate core-apply docker-desktop-traefik-crds platform-storage-test macos-dns macos-dns-check macos-trust-tls infisical-bootstrap infisical-admin-bootstrap kubedeck-env-bootstrap kubedeck-env-test kubedeck-env-doctor local-dev-env-bootstrap local-dev-env-test local-dev-env-doctor helm-inventory helm-repos helm-status helm-validate helm-apply helm-values helm-remove helm-lint nats-ha-test tempo-smoke
 
 core-validate:
 	kubectl apply --dry-run=server -f core/namespaces/namespaces.yaml
@@ -17,6 +17,9 @@ core-apply:
 
 docker-desktop-traefik-crds:
 	./scripts/docker-desktop-traefik-crds.sh
+
+platform-storage-test:
+	./apps/platform/storage/tests/test_infisicalsecret_templates.sh
 
 macos-dns:
 	./core/host/macos/configure-local-dev-dns-forwarding.sh
