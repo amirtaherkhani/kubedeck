@@ -9,7 +9,7 @@ cluster.
 core/                         cluster, DNS, TLS, host, Helm ownership
 apps/platform/                storage, cert-manager, Infisical
 apps/observability/           Grafana, Prometheus, Loki, Tempo, Alloy, k6
-apps/dev/                     KubeDeck, KubeDeck Agent, n8n, Plane
+apps/dev/                     KubeDeck, KubeDeck Agent
 scripts/                      safe validation and operation helpers
 tools/kubedeck-env-mcp/        project-aware Infisical connector for local agents
 ```

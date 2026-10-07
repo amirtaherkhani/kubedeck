@@ -72,7 +72,7 @@ helm-values:
 	./scripts/platform-helm.sh values "$(RELEASE)"
 
 helm-lint:
-	helm lint apps/dev/kubedeck apps/dev/kubedeck-agent apps/dev/n8n apps/platform/storage apps/observability/grafana
+	helm lint apps/dev/kubedeck apps/dev/kubedeck-agent apps/platform/storage apps/observability/grafana
 
 helm-remove:
 	@test "$(RELEASE)" != "all" || (echo "Set RELEASE to one managed release." && exit 1)

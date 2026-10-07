@@ -77,7 +77,7 @@ var classificationRules = []classificationRule{
 	{
 		category: CategoryAutomation,
 		terms: []string{
-			"n8n", "airflow", "argo-workflows", "tekton",
+			"airflow", "argo-workflows", "tekton",
 			"windmill", "workflow", "automation",
 		},
 	},

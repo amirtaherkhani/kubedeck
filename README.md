@@ -128,7 +128,7 @@ flowchart LR
 ```
 
 The homelab's PostgreSQL and Redis sharing rule, including Infisical's isolated
-backing stores and the Plane migration gate, is documented in
+backing stores, is documented in
 [Shared data services](docs/architecture/shared-data-services.md).
 
 ## Operations roadmaps
