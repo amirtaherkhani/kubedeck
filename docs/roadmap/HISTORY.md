@@ -20,6 +20,7 @@ Append new entries. Record observation, implementation, target verification, mer
 | 2026-10-07 | V1-04 | Mac-local DNS and normally trusted HTTPS verified after restart; NATS Monitor route remains failed | [Latest recovery record](v1.0.0-recovery.md); Technitium UDP/TCP answers; HTTPS 200; NATS HTTPS 404 persists after Traefik rollout | Repair Traefik CRD middleware discovery/routing; verify Host Agent after an IP change |
 | 2026-10-07 | V1-04 | NATS Monitor route repaired; HTTPS now reaches its protected monitoring service | PRs [#28](https://github.com/amirtaherkhani/kubedeck/pull/28) and [#29](https://github.com/amirtaherkhani/kubedeck/pull/29); `platform-storage` chart 0.1.9; response is 401 with `WWW-Authenticate: Basic`; Secret has only `users` key | Verify Host Agent reconciliation after a Mac IP change |
 | 2026-10-07 | V1 scope | Roadmap and docs aligned to the current Mac's Docker Desktop cluster; roadmap records use version-and-title filenames | [Roadmap status](STATUS.md), [V1.0.0](v1.0.0.md), and versioned baseline/recovery records | Continue the current-system readiness gates |
+| 2026-10-07 | V1-05 | Retired the unused SeaweedFS object-storage release; removed its automatic deployment path while retaining its PVC and data | [Latest recovery record](v1.0.0-recovery.md); Helm release removed; PVC retention verified | No object-storage workflow is planned for the current system |
 
 ## Entry template
 
