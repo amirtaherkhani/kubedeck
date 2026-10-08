@@ -1,0 +1,9 @@
+namespace:
+  create: false
+
+customLabels:
+  release: monitoring
+
+metrics:
+  serviceMonitor:
+    enabled: true
