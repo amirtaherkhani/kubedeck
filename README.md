@@ -115,6 +115,11 @@ A new service can use a hostname under `local.dev` through the wildcard DNS
 record. It still needs a matching Ingress host and TLS configuration. Services
 that need a distinct DNS answer can use an explicit Technitium record.
 
+The Mac keeps the Technitium admin page on `http://127.0.0.1:5380` and the
+local image registry on `http://127.0.0.1:5001/v2/` with the
+[local service forwarders](lab/core/host/macos/install-local-service-forwarders.sh).
+Both listeners bind only to localhost and reconnect after Kubernetes restarts.
+
 ## Architecture
 
 ```mermaid

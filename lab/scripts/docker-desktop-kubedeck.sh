@@ -89,17 +89,20 @@ cleanup() {
   rm -rf "${temporary_dir}"
 }
 trap cleanup EXIT
-kubectl port-forward -n platform-system deployment/kubedeck-local-registry 5001:5001 --address 127.0.0.1 \
-  >"${temporary_dir}/port-forward.log" 2>&1 &
-forward_pid=$!
-for _ in {1..30}; do
-  if ! kill -0 "${forward_pid}" 2>/dev/null; then
-    printf 'Local registry port-forward could not start; check port 5001.\n' >&2
-    exit 1
-  fi
-  if curl -fsS --max-time 1 http://127.0.0.1:5001/v2/ >/dev/null 2>&1; then break; fi
-  sleep 1
-done
+if ! launchctl print "gui/$(id -u)/dev.kubedeck.local-registry" >/dev/null 2>&1 ||
+   ! curl -fsS --max-time 2 http://127.0.0.1:5001/v2/ >/dev/null 2>&1; then
+  kubectl port-forward -n platform-system deployment/kubedeck-local-registry 5001:5001 --address 127.0.0.1 \
+    >"${temporary_dir}/port-forward.log" 2>&1 &
+  forward_pid=$!
+  for _ in {1..30}; do
+    if ! kill -0 "${forward_pid}" 2>/dev/null; then
+      printf 'Local registry port-forward could not start; check port 5001.\n' >&2
+      exit 1
+    fi
+    if curl -fsS --max-time 1 http://127.0.0.1:5001/v2/ >/dev/null 2>&1; then break; fi
+    sleep 1
+  done
+fi
 curl -fsS --max-time 2 http://127.0.0.1:5001/v2/ >/dev/null
 
 if [[ "${KUBEDECK_SKIP_BUILD:-0}" != 1 ]]; then
