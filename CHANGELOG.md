@@ -4,21 +4,21 @@ All notable KubeDeck changes are documented in this file.
 
 ## [Unreleased]
 
-### Added
-
-- Restore the Grafana, Prometheus Stack, Loki, Tempo, Alloy, and k6 Operator deployment catalog for the Docker Desktop cluster, including the Grafana dashboards and Tempo smoke check.
-
-### Fixed
-
-- Allow the local Prometheus pod to scrape the Grafana image renderer's metrics through its ingress NetworkPolicy.
-- Use the pinned Grafana Enterprise image for the local Grafana release after the Docker Hub mirror rejected the OSS image tag.
-- Disable anonymous Grafana administrator access and resolve Grafana's Infisical scope from the active Docker Desktop project.
+## [0.5.0] - 2026-10-08
 
 ### Removed
 
-- Remove the redundant k6 dashboard shortcut hostname; k6 dashboards remain available in Grafana.
-- Retire versioned delivery roadmaps and the legacy Rancher migration plan; service changes are now handled from the current request and live state.
-- Remove unused storage add-ons, Caretta, Radar, and KEDA, while retaining the KubeDeck dashboard and agent source for future use.
+- Remove the home-lab service catalog, deployment scripts, shared-service charts, local environment connector, and standalone contract/template documentation from the repository. The source tree now contains only the Kubernetes and macOS agents, their documentation, and the Kubernetes agent chart.
+- Remove the chart's InfisicalSecret resource and implicit local-registry image reference.
+
+### Changed
+
+- Consolidate duplicate Kubernetes agent charts into `kubedeck-agent/chart` and keep catalog parser fixtures beside the agent tests.
+- Require an explicit image repository and immutable tag when rendering the agent chart. The bearer Secret is provisioned separately in the target namespace.
+
+### Migration
+
+- Point Helm commands at `kubedeck-agent/chart`, provide `image.repository` and `image.tag`, and create `kubedeck-agent-auth` before deploying. Existing shared services are no longer managed from this repository.
 
 ## [0.4.0] - 2026-10-08
 
@@ -129,3 +129,5 @@ All notable KubeDeck changes are documented in this file.
 [0.1.3]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.2...v0.1.3
 [0.1.4]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.3...v0.1.4
 [0.2.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.4...v0.2.0
+[0.4.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.3.4...v0.4.0
+[0.5.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.4.0...v0.5.0

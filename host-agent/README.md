@@ -19,10 +19,4 @@ If a VPN changes the default route to `utun`, the agent refuses to publish that 
 
 The agent's Kubernetes credential can read the existing admin Secret. Treat that user account and kubeconfig as privileged; a dedicated scoped Technitium API credential and finer host permissions belong to later hardening work. The admin API is reachable only through a localhost port-forward.
 
-To keep the Technitium admin page on `http://127.0.0.1:5380` and the local image registry on `http://127.0.0.1:5001/v2/` across pod restarts and Mac logins, install the two localhost-only LaunchAgents:
-
-```sh
-bash lab/core/host/macos/install-local-service-forwarders.sh
-```
-
-Each job restarts its Kubernetes port-forward if the selected pod or cluster restarts. The DNS reconciler above continues to use its own temporary random port and does not take either fixed port.
+The DNS reconciler opens its own temporary localhost port-forward. This repository does not install a fixed-port Technitium admin forwarder or a local image registry.

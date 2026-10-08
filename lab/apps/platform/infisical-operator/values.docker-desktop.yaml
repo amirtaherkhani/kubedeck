@@ -1,8 +1,0 @@
-# Scope the operator to namespaces that already exist in the V1 Docker Desktop profile.
-# Add external client namespaces only when their owners deploy them.
-scopedNamespaces:
-  - platform-secrets
-  - platform-storage
-  - observability
-  - observability-tests
-  - development-tools

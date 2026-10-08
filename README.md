@@ -1,24 +1,20 @@
-# KubeDeck agents and home lab
+# KubeDeck agents
 
-This repository contains two standalone agents and the configuration for the local Docker Desktop Kubernetes home lab. The KubeDeck web dashboard, its API proxy, database, assets, and Helm release have been removed.
+This repository contains two Go agents. The Kubernetes agent discovers cluster resources and exposes an internal API; the macOS host agent reconciles this Mac's `*.local.dev` DNS records through an existing Technitium installation. No dashboard or shared service deployment is included.
 
-| Component | Purpose | Runtime |
-| --- | --- | --- |
-| [`kubedeck-agent/`](kubedeck-agent/README.md) | Kubernetes discovery, snapshots, events, metrics, and optional authenticated management/CoreDNS aliases | Go service in Kubernetes; internal `:8080` API |
-| [`host-agent/`](host-agent/README.md) | Reconcile this Mac's local DNS integration | Go service on macOS |
-| [`lab/`](lab/README.md) | Shared cluster services, observability, DNS, TLS, agent chart, and local Infisical connector | Docker Desktop Kubernetes and macOS |
+| Component | Purpose |
+| --- | --- |
+| [`kubedeck-agent/`](kubedeck-agent/README.md) | Kubernetes discovery, metrics, events, and optional authenticated management and CoreDNS aliases |
+| [`kubedeck-agent/chart/`](kubedeck-agent/chart/README.md) | Standalone Helm chart for the Kubernetes agent |
+| [`host-agent/`](host-agent/README.md) | macOS local DNS reconciler |
 
-The two agent Helm charts are under [`charts/kubedeck-agent/`](charts/kubedeck-agent/README.md) and [`lab/apps/dev/kubedeck-agent/`](lab/apps/dev/kubedeck-agent/README.md). Service-module contracts, templates, and examples remain for the Go agent's catalog parser. The local Infisical connector at [`lab/tools/kubedeck-env-mcp/`](lab/tools/kubedeck-env-mcp/README.md) serves development agents and is independent of the removed UI.
+The cluster agent's service is internal and has no dashboard or public hostname. Its catalog parser fixtures live with its Go tests. The host agent depends on a separately managed Technitium service; this repository does not install Technitium or other platform services.
 
-## Verify the agents
+## Verify
 
 ```bash
 (cd kubedeck-agent && go test ./... && go vet ./...)
 (cd host-agent && go test ./...)
-helm lint charts/kubedeck-agent
-helm lint lab/apps/dev/kubedeck-agent
+helm lint kubedeck-agent/chart --set image.repository=example.invalid/kubedeck-agent --set image.tag=0.2.0
+helm template kubedeck-agent kubedeck-agent/chart --set image.repository=example.invalid/kubedeck-agent --set image.tag=0.2.0
 ```
-
-The Kubernetes agent's Service is internal and has no public hostname or dashboard. Its `/healthz`, `/readyz`, `/v1/snapshot`, and `/v1/events` endpoints are documented in the [agent API](kubedeck-agent/README.md). The host agent's installation and launchd checks are documented in its [README](host-agent/README.md).
-
-The dashboard's old PVC and administrator Secret are not required by either agent. The `kubedeck-agent-auth` Secret, local registry, and shared platform services are separate resources; keep them when maintaining the agents.

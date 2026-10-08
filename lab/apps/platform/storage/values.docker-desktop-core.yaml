@@ -1,6 +1,0 @@
-# Keep unauthenticated Redis inside the cluster.
-redis:
-  # This chart has no Redis password; do not publish unauthenticated Redis
-  # on every LAN interface through Docker Desktop's LoadBalancer.
-  service:
-    type: ClusterIP

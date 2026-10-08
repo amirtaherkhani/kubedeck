@@ -1,5 +1,0 @@
-# CoreDNS serves cluster-local names. The Docker Desktop recovery profile
-# leaves its custom ConfigMap untouched until the DNS management contract is
-# validated against the built-in cluster.
-dnsManagement:
-  enabled: false
