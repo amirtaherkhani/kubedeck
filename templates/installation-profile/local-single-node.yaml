@@ -1,8 +1,0 @@
-# Copy this file when defining a local install profile. Do not store local kubeconfig paths here.
-apiVersion: catalog.kubedeck.io/v1alpha1
-kind: InstallationProfile
-profile:
-  id: local-single-node
-  displayName: Local Single-Node
-  target: local-single-node
-installations: []

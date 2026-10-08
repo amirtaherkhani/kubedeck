@@ -9,7 +9,7 @@ import (
 
 func fixture(t *testing.T, parts ...string) []byte {
 	t.Helper()
-	filePath := filepath.Join(append([]string{"..", "..", "..", "..", "examples"}, parts...)...)
+	filePath := filepath.Join(append([]string{"testdata"}, parts...)...)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Fatal(err)

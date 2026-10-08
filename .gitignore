@@ -2,14 +2,4 @@
 .env*
 .DS_Store
 *.pem
-*.tsbuildinfo
-/node_modules/
-/dist/
-/coverage/
-/outputs/
-/work/
 /.worktrees/
-
-# Retained local data and generated files from the removed web UI.
-/.vinext/
-/.wrangler/
