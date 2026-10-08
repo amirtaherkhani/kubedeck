@@ -20,6 +20,12 @@ All notable KubeDeck changes are documented in this file.
 - Retire versioned delivery roadmaps and the legacy Rancher migration plan; service changes are now handled from the current request and live state.
 - Remove unused storage add-ons, Caretta, Radar, and KEDA, while retaining the KubeDeck dashboard and agent source for future use.
 
+## [0.3.3] - 2026-10-08
+
+### Fixed
+
+- Pin the k6 Operator controller image by digest so a fresh Helm deployment uses the same controller binary as the TestRun examples.
+
 ## [0.3.2] - 2026-10-08
 
 ### Fixed
