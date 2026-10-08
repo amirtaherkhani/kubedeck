@@ -2,4 +2,14 @@
 .env*
 .DS_Store
 *.pem
+*.tsbuildinfo
+/node_modules/
+/dist/
+/coverage/
+/outputs/
+/work/
 /.worktrees/
+
+# Generated data from earlier checkouts may still exist locally.
+/.vinext/
+/.wrangler/
