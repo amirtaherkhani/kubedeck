@@ -4,6 +4,16 @@ All notable KubeDeck changes are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-08
+
+### Added
+
+- Restore the Grafana and image-renderer chart, Prometheus Stack, Loki, Tempo, Alloy, and their Infisical, TLS, and ingress deployment configuration after these services were explicitly retained.
+
+### Changed
+
+- Keep Loki's existing PVC when its StatefulSet is scaled down or removed. Document the pinned observability deployment order and the required Infisical scope override.
+
 ## [0.5.0] - 2026-10-08
 
 ### Removed
@@ -131,3 +141,4 @@ All notable KubeDeck changes are documented in this file.
 [0.2.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.4...v0.2.0
 [0.4.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.3.4...v0.4.0
 [0.5.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.4.0...v0.5.0
+[0.6.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.5.0...v0.6.0
