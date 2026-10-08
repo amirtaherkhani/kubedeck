@@ -41,6 +41,10 @@ Talos, MicroK8s, kind, managed Kubernetes, and other conformant clusters.
 
 KubeDeck `v0.2.0` is an early, Kubernetes-native foundation.
 
+The dashboard and Kubernetes agent remain in this repository but are not
+currently deployed. The active local platform consists of DNS, ingress, TLS,
+Infisical, and the shared PostgreSQL, Redis, RabbitMQ, and NATS services.
+
 The repository includes the dashboard, responsive liquid-glass interface,
 authentication, Kubernetes catalog, multi-node review, notifications, settings,
 Go cluster agent, container runtimes, and separate Helm charts for the app and
@@ -131,14 +135,9 @@ The homelab's PostgreSQL and Redis sharing rule, including Infisical's isolated
 backing stores, is documented in
 [Shared data services](docs/architecture/shared-data-services.md).
 
-## Operations roadmaps
-
-- [Versioned delivery roadmap, status, and history](docs/roadmap/README.md) — v0.2.0 baseline through v1.0.0, v1.1.0–v1.4.0, and v2.0.0.
-- [Rancher Desktop to Docker Desktop migration](docs/migration/rancher-to-docker-desktop.md) — planning and acceptance record for moving the local cluster, Infisical-backed environments, and developer DNS to Docker Desktop and Technitium. It does not authorize running the migration.
-
-The current Helm release runs one application replica because its embedded D1
-database uses a single-writer persistent volume. A future external database
-backend can enable horizontally scaled application replicas.
+The dashboard chart is configured for one application replica because its
+embedded D1 database uses a single-writer persistent volume. A future external
+database backend can enable horizontally scaled application replicas.
 
 ## Technology
 
@@ -450,24 +449,6 @@ the `kubedeck.override` key and refuses to overwrite unrecognized content.
 - HTTPS should be enabled before using authentication outside local development.
 - Do not grant write access to workloads, Secrets, or cluster administration
   APIs solely for dashboard discovery.
-
-## Roadmap
-
-- [x] Read-only Service, Ingress, EndpointSlice, Deployment, StatefulSet, Pod,
-      Namespace, and Node discovery agent
-- [x] Kubernetes watch-based snapshot and SSE updates
-- [x] Opt-in CoreDNS Service alias management
-- [x] Bind dashboard, catalog, DNS, settings, notifications, and session charts
-      to live agent snapshots
-- [ ] Prometheus and metrics-server resource histories
-- [ ] Multi-cluster connection management
-- [ ] Configurable classification rules and annotations
-- [ ] Viewer, editor, and administrator roles
-- [ ] User management and external identity providers
-- [ ] Pluggable database backend for horizontal scaling
-- [ ] Helm repository and signed multi-architecture container releases
-- [ ] Import/export and declarative catalog configuration
-- [ ] Notification delivery integrations
 
 ## Inspiration
 

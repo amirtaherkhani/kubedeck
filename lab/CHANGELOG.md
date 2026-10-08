@@ -9,7 +9,6 @@
 ### Added
 
 - Added explicit multi-project bootstrap through `INFISICAL_LOCAL_DEV_PROJECT_IDS` for the central local development agent identity.
-- Added a pinned Grafana image renderer deployment with Prometheus scraping support.
 
 ### Changed
 
@@ -17,12 +16,22 @@
 - Consolidated local AI environment access on one project-aware `local-dev-env-mcp` connector and removed per-project profile selection from the agent surface.
 - Configured the global MCP clients to use the macOS system CA store so `*.local.dev` HTTPS is trusted by Node.
 - Applied the same system-CA setting to bootstrap, doctor, and live smoke verification commands.
-- Updated pgAdmin's configured PostgreSQL application user to `app`.
 
 ### Removed
 
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
+
+## [platform-storage 0.2.0] - 2026-10-08
+
+### Removed
+
+- Remove unused PostgreSQL and NATS admin UIs, Kafka and Schema Registry, MongoDB, MinIO, Jaeger, Mailpit, and grpcui from the shared storage chart. Existing PVCs remain untouched.
+- Remove unused Radar, k6 Operator, and other optional observability and autoscaling releases from the managed catalog.
+
+### Fixed
+
+- Apply Docker Desktop storage overrides in the Helm workflow and keep unauthenticated Redis on a ClusterIP Service.
 
 ## [platform-storage 0.1.9] - 2026-10-07
 
