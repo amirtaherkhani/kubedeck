@@ -30,6 +30,12 @@
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
 
+## [0.3.3] - 2026-10-08
+
+### Fixed
+
+- Pin the k6 Operator controller image by digest in its Helm values, completing the fixed-image set for the existing k6 TestRun examples.
+
 ## [0.3.2] - 2026-10-08
 
 ### Fixed
