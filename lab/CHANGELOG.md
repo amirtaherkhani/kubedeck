@@ -2,8 +2,13 @@
 
 ## [Unreleased]
 
+### Added
+
+- Restore the Grafana, Prometheus Stack, Loki, Tempo, Alloy, and k6 Operator Helm releases and their Grafana dashboards.
+
 ### Fixed
 
+- Use Docker Desktop context, storage class, and Infisical scope for restored observability services; remove the stale Rancher Desktop scrape target and disable anonymous Grafana administrator access.
 - Added the version-matched Traefik provider CRDs to Docker Desktop core setup so Traefik can watch its complete CRD API set.
 
 ### Added
@@ -33,7 +38,7 @@
 ### Removed
 
 - Remove unused PostgreSQL and NATS admin UIs, Kafka and Schema Registry, MongoDB, MinIO, Jaeger, Mailpit, and grpcui from the shared storage chart. Historical platform-storage PVCs remain untouched; the Radar PVC was removed with its release.
-- Remove unused Radar, k6 Operator, and other optional observability and autoscaling releases from the managed catalog.
+- Remove unused Radar, Caretta, and KEDA releases from the managed catalog.
 
 ### Fixed
 

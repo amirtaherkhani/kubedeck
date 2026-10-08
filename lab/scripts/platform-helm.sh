@@ -126,19 +126,16 @@ helm_base_args() {
     --values "${values}"
   )
 
-  if [[ "${release}" == "platform-storage" ]]; then
+  if [[ "${release}" == "platform-storage" || "${release}" == "grafana" ]]; then
     require_command jq
     source "${SCRIPT_DIR}/lib/docker-desktop-scope.sh"
     scope="$(resolve_docker_desktop_scope)"
     IFS=$'\t' read -r project_slug environment <<<"${scope}"
     [[ -n "${project_slug}" && -n "${environment}" ]] || die "Infisical project scope is incomplete"
-    HELM_ARGS+=(
-      --reuse-values
-      --values apps/platform/storage/values.docker-desktop.yaml
-      --values apps/platform/storage/values.docker-desktop-core.yaml
-      --set-string "infisical.projectSlug=${project_slug}"
-      --set-string "infisical.envSlug=${environment}"
-    )
+    if [[ "${release}" == "platform-storage" ]]; then
+      HELM_ARGS+=(--reuse-values --values apps/platform/storage/values.docker-desktop.yaml --values apps/platform/storage/values.docker-desktop-core.yaml)
+    fi
+    HELM_ARGS+=(--set-string "infisical.projectSlug=${project_slug}" --set-string "infisical.envSlug=${environment}")
   fi
 
   if [[ "${version}" != "-" ]]; then

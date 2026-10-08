@@ -4,10 +4,18 @@ All notable KubeDeck changes are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Restore the Grafana, Prometheus Stack, Loki, Tempo, Alloy, and k6 Operator deployment catalog for the Docker Desktop cluster, including the Grafana dashboards and Tempo smoke check.
+
+### Fixed
+
+- Disable anonymous Grafana administrator access and resolve Grafana's Infisical scope from the active Docker Desktop project.
+
 ### Removed
 
 - Retire versioned delivery roadmaps and the legacy Rancher migration plan; service changes are now handled from the current request and live state.
-- Remove unused optional service charts and configuration, while retaining the KubeDeck dashboard and agent source for future use.
+- Remove unused storage add-ons, Caretta, Radar, and KEDA, while retaining the KubeDeck dashboard and agent source for future use.
 
 ## [0.2.0] - 2026-10-05
 
