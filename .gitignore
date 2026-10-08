@@ -9,3 +9,7 @@
 /outputs/
 /work/
 /.worktrees/
+
+# Retained local data and generated files from the removed web UI.
+/.vinext/
+/.wrangler/
