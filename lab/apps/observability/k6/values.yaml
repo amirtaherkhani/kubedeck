@@ -1,0 +1,16 @@
+namespace:
+  create: false
+
+manager:
+  image:
+    registry: ghcr.io
+    repository: grafana/k6-operator
+    tag: controller-v1.5.0@sha256:e70ae7547814e6d353359fd5db70528c2bc73be7edbd7c97dcb8ca0d660149ee
+    pullPolicy: IfNotPresent
+
+customLabels:
+  release: monitoring
+
+metrics:
+  serviceMonitor:
+    enabled: true
