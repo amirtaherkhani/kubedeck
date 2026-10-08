@@ -45,6 +45,15 @@ imageRenderer:
     enabled: true
     labels:
       release: monitoring
+  networkPolicy:
+    limitIngress: true
+    extraIngressSelectors:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: observability
+        podSelector:
+          matchLabels:
+            app.kubernetes.io/name: prometheus
 
 serviceMonitor:
   enabled: true
