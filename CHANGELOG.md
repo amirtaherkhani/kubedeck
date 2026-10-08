@@ -16,6 +16,7 @@ All notable KubeDeck changes are documented in this file.
 
 ### Removed
 
+- Remove the redundant k6 dashboard shortcut hostname; k6 dashboards remain available in Grafana.
 - Retire versioned delivery roadmaps and the legacy Rancher migration plan; service changes are now handled from the current request and live state.
 - Remove unused storage add-ons, Caretta, Radar, and KEDA, while retaining the KubeDeck dashboard and agent source for future use.
 
