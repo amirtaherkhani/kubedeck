@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- Allow the local Prometheus pod to scrape the Grafana image renderer's metrics through its ingress NetworkPolicy.
 - Use the pinned Grafana Enterprise image for the local Grafana release after the Docker Hub mirror rejected the OSS image tag.
 - Use Docker Desktop context, storage class, and Infisical scope for restored observability services; remove the stale Rancher Desktop scrape target and disable anonymous Grafana administrator access.
 - Added the version-matched Traefik provider CRDs to Docker Desktop core setup so Traefik can watch its complete CRD API set.
