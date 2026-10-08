@@ -30,6 +30,12 @@
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
 
+## [0.3.4] - 2026-10-08
+
+### Removed
+
+- Remove the completed NATS HA migration helper, empty Grafana dashboard placeholder, and optional k6 live-dashboard TestRun example while keeping the active releases and Grafana dashboards.
+
 ## [0.3.3] - 2026-10-08
 
 ### Fixed

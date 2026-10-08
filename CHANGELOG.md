@@ -20,6 +20,12 @@ All notable KubeDeck changes are documented in this file.
 - Retire versioned delivery roadmaps and the legacy Rancher migration plan; service changes are now handled from the current request and live state.
 - Remove unused storage add-ons, Caretta, Radar, and KEDA, while retaining the KubeDeck dashboard and agent source for future use.
 
+## [0.3.4] - 2026-10-08
+
+### Removed
+
+- Remove unused D1 notes examples, archived release-note files, the empty Grafana dashboard placeholder, the completed NATS HA migration helper, and the optional k6 live-dashboard TestRun example.
+
 ## [0.3.3] - 2026-10-08
 
 ### Fixed

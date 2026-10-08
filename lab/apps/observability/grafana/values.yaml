@@ -911,8 +911,6 @@ dashboards: {}
   #   some-dashboard:
   #     json: |
   #       $RAW_JSON
-  #   custom-dashboard:
-  #     file: dashboards/custom-dashboard.json
   #   prometheus-stats:
   #     title: My Custom Dashboard Title   # optional; overrides the dashboard title in the downloaded JSON
   #     gnetId: 2
