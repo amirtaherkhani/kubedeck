@@ -1,7 +1,7 @@
 # Local DNS
 
 All new home-lab routes use the `*.local.dev` suffix, for example
-`https://grafana.local.dev` and `https://kubedeck.local.dev`.
+`https://grafana.local.dev`.
 
 Kubernetes pods use service DNS such as
 `grafana.observability.svc.cluster.local`. macOS applications must use the

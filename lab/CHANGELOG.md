@@ -30,6 +30,16 @@
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
 
+## [0.4.0] - 2026-10-08
+
+### Removed
+
+- Remove the KubeDeck dashboard chart and its combined Docker Desktop build/deploy helper; keep the cluster agent chart and local Infisical connector.
+
+### Changed
+
+- Require an explicit client Pod selector when enabling the cluster agent NetworkPolicy.
+
 ## [0.3.4] - 2026-10-08
 
 ### Removed

@@ -51,8 +51,6 @@ repo_root="$(git -C "${script_dir}/../.." rev-parse --show-toplevel)"
 primary_root="$(git -C "${repo_root}" worktree list --porcelain | awk '/^worktree / {sub(/^worktree /, ""); print; exit}')"
 for root in "${primary_root}" "${repo_root}"; do
   kubedeck-env-mcp register --project-id "${home_id}" --environment dev \
-    --path /apps/development-tools/kubedeck --root "${root}" >/dev/null
-  kubedeck-env-mcp register --project-id "${home_id}" --environment dev \
     --path /apps/development-tools/kubedeck-agent --root "${root}/kubedeck-agent" >/dev/null
 done
 finance_root="${VERO_FINANCE_PROJECT_DIR:-/Users/mac/Documents/GitHub/verovault-finance}"

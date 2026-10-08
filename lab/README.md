@@ -1,6 +1,6 @@
 # Local Home Lab
 
-Source of truth for services running on the local Rancher Desktop Kubernetes
+Source of truth for services running on the local Docker Desktop Kubernetes
 cluster.
 
 ## Structure
@@ -9,14 +9,14 @@ cluster.
 core/                         cluster, DNS, TLS, host, Helm ownership
 apps/platform/                storage, cert-manager, Infisical
 apps/observability/           Grafana, Prometheus, Loki, Tempo, Alloy, k6
-apps/dev/                     KubeDeck, KubeDeck Agent
+apps/dev/                     KubeDeck cluster agent
 scripts/                      safe validation and operation helpers
 tools/kubedeck-env-mcp/        project-aware Infisical connector for local agents
 ```
 
 ## Conventions
 
-- Kubernetes context: `rancher-desktop`.
+- Kubernetes context: `docker-desktop`.
 - Local domains: `*.local.dev`.
 - Web access: HTTPS through Traefik and `local-dev-tls`.
 - Namespaces: `platform-system`, `platform-storage`, `platform-secrets`,
@@ -58,7 +58,5 @@ See [tools/kubedeck-env-mcp/README.md](tools/kubedeck-env-mcp/README.md) for
 the agent tools, project registration, identity boundaries, and direct
 Kubernetes injection contract.
 
-Rancher Desktop owns Traefik, Traefik CRDs, CoreDNS, Flannel,
-local-path-provisioner, metrics-server, ServiceLB, and K3s system controllers.
-The repository observes these components and does not upgrade or remove their
-Helm releases.
+Docker Desktop provides the Kubernetes runtime. The cluster agent is an
+internal API service; there is no KubeDeck web UI or Ingress.

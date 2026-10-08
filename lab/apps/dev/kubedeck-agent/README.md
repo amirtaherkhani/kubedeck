@@ -1,7 +1,6 @@
 # KubeDeck Agent
 
-Internal discovery, metrics, events, SSE, and optional CoreDNS alias agent for
-KubeDeck.
+Internal discovery, metrics, events, SSE, and optional CoreDNS alias agent.
 
 | Field | Value |
 |---|---|
@@ -12,4 +11,5 @@ KubeDeck.
 | Configuration | Infisical secret `kubedeck-agent-auth` |
 | Observability | Readiness, liveness, and agent metrics |
 
-The service is consumed by KubeDeck and is not exposed through an Ingress.
+The service is not exposed through an Ingress. Authorized in-cluster clients
+can consume its API directly; see the [agent API](../../../../kubedeck-agent/README.md).

@@ -2,7 +2,7 @@
 
 KubeDeck Agent is a small Go service that runs once per Kubernetes cluster. It
 watches the Kubernetes API, reads the resource Metrics API, builds a
-dashboard-ready cluster snapshot, and streams updates to KubeDeck over
+cluster snapshot, and streams updates to authorized clients over
 Server-Sent Events (SSE). Discovery is read-only. An optional, disabled-by-
 default CoreDNS module can manage exact internal aliases for Kubernetes
 Services.
@@ -72,8 +72,8 @@ permission to scrape kubelet Summary APIs.
 Management is disabled by default with `KUBEDECK_MANAGEMENT_ENABLED=false`.
 It requires a non-empty bearer token and an intentionally granted Kubernetes
 ServiceAccount role. The Helm chart requires `rbac.clusterAdmin=true` when
-management is enabled. The dashboard exposes an authenticated
-`/api/cluster/manage/...` proxy; management responses are never cached.
+management is enabled. Clients must authenticate directly to the internal
+agent API; avoid caching management responses.
 
 Resource operations use discovery for served resource scope. `GET` supports
 `name` or a paginated list (`continue`), and a bounded newline-delimited watch
@@ -96,7 +96,7 @@ operation again. `GET` workload status returns the typed workload object;
 
 Raw Secret resources are excluded from generic discovery and operations. Logs,
 events, ConfigMaps, and other resources can contain sensitive content; limit
-dashboard administrator access and avoid saving these responses. Audit logs
+agent API client access and avoid saving these responses. Audit logs
 record action metadata and request IDs, not request or response bodies.
 Exec, attach, port-forward, Helm operations, and generic subresource writes
 are not implemented; each needs separate streaming and authorization design.
@@ -105,7 +105,7 @@ The stream sends an initial snapshot, debounced resource-change snapshots,
 metrics snapshots, and heartbeat comments. It supports the standard
 `Last-Event-ID` header and replays a bounded in-memory history. When the client
 falls behind that history, the agent sends only the newest full snapshot so
-stale replay cannot roll the dashboard backward:
+stale replay cannot roll a client backward:
 
 ```text
 retry: 3000
@@ -116,13 +116,12 @@ data: {"id":42,"name":"snapshot","clusterId":"homelab","sentAt":"...","data":{..
 ```
 
 If `KUBEDECK_AGENT_TOKEN` is set, snapshot and stream requests require
-`Authorization: Bearer <token>`. KubeDeck should keep that token server-side and
-proxy the SSE stream to an authenticated browser session; native browser
-`EventSource` cannot set an Authorization header.
+`Authorization: Bearer <token>`. Keep the token in a trusted client process;
+native browser `EventSource` cannot set an Authorization header.
 
 ## CoreDNS service aliases
 
-CoreDNS does not expose a remote configuration CRUD API. KubeDeck therefore
+CoreDNS does not expose a remote configuration CRUD API. The agent therefore
 uses the official Kubernetes client to update one dedicated key in the
 CoreDNS custom ConfigMap, and the CoreDNS Caddyfile package to validate the
 generated override. It never edits the K3s-owned main `Corefile`.
