@@ -20,6 +20,13 @@ All notable KubeDeck changes are documented in this file.
 - Retire versioned delivery roadmaps and the legacy Rancher migration plan; service changes are now handled from the current request and live state.
 - Remove unused storage add-ons, Caretta, Radar, and KEDA, while retaining the KubeDeck dashboard and agent source for future use.
 
+## [0.3.1] - 2026-10-08
+
+### Fixed
+
+- Keep the Technitium admin page and local image registry available on fixed Mac localhost ports 5380 and 5001 across pod restarts and user logins.
+- Reuse the persistent registry listener when preparing Docker Desktop images.
+
 ## [0.2.0] - 2026-10-05
 
 ### Added

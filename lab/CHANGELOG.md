@@ -8,7 +8,6 @@
 
 ### Fixed
 
-- Keep Technitium admin and the local image registry reachable on stable Mac localhost ports 5380 and 5001, including after Kubernetes pod restarts and Mac login. Reuse an existing registry listener in the Docker Desktop image workflow.
 - Allow the local Prometheus pod to scrape the Grafana image renderer's metrics through its ingress NetworkPolicy.
 - Use the pinned Grafana Enterprise image for the local Grafana release after the Docker Hub mirror rejected the OSS image tag.
 - Use Docker Desktop context, storage class, and Infisical scope for restored observability services; remove the stale Rancher Desktop scrape target and disable anonymous Grafana administrator access.
@@ -30,6 +29,12 @@
 - Remove the redundant k6 dashboard redirect Ingress and Middleware; keep the Grafana dashboard ConfigMaps.
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
+
+## [0.3.1] - 2026-10-08
+
+### Fixed
+
+- Keep Technitium admin and the local image registry reachable on stable Mac localhost ports 5380 and 5001, including after Kubernetes pod restarts and Mac login. Reuse the existing registry listener in the Docker Desktop image workflow.
 
 ## [platform-storage 0.2.1] - 2026-10-08
 
