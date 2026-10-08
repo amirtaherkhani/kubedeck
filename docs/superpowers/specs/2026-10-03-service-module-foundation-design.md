@@ -2,7 +2,7 @@
 
 ## Purpose and scope
 
-Establish a portable, versioned metadata contract and reusable starter for describing services and tools in the combined KubeDeck/homelab project. The immediate milestone is local and additive: the existing homelab Helm charts, release ordering, secrets, workloads, and UI/agent behavior stay unchanged. It is not a bulk catalog migration or a new runtime plugin loader.
+Establish a portable, versioned metadata contract and reusable starter for describing services and tools in the KubeDeck agent and home-lab project. The existing homelab Helm charts, release ordering, secrets, and workloads stay unchanged. It is not a bulk catalog migration or a new runtime plugin loader.
 
 V1 targets one local single-node Kubernetes environment. The contract must distinguish infrastructure managed by the homelab from external applications registered for observation. Vero Finance remains an external client workload, not a KubeDeck-owned service.
 
@@ -12,7 +12,7 @@ V1 targets one local single-node Kubernetes environment. The contract must disti
 - `lab/core/helm/releases.conf` defines deployment order, release name, namespace, chart reference/version, values path, and timeout; `repositories.conf` maps remote chart repositories. These remain the current deployment source of truth.
 - Some current modules bundle multiple components in one chart/release. `apps/platform/storage` is the relevant example; a module therefore cannot be assumed to represent exactly one Kubernetes workload or one chart component.
 - The Go agent exposes versioned live cluster snapshots (`kubedeck.io/v1alpha1`) over its API/SSE and discovers Kubernetes resources. It has no declarative service metadata catalog today. Its discovery remains read-only.
-- The UI consumes the agent's current model. This milestone adds stable shared declarations and types but does not yet add a catalog-serving endpoint or change UI inventory behavior.
+- The repository contains only agents and infrastructure; the web dashboard was removed. This foundation adds declarations and Go types but no catalog-serving endpoint.
 
 ## Proposed contract
 
@@ -21,7 +21,7 @@ Use two distinct versioned file contracts rather than one object mixing durable 
 1. **ServiceModule** describes a logical module and its components. It contains stable identity, category, ownership (`managed` or `external`), purpose, capabilities provided and required, external connections, workload references, endpoints, health/observability references, and Infisical reference-only secret bindings.
 2. **InstallationProfile** describes one deployment target/environment and references ServiceModule IDs. Its managed installation entries carry Helm source/chart/version, release name, namespace, and relative values-file overrides. V1 profile target is local single-node Kubernetes; machine-specific context and filesystem paths are supplied by the developer at runtime, not committed.
 
-Use a separate API group/version for declarations (proposed `catalog.kubedeck.io/v1alpha1`); do not conflate it with the current live snapshot version `kubedeck.io/v1alpha1`. JSON Schema is the language-neutral structural contract. Go and TypeScript types reflect that schema; fixtures validate in both runtimes. Additional unknown fields fail validation in this first version. Additive schema changes must increment or explicitly revise the contract version and compatibility tests.
+Use a separate API group/version for declarations (`catalog.kubedeck.io/v1alpha1`); do not conflate it with the current live snapshot version `kubedeck.io/v1alpha1`. JSON Schema is the language-neutral structural contract. Go types reflect that schema; fixtures validate in Go tests. Additional unknown fields fail validation in this first version. Additive schema changes must increment or explicitly revise the contract version and compatibility tests.
 
 Secret metadata contains only references (provider, project/environment reference, and secret path/name). Raw tokens, passwords, keys, or secret values are forbidden. A module's declared capabilities and metadata never grant agent permissions or authorize executable plugin code.
 
@@ -31,7 +31,6 @@ Secret metadata contains only references (provider, project/environment referenc
 contracts/service-module/v1alpha1/schema.json
 contracts/installation-profile/v1alpha1/schema.json
 kubedeck-agent/internal/catalog/v1alpha1/types.go
-src/lib/service-catalog/types.ts
 templates/service-module/service.yaml
 templates/installation-profile/local-single-node.yaml
 examples/service-modules/managed.example.yaml
@@ -43,14 +42,14 @@ lab/core/helm/{releases,repositories}.conf     # existing deployment truth uncha
 
 Templates and examples are non-installed reference files, not catalog entries. Real service registration or migration requires separate explicit review. Existing modules can adopt descriptors incrementally after approval; the foundation does not move charts or redefine the existing storage release.
 
-## UI and agent relationship
+## Agent relationship
 
-This phase provides versioned Go and TypeScript value types and schema-valid examples. Later work may load module declarations into the agent as read-only metadata, combine them with live Kubernetes observations using explicit workload references, and expose a normalized view for the UI. The exact transport and reconciliation rules are deferred. Discovery continues through `client-go`; use Helm lifecycle APIs for future managed release operations rather than treating render/apply as a complete Helm lifecycle.
+This phase provides versioned Go value types and schema-valid examples. Later work may load module declarations into the agent as read-only metadata and combine them with live Kubernetes observations using explicit workload references. The exact transport and reconciliation rules are deferred. Discovery continues through `client-go`; use Helm lifecycle APIs for future managed release operations rather than treating render/apply as a complete Helm lifecycle.
 
 ## Validation and failure behavior
 
 - Validate each example/profile against its JSON Schema; reject wrong API versions, duplicate identifiers, invalid ownership/deployment combinations, unknown fields, invalid references, absolute machine-specific paths, and secret values.
-- Go and TypeScript tests parse the same fixtures and verify the same contract version and core fields.
+- Go tests parse the fixtures and verify the contract version and core fields.
 - Preserve vendor `values.schema.json` and chart-specific values; do not impose identical chart configuration on different upstreams.
 - Profile validation checks module references and relative paths. It does not install or alter a cluster.
 
@@ -64,7 +63,7 @@ This phase provides versioned Go and TypeScript value types and schema-valid exa
 ## Acceptance criteria
 
 1. A generic managed module, a generic external registration, and a local single-node profile example validate against versioned schemas without referring to a real service or containing secret values.
-2. Go agent and TypeScript UI types represent the same API version and core contract fields; tests parse the common fixtures.
+2. Go agent types represent the API version and core contract fields; tests parse the fixtures.
 3. Example and template paths are documented, portable, and reference existing Helm module locations without moving or changing those charts.
 4. No live Kubernetes resources, Helm releases, existing service catalog entries, secrets, or production/staging environments are changed.
 

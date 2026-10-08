@@ -53,7 +53,7 @@ helm() {
 
 kubectl() {
   if [[ "${1:-}" == "config" && "${2:-}" == "current-context" ]]; then
-    printf '%s\n' 'rancher-desktop'
+    printf '%s\n' 'docker-desktop'
     return 0
   fi
 
@@ -68,7 +68,7 @@ cd "${REPO_ROOT}"
 
 test_custom_image_apply_omits_automatic_rollback() {
   HELM_AUTO_ROLLBACK=false make --no-print-directory \
-    helm-apply RELEASE=kubedeck > "${OUTPUT_FILE}"
+    helm-apply RELEASE=tempo > "${OUTPUT_FILE}"
   local safe_args
   safe_args="$(<"${CAPTURE_FILE}")"
 
@@ -83,7 +83,7 @@ test_default_apply_prefers_rollback_on_failure() {
   : > "${CAPTURE_FILE}"
   (
     unset HELM_AUTO_ROLLBACK
-    ./scripts/platform-helm.sh apply kubedeck > "${OUTPUT_FILE}"
+    ./scripts/platform-helm.sh apply tempo > "${OUTPUT_FILE}"
   )
   assert_has_arg "$(<"${CAPTURE_FILE}")" '--rollback-on-failure'
 }
@@ -91,12 +91,12 @@ test_default_apply_prefers_rollback_on_failure() {
 test_default_apply_falls_back_to_atomic() {
   : > "${CAPTURE_FILE}"
   HELM_AUTO_ROLLBACK=true HELM_HELP_SUPPORTS_ROLLBACK=false \
-    ./scripts/platform-helm.sh apply kubedeck > "${OUTPUT_FILE}"
+    ./scripts/platform-helm.sh apply tempo > "${OUTPUT_FILE}"
   assert_has_arg "$(<"${CAPTURE_FILE}")" '--atomic'
 }
 
 test_invalid_auto_rollback_setting_is_rejected() {
-  if HELM_AUTO_ROLLBACK=invalid ./scripts/platform-helm.sh apply kubedeck \
+  if HELM_AUTO_ROLLBACK=invalid ./scripts/platform-helm.sh apply tempo \
     > "${OUTPUT_FILE}" 2>&1; then
     fail 'invalid HELM_AUTO_ROLLBACK value was accepted'
   fi

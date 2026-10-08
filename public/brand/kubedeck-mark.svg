@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title description">
-  <title id="title">KubeDeck</title>
-  <desc id="description">A rounded K inside an open cube with a playful cluster node.</desc>
-  <rect x="8" y="8" width="240" height="240" rx="56" fill="#101d2b"/>
-  <path d="m128 34 78 45v90l-78 45-78-45V79z" fill="none" stroke="#6ee7d8" stroke-width="20" stroke-linejoin="round"/>
-  <path d="M91 88v80m4-39 57-42m-57 42 61 44" fill="none" stroke="#c9b6ff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="190" cy="128" r="10" fill="#ffcb6b"/>
-</svg>

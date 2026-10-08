@@ -1,4 +1,7 @@
 {{- if .Values.networkPolicy.enabled }}
+{{- if empty .Values.networkPolicy.ingressPodSelector }}
+{{- fail "networkPolicy.ingressPodSelector must identify an authorized API client when the NetworkPolicy is enabled" }}
+{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

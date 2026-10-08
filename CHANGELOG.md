@@ -20,6 +20,20 @@ All notable KubeDeck changes are documented in this file.
 - Retire versioned delivery roadmaps and the legacy Rancher migration plan; service changes are now handled from the current request and live state.
 - Remove unused storage add-ons, Caretta, Radar, and KEDA, while retaining the KubeDeck dashboard and agent source for future use.
 
+## [0.4.0] - 2026-10-08
+
+### Removed
+
+- Remove the KubeDeck web UI, its API proxy, database, Node build chain, static assets, dashboard Helm charts, and combined UI/agent deployment scripts. The repository now keeps the Kubernetes and macOS agents without a dashboard.
+
+### Changed
+
+- Keep the cluster agent's API, auth Secret, service-module contract, and Helm charts independent of a dashboard. Operators who enable the agent NetworkPolicy must now select authorized client Pods explicitly.
+
+### Migration
+
+- Existing dashboard Helm releases should be uninstalled separately. The dashboard administrator Secret and UI PVC are not needed by either agent; retain or delete UI data according to the operator's data-retention decision.
+
 ## [0.3.4] - 2026-10-08
 
 ### Removed

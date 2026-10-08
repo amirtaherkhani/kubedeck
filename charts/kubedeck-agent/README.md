@@ -2,9 +2,8 @@
 
 This chart deploys one discovery agent for a Kubernetes cluster. Discovery is
 read-only. CoreDNS Service-alias writes are optional, disabled by default, and
-limited to one custom ConfigMap. The agent Service stays internal; KubeDeck
-consumes its snapshot, SSE, and DNS configuration endpoints through the cluster
-network.
+limited to one custom ConfigMap. The agent Service stays internal; authorized
+in-cluster clients consume its snapshot, SSE, and DNS configuration endpoints.
 
 ```bash
 helm upgrade --install kubedeck-agent ./charts/kubedeck-agent \
@@ -30,17 +29,8 @@ auth:
   tokenKey: token
 ```
 
-Configure the KubeDeck application with:
-
-```yaml
-agent:
-  url: http://kubedeck-agent:8080
-  existingSecret: kubedeck-agent-auth
-  tokenKey: KUBEDECK_AGENT_TOKEN
-```
-
-For a standalone installation that uses the `token` key above, set the
-application's `agent.tokenKey` to `token` as well.
+Clients send `Authorization: Bearer <token>` to the internal Service using the
+same Secret key; do not expose the token or Service through an Ingress.
 
 ## Cluster administrator access
 
@@ -60,10 +50,13 @@ ClusterRole. It can then read Secrets and change or delete resources in every
 namespace. The chart requires a dedicated ServiceAccount in this mode. Keep
 the bearer token Secret configured, limit access to the
 internal agent Service, and review Kubernetes audit logs for this identity.
-The current HTTP API still exposes snapshot/SSE reads and the separately
-enabled, validated CoreDNS alias operation; this setting does not add generic
-Kubernetes write endpoints. Any future destructive operation needs its own
-authenticated API, authorization checks, dry-run/confirmation flow, and tests.
+Generic management endpoints are separately disabled by default. Granting
+cluster-admin makes those endpoints powerful if enabled; review both flags
+and the [agent API](../../kubedeck-agent/README.md) before using them.
+
+If `networkPolicy.enabled=true`, configure a non-empty
+`networkPolicy.ingressPodSelector` for the authorized client. The chart no
+longer assumes a dashboard Pod exists.
 
 For Docker Desktop KIND, leave `dnsManagement.enabled=false`: the K3s
 `coredns-custom` import is not part of KIND's default CoreDNS configuration.

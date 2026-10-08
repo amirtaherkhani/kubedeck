@@ -102,9 +102,7 @@ terminationGracePeriodSeconds: 20
 networkPolicy:
   enabled: false
   ingressNamespaceSelector: {}
-  ingressPodSelector:
-    matchLabels:
-      app.kubernetes.io/name: kubedeck
+  ingressPodSelector: {}
 
 nodeSelector: {}
 tolerations: []
