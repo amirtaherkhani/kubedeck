@@ -30,6 +30,12 @@
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
 
+## [0.3.2] - 2026-10-08
+
+### Fixed
+
+- Pin runner, initializer, and starter image digests in both k6 TestRun examples so later test runs do not silently move to a new image.
+
 ## [0.3.1] - 2026-10-08
 
 ### Fixed

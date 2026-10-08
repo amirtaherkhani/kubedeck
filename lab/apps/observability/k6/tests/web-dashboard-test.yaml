@@ -95,8 +95,12 @@ spec:
     configMap:
       name: k6-web-dashboard-script
       file: test.js
+  initializer:
+    image: docker.io/grafana/k6:2.0.0@sha256:a33a0cfdc4d2483d6b7a3a22e726a499ff2831a671a49239104cd34a9937523c
+  starter:
+    image: ghcr.io/grafana/k6-operator:starter-v1.5.0@sha256:a5a7bcb247e0d37319fa4bd4ddcea147c9efa6125148e370740fd0e11645471a
   runner:
-    image: grafana/k6:2.0.0
+    image: docker.io/grafana/k6:2.0.0@sha256:a33a0cfdc4d2483d6b7a3a22e726a499ff2831a671a49239104cd34a9937523c
     env:
       # k6 2.x disables its control API by default. The operator starts a
       # runner paused and resumes it through this API on port 6565.
