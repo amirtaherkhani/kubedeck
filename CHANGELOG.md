@@ -4,6 +4,16 @@ All notable KubeDeck changes are documented in this file.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-08
+
+### Added
+
+- Restore the pinned k6 Operator, Grafana k6 dashboards, and a bounded one-iteration smoke TestRun in the existing `observability-tests` namespace.
+
+### Changed
+
+- Document the operator's Prometheus remote-write and Grafana dashboard dependencies alongside the deployment order.
+
 ## [0.6.0] - 2026-10-08
 
 ### Added
@@ -142,3 +152,4 @@ All notable KubeDeck changes are documented in this file.
 [0.4.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.3.4...v0.4.0
 [0.5.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.4.0...v0.5.0
 [0.6.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.5.0...v0.6.0
+[0.7.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.6.0...v0.7.0

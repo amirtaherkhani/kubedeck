@@ -1,8 +1,8 @@
 # Observability runtime
 
-This directory keeps only the Grafana observability stack and the platform configuration required for its local HTTPS and Infisical-backed admin Secret. It does not manage the KubeDeck dashboard, k6 Operator, shared application databases, or unrelated home-lab services.
+This directory keeps the Grafana observability stack, k6 Operator, and the platform configuration required for local HTTPS and Infisical-backed Grafana credentials. It does not manage the KubeDeck dashboard, shared application databases, or unrelated home-lab services.
 
-The runtime on Docker Desktop Kubernetes consists of Grafana and its image renderer, Prometheus Stack, Loki, Tempo, and Alloy. cert-manager and Traefik provide `https://grafana.local.dev`; Infisical and its operator supply `observability/grafana-admin`. The existing Grafana, Loki, Tempo, and Infisical PVCs are reused. Loki's chart values retain its PVC when the StatefulSet scales down or is removed.
+The runtime on Docker Desktop Kubernetes consists of Grafana and its image renderer, Prometheus Stack, Loki, Tempo, Alloy, and k6 Operator. cert-manager and Traefik provide `https://grafana.local.dev`; Infisical and its operator supply `observability/grafana-admin`. The existing Grafana, Loki, Tempo, and Infisical PVCs are reused. Loki's chart values retain its PVC when the StatefulSet scales down or is removed.
 
 ## Prerequisites
 
@@ -23,6 +23,7 @@ helm repo add grafana https://grafana.github.io/helm-charts
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace observability-tests --dry-run=client -o yaml | kubectl apply -f -
 helm upgrade --install cert-manager cert-manager/cert-manager -n platform-system --create-namespace --version v1.21.0 -f apps/platform/cert-manager/values.yaml --wait
 kubectl apply -f core/tls/clusterissuer.yaml -f core/tls/certificates.yaml
 helm upgrade --install traefik traefik/traefik -n platform-system --version 39.0.7 -f core/ingress/traefik-docker-desktop-values.yaml --wait
@@ -36,15 +37,20 @@ helm upgrade --install monitoring prometheus-community/kube-prometheus-stack -n 
 helm upgrade --install tempo grafana/tempo -n observability --version 1.24.4 -f apps/observability/tempo/values.yaml --wait
 helm upgrade --install alloy grafana/alloy -n observability --version 1.10.1 -f apps/observability/alloy/values.yaml --wait
 helm upgrade --install grafana ./apps/observability/grafana -n observability -f apps/observability/grafana/values.homelab.yaml --set-string infisical.projectSlug="${INFISICAL_PROJECT_SLUG}" --set-string infisical.envSlug="${INFISICAL_ENV_SLUG}" --wait
+helm upgrade --install k6-operator grafana/k6-operator -n observability-tests --version 4.5.0 -f apps/observability/k6/values.yaml --wait
+kubectl apply -k apps/observability/k6/dashboard
 ```
 
 After installation, confirm `observability/grafana-admin` reports `ReadyToSyncSecrets=True` and the Grafana Deployment is Ready. The image renderer is part of the Grafana chart. For changes to a live release, render and server-side dry-run before applying.
+
+The k6 Operator uses Prometheus's enabled remote-write receiver. The dashboard ConfigMaps are discovered by Grafana's sidecar. The one-iteration smoke TestRun can be started with `kubectl apply -f apps/observability/k6/tests/smoke-test.yaml`.
 
 ## Verification
 
 ```bash
 kubectl -n observability get pods,pvc
 kubectl -n observability get infisicalsecret grafana-admin
+kubectl -n observability-tests get deploy,servicemonitor,testruns.k6.io
 curl --fail https://grafana.local.dev/api/health
 kubectl get --raw '/api/v1/namespaces/observability/services/http:loki:3100/proxy/ready'
 kubectl get --raw '/api/v1/namespaces/observability/services/http:tempo:3200/proxy/ready'
