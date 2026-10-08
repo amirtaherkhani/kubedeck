@@ -114,6 +114,7 @@ helm_base_args() {
   local chart="$3"
   local version="$4"
   local values="$5"
+  local scope project_slug environment
 
   HELM_ARGS=(
     upgrade
@@ -126,10 +127,17 @@ helm_base_args() {
   )
 
   if [[ "${release}" == "platform-storage" ]]; then
+    require_command jq
+    source "${SCRIPT_DIR}/lib/docker-desktop-scope.sh"
+    scope="$(resolve_docker_desktop_scope)"
+    IFS=$'\t' read -r project_slug environment <<<"${scope}"
+    [[ -n "${project_slug}" && -n "${environment}" ]] || die "Infisical project scope is incomplete"
     HELM_ARGS+=(
       --reuse-values
       --values apps/platform/storage/values.docker-desktop.yaml
       --values apps/platform/storage/values.docker-desktop-core.yaml
+      --set-string "infisical.projectSlug=${project_slug}"
+      --set-string "infisical.envSlug=${environment}"
     )
   fi
 

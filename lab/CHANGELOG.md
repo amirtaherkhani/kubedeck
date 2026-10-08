@@ -22,6 +22,12 @@
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
 
+## [platform-storage 0.2.1] - 2026-10-08
+
+### Fixed
+
+- Resolve the actual Infisical project slug and environment for platform-storage Helm validation and deployment, preventing Secret sync from targeting a nonexistent project.
+
 ## [platform-storage 0.2.0] - 2026-10-08
 
 ### Removed
