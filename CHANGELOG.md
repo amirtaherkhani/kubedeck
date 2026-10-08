@@ -10,6 +10,7 @@ All notable KubeDeck changes are documented in this file.
 
 ### Fixed
 
+- Use the pinned Grafana Enterprise image for the local Grafana release after the Docker Hub mirror rejected the OSS image tag.
 - Disable anonymous Grafana administrator access and resolve Grafana's Infisical scope from the active Docker Desktop project.
 
 ### Removed

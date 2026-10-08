@@ -1,5 +1,11 @@
 replicas: 1
 
+image:
+  registry: docker.io
+  repository: grafana/grafana-enterprise
+  tag: "13.1.0"
+  pullPolicy: IfNotPresent
+
 infisical:
   projectSlug: home-lab
   envSlug: local
@@ -74,7 +80,7 @@ initChownData:
   # Use the same pinned image as the main Grafana workload.
   image:
     registry: docker.io
-    repository: grafana/grafana
+    repository: grafana/grafana-enterprise
     tag: 13.1.0
     pullPolicy: IfNotPresent
   resources:
