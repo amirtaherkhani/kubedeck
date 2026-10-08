@@ -26,7 +26,7 @@
 
 ### Removed
 
-- Remove unused PostgreSQL and NATS admin UIs, Kafka and Schema Registry, MongoDB, MinIO, Jaeger, Mailpit, and grpcui from the shared storage chart. Existing PVCs remain untouched.
+- Remove unused PostgreSQL and NATS admin UIs, Kafka and Schema Registry, MongoDB, MinIO, Jaeger, Mailpit, and grpcui from the shared storage chart. Historical platform-storage PVCs remain untouched; the Radar PVC was removed with its release.
 - Remove unused Radar, k6 Operator, and other optional observability and autoscaling releases from the managed catalog.
 
 ### Fixed

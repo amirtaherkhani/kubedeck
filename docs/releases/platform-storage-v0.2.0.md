@@ -6,7 +6,7 @@ The managed local platform now contains only the shared PostgreSQL, Redis, Rabbi
 
 ## Removed
 
-Unused admin UIs, Kafka and Schema Registry, MongoDB, MinIO, Jaeger, Mailpit, grpcui, Radar, k6 Operator, and inactive observability and autoscaling modules are removed from the managed service catalog. Previously provisioned PVCs are retained.
+Unused admin UIs, Kafka and Schema Registry, MongoDB, MinIO, Jaeger, Mailpit, grpcui, Radar, k6 Operator, and inactive observability and autoscaling modules are removed from the managed service catalog. The platform-storage chart retains historical PVCs, but uninstalling the Radar Helm release removed its own PVC.
 
 ## Breaking Changes
 
