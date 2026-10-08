@@ -4,6 +4,11 @@ All notable KubeDeck changes are documented in this file.
 
 ## [Unreleased]
 
+### Removed
+
+- Retire versioned delivery roadmaps and the legacy Rancher migration plan; service changes are now handled from the current request and live state.
+- Remove unused optional service charts and configuration, while retaining the KubeDeck dashboard and agent source for future use.
+
 ## [0.2.0] - 2026-10-05
 
 ### Added

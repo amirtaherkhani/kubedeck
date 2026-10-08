@@ -6,8 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 RELEASES_FILE="${REPO_ROOT}/core/helm/releases.conf"
 REPOSITORIES_FILE="${REPO_ROOT}/core/helm/repositories.conf"
-RANCHER_MANAGED_FILE="${REPO_ROOT}/core/helm/rancher-managed.conf"
-EXPECTED_CONTEXT="${KUBE_CONTEXT:-rancher-desktop}"
+EXPECTED_CONTEXT="${KUBE_CONTEXT:-docker-desktop}"
 
 cd "${REPO_ROOT}"
 
@@ -45,42 +44,6 @@ check_context() {
   current_context="$(kubectl config current-context)"
   [[ "${current_context}" == "${EXPECTED_CONTEXT}" ]] || die \
     "current Kubernetes context is ${current_context}; expected ${EXPECTED_CONTEXT}"
-}
-
-assert_rancher_boundary() {
-  local rancher_release rancher_namespace owner
-  local managed_release managed_namespace chart version values timeout
-
-  while IFS='|' read -r rancher_release rancher_namespace owner; do
-    if [[ -z "${rancher_release}" || "${rancher_release}" == \#* ]]; then
-      continue
-    fi
-
-    while IFS='|' read -r managed_release managed_namespace chart version values timeout; do
-      if [[ -z "${managed_release}" || "${managed_release}" == \#* ]]; then
-        continue
-      fi
-      if [[ "${managed_release}" == "${rancher_release}" && "${managed_namespace}" == "${rancher_namespace}" ]]; then
-        die "${managed_release} in ${managed_namespace} is owned by ${owner} and cannot be repository-managed"
-      fi
-    done < "${RELEASES_FILE}"
-  done < "${RANCHER_MANAGED_FILE}"
-}
-
-reject_rancher_target() {
-  local target="$1"
-  local rancher_release rancher_namespace owner
-
-  [[ "${target}" != "all" ]] || return 0
-
-  while IFS='|' read -r rancher_release rancher_namespace owner; do
-    if [[ -z "${rancher_release}" || "${rancher_release}" == \#* ]]; then
-      continue
-    fi
-    if [[ "${target}" == "${rancher_release}" ]]; then
-      die "${target} is owned by ${owner}; manage it through Rancher Desktop"
-    fi
-  done < "${RANCHER_MANAGED_FILE}"
 }
 
 sync_repositories() {
@@ -161,6 +124,14 @@ helm_base_args() {
     --create-namespace
     --values "${values}"
   )
+
+  if [[ "${release}" == "platform-storage" ]]; then
+    HELM_ARGS+=(
+      --reuse-values
+      --values apps/platform/storage/values.docker-desktop.yaml
+      --values apps/platform/storage/values.docker-desktop-core.yaml
+    )
+  fi
 
   if [[ "${version}" != "-" ]]; then
     HELM_ARGS+=(--version "${version}")
@@ -257,17 +228,8 @@ validate_manifests() {
     kubectl apply --dry-run=server -f core/ingress/tlsstore.yaml >/dev/null
   fi
 
-  if [[ "${target}" == "all" || "${target}" == "grafana" ]]; then
-    kubectl apply --dry-run=server --kustomize apps/observability/grafana/manifests/dashboard >/dev/null
-  fi
-  if [[ "${target}" == "all" || "${target}" == "k6-operator" ]]; then
-    kubectl apply --dry-run=server --kustomize apps/observability/k6/dashboard >/dev/null
-  fi
   if [[ "${target}" == "all" || "${target}" == "infisical" ]]; then
     kubectl apply --dry-run=server -f apps/platform/infisical/manifests/https-redirect.yaml >/dev/null
-  fi
-  if [[ "${target}" == "all" || "${target}" == "radar" ]]; then
-    kubectl apply --dry-run=server -f apps/observability/radar/manifests/https-redirect.yaml >/dev/null
   fi
 }
 
@@ -280,20 +242,8 @@ apply_manifests() {
     kubectl apply -f core/ingress/tlsstore.yaml
   fi
 
-  if [[ "${target}" == "all" || "${target}" == "monitoring" ]]; then
-    scripts/patch-macos-dashboard.sh apply
-  fi
-  if [[ "${target}" == "all" || "${target}" == "grafana" ]]; then
-    kubectl apply --kustomize apps/observability/grafana/manifests/dashboard
-  fi
-  if [[ "${target}" == "all" || "${target}" == "k6-operator" ]]; then
-    kubectl apply --kustomize apps/observability/k6/dashboard
-  fi
   if [[ "${target}" == "all" || "${target}" == "infisical" ]]; then
     kubectl apply -f apps/platform/infisical/manifests/https-redirect.yaml
-  fi
-  if [[ "${target}" == "all" || "${target}" == "radar" ]]; then
-    kubectl apply -f apps/observability/radar/manifests/https-redirect.yaml
   fi
 }
 
@@ -310,21 +260,8 @@ print_inventory() {
   done < "${RELEASES_FILE}"
 }
 
-print_rancher_inventory() {
-  local release namespace owner
-
-  printf '%-18s %-12s %s\n' RELEASE NAMESPACE OWNER
-  while IFS='|' read -r release namespace owner; do
-    if [[ -z "${release}" || "${release}" == \#* ]]; then
-      continue
-    fi
-    printf '%-18s %-12s %s\n' "${release}" "${namespace}" "${owner}"
-  done < "${RANCHER_MANAGED_FILE}"
-}
-
 require_command helm
 require_command kubectl
-assert_rancher_boundary
 
 command_name="${1:-help}"
 target_release="${2:-all}"
@@ -332,8 +269,6 @@ target_release="${2:-all}"
 case "${command_name}" in
   inventory)
     print_inventory
-    printf '\nRancher-owned Helm releases excluded from repository management:\n'
-    print_rancher_inventory
     ;;
   repos)
     sync_repositories
@@ -341,13 +276,10 @@ case "${command_name}" in
   status)
     printf 'Kubernetes context: %s\n\n' "$(kubectl config current-context)"
     print_inventory
-    printf '\nRancher-owned Helm releases excluded from repository management:\n'
-    print_rancher_inventory
     printf '\nLive Helm releases:\n'
     helm list --all-namespaces
     ;;
   validate)
-    reject_rancher_target "${target_release}"
     check_context
     sync_repositories_for_target "${target_release}"
     run_selected "${target_release}" validate_release
@@ -355,7 +287,6 @@ case "${command_name}" in
     printf 'Validation completed for %s.\n' "${target_release}"
     ;;
   apply)
-    reject_rancher_target "${target_release}"
     check_context
     sync_repositories_for_target "${target_release}"
     run_selected "${target_release}" apply_release
@@ -364,12 +295,10 @@ case "${command_name}" in
     ;;
   values)
     [[ "${target_release}" != "all" ]] || die "values requires a release name"
-    reject_rancher_target "${target_release}"
     run_selected "${target_release}" show_values
     ;;
   remove)
     [[ "${target_release}" != "all" ]] || die "remove requires a release name"
-    reject_rancher_target "${target_release}"
     check_context
     run_selected "${target_release}" remove_release
     ;;
