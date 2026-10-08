@@ -401,22 +401,6 @@ const webApps: CatalogBase[] = [
     status: "ready",
     icon: CableIcon,
   },
-  {
-    id: "k6-dashboard",
-    name: "k6 Dashboard",
-    kind: "app",
-    namespace: "k6-tests",
-    summary: "Ephemeral live dashboard for the active load test.",
-    endpoint: "k6-dashboard.local.dev",
-    href: "https://k6-dashboard.local.dev",
-    ports: ["5665"],
-    protocol: "HTTPS",
-    workload: "Pod/k6-web-dashboard",
-    pods: "0 endpoints",
-    source: "Ingress/k6-web-dashboard",
-    status: "attention",
-    icon: CircleGaugeIcon,
-  },
 ]
 
 const services: CatalogBase[] = [
@@ -768,16 +752,6 @@ const operationalMeta: Record<string, OperationalMeta> = {
     uptime: "10d 20h",
     uptimeHours: 260.69,
     lastDeployedAt: "2026-07-18T08:24:44Z",
-  },
-  "k6-dashboard": {
-    category: "deployments",
-    serviceName: "k6-web-dashboard",
-    clusterIP: "10.43.4.252",
-    readyEndpoints: 0,
-    totalEndpoints: 0,
-    uptime: "Not running",
-    uptimeHours: 0,
-    lastDeployedAt: "2026-07-16T18:16:20Z",
   },
   "homelab-api": {
     category: "web-applications",

@@ -26,6 +26,7 @@
 
 ### Removed
 
+- Remove the redundant k6 dashboard redirect Ingress and Middleware; keep the Grafana dashboard ConfigMaps.
 - Removed the legacy `infisical-agent-access.sh` and Finance-specific agent helper workflows.
 - Removed obsolete PostgreSQL legacy credential entries from the generated Secret.
 
