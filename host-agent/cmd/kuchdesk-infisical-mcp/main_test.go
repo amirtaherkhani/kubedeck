@@ -151,14 +151,14 @@ func TestDoctorMCPPromptSchemaCatalogAndFailedVerification(t *testing.T) {
 	}
 }
 
-func TestMCPHostClientReadsPrivateFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "infisical", "host.env")
-	if err := infisical.SaveHostCredentials(path, "id", "sensitive-value"); err != nil {
+func TestMCPHostClientReadsProjectLocalFile(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("INFISICAL_CLIENT_ID=id\nINFISICAL_CLIENT_SECRET=sensitive-value\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	client, err := hostClient("https://infisical.example", func(key string) string {
-		if key == "KUCHDESK_INFISICAL_ENV_FILE" {
-			return path
+		if key == "KUCHDESK_PROJECT_ROOT" {
+			return root
 		}
 		return ""
 	})

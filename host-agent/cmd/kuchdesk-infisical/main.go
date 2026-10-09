@@ -23,7 +23,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, getenv fu
 	}
 	clientID, clientSecret, err := infisical.HostCredentials(getenv)
 	if err != nil {
-		fmt.Fprintln(stderr, "invalid Infisical host credential file:", err)
+		fmt.Fprintln(stderr, "Infisical credential backend unavailable:", err)
 		return 2
 	}
 	client, err := infisical.NewClient(*baseURL, clientID, clientSecret, nil)
