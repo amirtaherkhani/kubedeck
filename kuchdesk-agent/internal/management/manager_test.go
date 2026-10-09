@@ -68,7 +68,11 @@ func testManager(t *testing.T) *Manager {
 	discovery.Resources = []*metav1.APIResourceList{{GroupVersion: "v1", APIResources: []metav1.APIResource{{Name: "configmaps", Kind: "ConfigMap", Namespaced: true, Verbs: metav1.Verbs{"get", "list", "create", "update", "patch", "delete", "watch"}}, {Name: "configmaps/status", Kind: "ConfigMap", Namespaced: true, Verbs: metav1.Verbs{"get"}}, {Name: "secrets", Kind: "Secret", Namespaced: true}, {Name: "secrets/status", Kind: "Secret", Namespaced: true, Verbs: metav1.Verbs{"get"}}}}}
 	item := &unstructured.Unstructured{Object: map[string]any{"apiVersion": "v1", "kind": "ConfigMap", "metadata": map[string]any{"name": "sample", "namespace": "apps", "resourceVersion": "4", "uid": "uid-1"}, "data": map[string]any{"a": "b"}}}
 	dyn := dynamicfake.NewSimpleDynamicClient(scheme, item)
-	return &Manager{Dynamic: dyn, Discovery: discovery, Kube: kubefake.NewSimpleClientset(), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	kube := kubefake.NewSimpleClientset()
+	kube.PrependReactor("create", "selfsubjectrulesreviews", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, &authv1.SelfSubjectRulesReview{Status: authv1.SubjectRulesReviewStatus{Incomplete: true}}, nil
+	})
+	return &Manager{Dynamic: dyn, Discovery: discovery, Kube: kube, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 }
 func request(m *Manager, method, path string, body []byte, headers map[string]string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, path, bytes.NewReader(body))
@@ -207,6 +211,53 @@ func TestCapabilitiesCheckNamespaceAndSubresourceAuthorization(t *testing.T) {
 	}
 	if !checkedStatus {
 		t.Fatal("no status subresource authorization review")
+	}
+}
+
+func TestCapabilitiesUseCompleteRulesReviewWithoutPerVerbCalls(t *testing.T) {
+	m := testManager(t)
+	kube := m.Kube.(*kubefake.Clientset)
+	var rulesCalls, accessCalls atomic.Int32
+	kube.PrependReactor("create", "selfsubjectrulesreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		rulesCalls.Add(1)
+		object := action.(k8stesting.CreateAction).GetObject().(*authv1.SelfSubjectRulesReview)
+		if object.Spec.Namespace != "apps" {
+			t.Fatalf("wrong rules namespace: %s", object.Spec.Namespace)
+		}
+		return true, &authv1.SelfSubjectRulesReview{Status: authv1.SubjectRulesReviewStatus{ResourceRules: []authv1.ResourceRule{
+			{Verbs: []string{"get"}, APIGroups: []string{""}, Resources: []string{"configmaps"}},
+			{Verbs: []string{"*"}, APIGroups: []string{"*"}, Resources: []string{"*/status"}},
+			{Verbs: []string{"delete"}, APIGroups: []string{""}, Resources: []string{"configmaps"}, ResourceNames: []string{"one-name"}},
+		}}}, nil
+	})
+	kube.PrependReactor("create", "selfsubjectaccessreviews", func(k8stesting.Action) (bool, runtime.Object, error) {
+		accessCalls.Add(1)
+		return true, nil, errors.New("unexpected per-verb review")
+	})
+	response := request(m, "GET", "/v1/manage/capabilities?namespace=apps", nil, nil)
+	if response.Code != http.StatusOK || rulesCalls.Load() != 1 || accessCalls.Load() != 0 {
+		t.Fatalf("rules review not used: status=%d rules=%d access=%d", response.Code, rulesCalls.Load(), accessCalls.Load())
+	}
+	var body struct {
+		Resources []struct {
+			Resource     string          `json:"resource"`
+			AllowedVerbs map[string]bool `json:"allowedVerbs"`
+		} `json:"resources"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	for _, resource := range body.Resources {
+		switch resource.Resource {
+		case "configmaps":
+			if !resource.AllowedVerbs["get"] || resource.AllowedVerbs["delete"] || resource.AllowedVerbs["update"] {
+				t.Fatalf("wrong base access: %+v", resource.AllowedVerbs)
+			}
+		case "configmaps/status":
+			if !resource.AllowedVerbs["get"] {
+				t.Fatalf("subresource wildcard omitted: %+v", resource.AllowedVerbs)
+			}
+		}
 	}
 }
 

@@ -124,9 +124,21 @@ func (m *Manager) capabilities(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Keep authorization answers exact, but bound parallel reviews so a large
-	// API catalog does not make the endpoint wait on every network round trip.
-	if len(reviews) > 0 {
+	// RulesReview avoids one API request per resource verb for this
+	// informational catalog. It is suitable here because Kubernetes
+	// still authorizes every actual operation. Fall back to exact access reviews
+	// when rules are incomplete or unavailable.
+	rulesComplete := false
+	if namespace != "" {
+		rules, err := m.Kube.AuthorizationV1().SelfSubjectRulesReviews().Create(r.Context(), &authv1.SelfSubjectRulesReview{Spec: authv1.SelfSubjectRulesReviewSpec{Namespace: namespace}}, metav1.CreateOptions{})
+		if err == nil && !rules.Status.Incomplete && rules.Status.EvaluationError == "" {
+			rulesComplete = true
+			for _, task := range reviews {
+				allowedByResource[task.resourceIndex][task.verbIndex] = allowedByRules(rules.Status.ResourceRules, task.attributes)
+			}
+		}
+	}
+	if !rulesComplete && len(reviews) > 0 {
 		ctx, cancel := context.WithCancel(r.Context())
 		defer cancel()
 		jobs := make(chan reviewTask)
@@ -179,7 +191,41 @@ func (m *Manager) capabilities(w http.ResponseWriter, r *http.Request) {
 	if _, err := m.Discovery.ServerResourcesForGroupVersion("metrics.k8s.io/v1beta1"); err == nil {
 		metrics = true
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"managementEnabled": true, "metricsAvailable": metrics, "resources": resources, "authorizationNamespace": namespace, "workloadActions": []string{"scale", "restart", "status"}, "asyncWorkloadActions": m.Jobs != nil, "podLogs": true, "events": true, "note": "allowedVerbs are point-in-time authorization checks; each operation is authorized again by Kubernetes"})
+	writeJSON(w, http.StatusOK, map[string]any{"managementEnabled": true, "metricsAvailable": metrics, "resources": resources, "authorizationNamespace": namespace, "workloadActions": []string{"scale", "restart", "status"}, "asyncWorkloadActions": m.Jobs != nil, "podLogs": true, "events": true, "note": "allowedVerbs are point-in-time authorization information; each operation is authorized again by Kubernetes"})
+}
+
+func allowedByRules(rules []authv1.ResourceRule, attributes authv1.ResourceAttributes) bool {
+	resource := attributes.Resource
+	if attributes.Subresource != "" {
+		resource += "/" + attributes.Subresource
+	}
+	for _, rule := range rules {
+		if len(rule.ResourceNames) > 0 && !contains(rule.ResourceNames, "*") {
+			continue
+		}
+		if !contains(rule.Verbs, attributes.Verb) && !contains(rule.Verbs, "*") {
+			continue
+		}
+		if !contains(rule.APIGroups, attributes.Group) && !contains(rule.APIGroups, "*") {
+			continue
+		}
+		if contains(rule.Resources, "*") || contains(rule.Resources, resource) {
+			return true
+		}
+		if attributes.Subresource != "" && contains(rule.Resources, "*/"+attributes.Subresource) {
+			return true
+		}
+	}
+	return false
+}
+
+func contains(values []string, wanted string) bool {
+	for _, value := range values {
+		if value == wanted {
+			return true
+		}
+	}
+	return false
 }
 
 func namespaceForReview(namespaced bool, namespace string) string {
