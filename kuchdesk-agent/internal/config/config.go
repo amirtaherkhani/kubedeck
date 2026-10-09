@@ -128,7 +128,7 @@ func RESTConfig(cfg Config) (*rest.Config, error) {
 		return nil, fmt.Errorf("load Kubernetes client configuration: %w", err)
 	}
 
-	restConfig.UserAgent = "kuchdesk-agent/0.5.0"
+	restConfig.UserAgent = "kuchdesk-agent/0.6.0"
 	restConfig.QPS = 30
 	restConfig.Burst = 60
 	restConfig.Timeout = 30 * time.Second

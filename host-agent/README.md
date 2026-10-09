@@ -52,4 +52,43 @@ go run ./cmd/kuchdesk-infisical -url https://YOUR-INFISICAL-HOST list-secret-nam
 
 No real identity, credential, role, or live MCP service is provisioned by this source change. Permissions and bootstrap credential lifetime remain unverified against this installation.
 
-Secret writes, project/identity administration, value delivery, a host HTTP API, Kubernetes-agent bridging, and Helm execution are not implemented. Existing Grafana Operator sync remains independent.
+Secret writes, project/identity administration, value delivery, a host HTTP API, Kubernetes-agent bridging, and Helm execution through Infisical MCP are not implemented. Existing Grafana Operator sync remains independent.
+
+## Local build and deployment workflow
+
+`cmd/kuchdesk-deploy` is a local operator CLI. Its default mode prints a plan;
+`-apply` runs it only with an exact `release/namespace` confirmation. A profile
+is one JSON object with absolute `sourceDir`, `dockerfile`, and `chartDir`
+paths, optional absolute `valuesFiles`, `imageRepository`, a 12-hex-commit
+`imageTag` such as `git-123456789abc`, `kubeContext`, `namespace`, `release`,
+`deployment`, and `test` (`go` or empty). Dockerfile and chart must be inside
+the clean Git source tree. The Git tag must match that source's HEAD. The CLI
+uses first-party Docker, Helm, kubectl, and Go commands with explicit arguments
+and context; it never invokes a shell or passes Infisical bootstrap variables
+to child commands. Values files are operator-supplied; review them before
+apply and reference Kubernetes Secrets by name instead of putting secret
+values in Helm release metadata.
+
+For the KuchDesk agent chart, a values file must also provide `cluster.id`
+and `cluster.name`; the workflow supplies image repository, tag, and digest.
+
+```sh
+cd host-agent
+go run ./cmd/kuchdesk-deploy -profile /absolute/path/to/profile.json
+go run ./cmd/kuchdesk-deploy -profile /absolute/path/to/profile.json \
+  -apply -confirm kuchdesk-agent/development-tools
+```
+
+Apply runs Helm lint, optional `go test ./...`, Docker build/push, image digest
+resolution, Helm template, atomic Helm upgrade, and `kubectl rollout status` in
+that order. It stops before Helm if push or digest lookup fails. The Helm chart
+uses `image.digest` to pin the pulled content. The CLI prints step names as
+progress and reports failures without printing child output, rendered Secret
+data, or Infisical credentials. A successful rollout is readiness evidence,
+not an application smoke test. Helm's `--atomic` covers upgrade failures; if the subsequent
+`kubectl rollout status` check fails, inspect the release before retrying
+because the successful Helm upgrade remains installed. This source feature has
+only fake-runner and chart-render tests; the current local registry pull/push
+route is not yet healthy, and no live deployment was attempted through this
+CLI. It is synchronous and is not yet
+exposed as a host API or MCP operation.

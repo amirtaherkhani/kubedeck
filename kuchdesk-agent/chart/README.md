@@ -18,6 +18,12 @@ helm upgrade --install kuchdesk-agent ./kuchdesk-agent/chart \
 
 Do not put the token in Helm values or Git. If the image is loaded directly into Docker Desktop Kubernetes, use its matching repository and tag. The chart does not require a local registry. Its `appVersion` tracks the Go binary; the chart `version` tracks chart changes.
 
+`image.digest` optionally pins the manifest by `sha256`. When supplied, the
+rendered reference is `repository:tag@sha256:...`; the digest determines the
+content Kubernetes pulls. The host deployment workflow resolves this digest
+after a successful push and supplies it to Helm. A tag alone remains supported
+for images already loaded into a local node.
+
 Clients send `Authorization: Bearer <token>` to the internal Service. Limit which clients can reach it. `networkPolicy.enabled` is off by default; when enabling it, set `networkPolicy.ingressPodSelector` to select authorized client Pods.
 
 The default ClusterRole allows discovery and metrics reads. CoreDNS alias writes and general resource management are disabled by default. General management requires an explicit bearer Secret and `rbac.clusterAdmin=true`, granting the agent ServiceAccount full cluster access. DNS alias management needs the bearer Secret but uses a narrow Role for `get` and `update` on the existing CoreDNS ConfigMap. Review the [agent API](../README.md) before enabling it. On Docker Desktop KIND, set `dnsManagement.enabled=true` only after backing up `kube-system/coredns` and verifying its `Corefile` contains a `.:53` block with `kubernetes` and `reload`. The agent owns only its marked block and the chart never creates the system ConfigMap.
@@ -33,11 +39,11 @@ helm lint ./kuchdesk-agent/chart \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kuchdesk-agent \
-  --set image.tag=0.5.0
+  --set image.tag=0.6.0
 helm template kuchdesk-agent ./kuchdesk-agent/chart \
   --namespace development-tools \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kuchdesk-agent \
-  --set image.tag=0.5.0
+  --set image.tag=0.6.0
 ```
