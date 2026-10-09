@@ -36,6 +36,9 @@ type Spec struct {
 	Release         string   `json:"release"`
 	Deployment      string   `json:"deployment"`
 	Test            string   `json:"test"`
+	PushMode        string   `json:"pushMode,omitempty"`
+	HostPushRepo    string   `json:"hostPushRepository,omitempty"`
+	KindPrepull     bool     `json:"kindPrepull,omitempty"`
 }
 
 type Result struct {
@@ -89,6 +92,20 @@ func (s Spec) Validate() error {
 	if !imagePattern.MatchString(s.ImageRepository) || !tagPattern.MatchString(s.ImageTag) || strings.HasSuffix(s.ImageRepository, ":") {
 		return errors.New("image repository and immutable git tag are required")
 	}
+	if s.PushMode != "" && s.PushMode != "docker" && s.PushMode != "host-crane" {
+		return errors.New("pushMode must be docker or host-crane")
+	}
+	if s.PushMode == "host-crane" {
+		parts := strings.SplitN(s.HostPushRepo, "/", 2)
+		if len(parts) != 2 || (parts[0] != "127.0.0.1:5001" && parts[0] != "localhost:5001") || !imagePattern.MatchString(s.HostPushRepo) || parts[1] != repositoryPath(s.ImageRepository) {
+			return errors.New("hostPushRepository must use loopback port 5001 and the same image repository path")
+		}
+	} else if s.HostPushRepo != "" {
+		return errors.New("hostPushRepository requires pushMode=host-crane")
+	}
+	if s.KindPrepull && !(strings.HasPrefix(s.ImageRepository, "localhost:5001/") || strings.HasPrefix(s.ImageRepository, "127.0.0.1:5001/")) {
+		return errors.New("kindPrepull requires a node-local HTTP registry on port 5001")
+	}
 	if s.Test != "" && s.Test != "go" {
 		return errors.New("only test=go or no test is supported")
 	}
@@ -135,7 +152,24 @@ func (s Spec) Plan() ([]string, error) {
 	if s.Test == "go" {
 		steps = append(steps, "go test")
 	}
-	return append(steps, "docker build", "docker push", "resolve image digest", "helm template", "helm upgrade --install --atomic --wait", "kubectl rollout status"), nil
+	steps = append(steps, "docker build")
+	if s.PushMode == "host-crane" {
+		steps = append(steps, "docker save", "crane push", "crane digest")
+	} else {
+		steps = append(steps, "docker push", "resolve image digest")
+	}
+	if s.KindPrepull {
+		steps = append(steps, "discover KIND nodes", "prepull digest on KIND nodes")
+	}
+	return append(steps, "helm template", "helm upgrade --install --atomic --wait", "kubectl rollout status"), nil
+}
+
+func repositoryPath(repository string) string {
+	parts := strings.SplitN(repository, "/", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+	return parts[1]
 }
 
 func (w Workflow) Apply(ctx context.Context, s Spec) (Result, error) {
@@ -168,29 +202,58 @@ func (w Workflow) Apply(ctx context.Context, s Spec) (Result, error) {
 	if err := w.run(ctx, s.SourceDir, "docker build", "docker", "build", "--file", s.Dockerfile, "--tag", image, s.SourceDir); err != nil {
 		return Result{}, err
 	}
-	if err := w.run(ctx, s.SourceDir, "docker push", "docker", "push", image); err != nil {
-		return Result{}, err
-	}
-	w.progress("resolve image digest")
-	raw, err := w.Runner.Output(ctx, s.SourceDir, "docker", "image", "inspect", "--format", "{{json .RepoDigests}}", image)
-	if err != nil {
-		return Result{}, errors.New("image digest lookup failed")
-	}
-	var repoDigests []string
-	if json.Unmarshal(raw, &repoDigests) != nil {
-		return Result{}, errors.New("image digest response invalid")
-	}
 	var digest string
-	for _, candidate := range repoDigests {
-		if strings.HasPrefix(candidate, s.ImageRepository+"@") {
-			digest = strings.TrimPrefix(candidate, s.ImageRepository+"@")
-			break
+	if s.PushMode == "host-crane" {
+		archive, err := os.CreateTemp("", "kuchdesk-image-*.tar")
+		if err != nil {
+			return Result{}, errors.New("cannot create temporary image archive")
+		}
+		archive.Close()
+		defer os.Remove(archive.Name())
+		if err := w.run(ctx, s.SourceDir, "docker save", "docker", "save", "--output", archive.Name(), image); err != nil {
+			return Result{}, err
+		}
+		if err := w.run(ctx, s.SourceDir, "crane push", "crane", "push", "--insecure", archive.Name(), s.HostPushRepo+":"+s.ImageTag); err != nil {
+			return Result{}, err
+		}
+		w.progress("crane digest")
+		raw, err := w.Runner.Output(ctx, s.SourceDir, "crane", "digest", "--insecure", s.HostPushRepo+":"+s.ImageTag)
+		if err != nil {
+			return Result{}, errors.New("host registry digest lookup failed")
+		}
+		digest = strings.TrimSpace(string(raw))
+	} else {
+		if err := w.run(ctx, s.SourceDir, "docker push", "docker", "push", image); err != nil {
+			return Result{}, err
+		}
+		w.progress("resolve image digest")
+		raw, err := w.Runner.Output(ctx, s.SourceDir, "docker", "image", "inspect", "--format", "{{json .RepoDigests}}", image)
+		if err != nil {
+			return Result{}, errors.New("image digest lookup failed")
+		}
+		var repoDigests []string
+		if json.Unmarshal(raw, &repoDigests) != nil {
+			return Result{}, errors.New("image digest response invalid")
+		}
+		for _, candidate := range repoDigests {
+			if strings.HasPrefix(candidate, s.ImageRepository+"@") {
+				digest = strings.TrimPrefix(candidate, s.ImageRepository+"@")
+				break
+			}
 		}
 	}
 	if !digestPattern.MatchString(digest) {
 		return Result{}, errors.New("pushed image digest unavailable")
 	}
+	if s.KindPrepull {
+		if err := w.prepullKind(ctx, s, image+"@"+digest); err != nil {
+			return Result{}, err
+		}
+	}
 	values := append(valuesArgs(s.ValuesFiles), "--set-string", "image.repository="+s.ImageRepository, "--set-string", "image.tag="+s.ImageTag, "--set-string", "image.digest="+digest)
+	if s.KindPrepull {
+		values = append(values, "--set-string", "image.pullPolicy=Never")
+	}
 	base := []string{"--kube-context", s.KubeContext, "--namespace", s.Namespace}
 	template := append(append([]string{"template", s.Release, s.ChartDir}, base...), values...)
 	if err := w.run(ctx, s.SourceDir, "helm template", "helm", template...); err != nil {
@@ -205,6 +268,34 @@ func (w Workflow) Apply(ctx context.Context, s Spec) (Result, error) {
 		return Result{}, err
 	}
 	return Result{Image: image, Digest: digest}, nil
+}
+
+func (w Workflow) prepullKind(ctx context.Context, spec Spec, image string) error {
+	w.progress("discover KIND nodes")
+	raw, err := w.Runner.Output(ctx, spec.SourceDir, "kubectl", "--context", spec.KubeContext, "get", "nodes", "-o", "json")
+	if err != nil {
+		return errors.New("KIND node discovery failed")
+	}
+	var nodes struct {
+		Items []struct {
+			Metadata struct {
+				Name string `json:"name"`
+			} `json:"metadata"`
+		} `json:"items"`
+	}
+	if json.Unmarshal(raw, &nodes) != nil || len(nodes.Items) == 0 || len(nodes.Items) > 16 {
+		return errors.New("KIND node list invalid or exceeds 16 nodes")
+	}
+	for _, node := range nodes.Items {
+		name := node.Metadata.Name
+		if !namePattern.MatchString(name) {
+			return errors.New("KIND node name invalid")
+		}
+		if err := w.run(ctx, spec.SourceDir, "prepull digest on KIND nodes", "docker", "exec", name, "ctr", "-n", "k8s.io", "images", "pull", "--plain-http", image); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func valuesArgs(files []string) []string {
