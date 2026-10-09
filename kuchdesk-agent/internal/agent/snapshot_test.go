@@ -6,6 +6,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -50,6 +51,19 @@ func TestBuildNodesPreservesReadyWhileReportingPressureAndCordons(t *testing.T) 
 	result = buildNodes(now, []*corev1.Node{node}, nil, nil)
 	if result[0].Status != "Unschedulable" || !result[0].Ready {
 		t.Fatalf("cordoned node status = %#v", result[0])
+	}
+}
+
+func TestIngressResourceBackendDoesNotCrashServiceSnapshot(t *testing.T) {
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "apps", Name: "resource-route"},
+		Spec: networkingv1.IngressSpec{DefaultBackend: &networkingv1.IngressBackend{
+			Resource: &corev1.TypedLocalObjectReference{Kind: "StorageBucket", Name: "assets"},
+		}},
+	}
+	routes, serviceURLs := buildIngresses([]*networkingv1.Ingress{ingress})
+	if len(routes) != 1 || len(routes[0].Routes) != 1 || routes[0].Routes[0].ServiceName != "" || len(serviceURLs) != 0 {
+		t.Fatalf("resource backend = %#v; service URLs = %#v", routes, serviceURLs)
 	}
 }
 

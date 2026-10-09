@@ -174,6 +174,7 @@ through `external-dns`.
 | `KUCHDESK_CLUSTER_NAME` | required; human-readable display name |
 | `KUCHDESK_CLUSTER_DOMAIN` | `cluster.local` |
 | `KUCHDESK_AGENT_TOKEN` | empty, internal endpoint unauthenticated |
+| `KUCHDESK_KUBE_CONTEXT` | empty; optional context override for local kubeconfig use |
 | `KUCHDESK_DNS_MANAGEMENT_ENABLED` | `false` |
 | `KUCHDESK_COREDNS_NAMESPACE` | `kube-system` |
 | `KUCHDESK_COREDNS_CUSTOM_CONFIGMAP` | `coredns-custom` |
@@ -183,7 +184,15 @@ through `external-dns`.
 | `KUCHDESK_SSE_HEARTBEAT` | `15s` |
 | `KUCHDESK_SSE_HISTORY` | `256` |
 | `KUCHDESK_EVENT_LIMIT` | `100` |
-| `KUBECONFIG` | in-cluster ServiceAccount configuration |
+| `KUBECONFIG` | empty; in-cluster credentials first, then standard local kubeconfig |
+
+Inside Kubernetes, the agent uses its mounted ServiceAccount unless a
+`KUBECONFIG` or `KUCHDESK_KUBE_CONTEXT` override is supplied. On a developer
+Mac, it falls back to the standard kubeconfig search path, supports the
+platform's multi-file `KUBECONFIG` path list, and accepts an explicit context.
+Set `KUCHDESK_KUBE_CONTEXT` when running locally against more than one cluster
+to avoid relying on a changing current context. The Helm chart leaves both
+local overrides unset and continues to use the in-cluster ServiceAccount.
 
 DNS management requires a non-empty `KUCHDESK_AGENT_TOKEN`; the agent refuses
 to start with unauthenticated DNS writes. The Helm chart adds a namespaced Role
@@ -195,9 +204,9 @@ using the write endpoint.
 For local development:
 
 ```bash
-KUBECONFIG="$HOME/.kube/config" \
 KUCHDESK_CLUSTER_ID=local \
 KUCHDESK_CLUSTER_NAME='Local cluster' \
+KUCHDESK_KUBE_CONTEXT=docker-desktop \
 go run ./cmd/kuchdesk-agent
 ```
 

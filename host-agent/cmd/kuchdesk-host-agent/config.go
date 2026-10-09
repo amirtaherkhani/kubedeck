@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 )
 
 type config struct {
@@ -18,6 +19,9 @@ type config struct {
 	PasswordKey   string
 	AdminUser     string
 	APIPort       int
+	Kubectl       string
+	TTL           int
+	Timeout       time.Duration
 }
 
 func parseConfig(args []string) (config, error) {
@@ -33,6 +37,9 @@ func parseConfig(args []string) (config, error) {
 	flags.StringVar(&cfg.PasswordKey, "password-key", "DNS_SERVER_ADMIN_PASSWORD", "password key in the admin Secret")
 	flags.StringVar(&cfg.AdminUser, "admin-user", "admin", "Technitium admin username")
 	flags.IntVar(&cfg.APIPort, "api-port", 5380, "Technitium admin Service port")
+	flags.StringVar(&cfg.Kubectl, "kubectl", "kubectl", "kubectl executable or absolute path")
+	flags.IntVar(&cfg.TTL, "ttl", 30, "wildcard A record TTL in seconds")
+	flags.DurationVar(&cfg.Timeout, "timeout", 30*time.Second, "maximum time for one reconciliation")
 	if err := flags.Parse(args); err != nil {
 		return config{}, err
 	}
@@ -65,6 +72,15 @@ func parseConfig(args []string) (config, error) {
 	}
 	if cfg.APIPort < 1 || cfg.APIPort > 65535 {
 		return config{}, fmt.Errorf("-api-port must be between 1 and 65535")
+	}
+	if strings.TrimSpace(cfg.Kubectl) == "" {
+		return config{}, fmt.Errorf("-kubectl cannot be empty")
+	}
+	if cfg.TTL < 1 || cfg.TTL > 86400 {
+		return config{}, fmt.Errorf("-ttl must be between 1 and 86400 seconds")
+	}
+	if cfg.Timeout <= 0 {
+		return config{}, fmt.Errorf("-timeout must be positive")
 	}
 	return cfg, nil
 }

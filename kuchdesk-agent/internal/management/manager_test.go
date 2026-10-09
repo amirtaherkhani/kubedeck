@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/watch"
 	discoveryfake "k8s.io/client-go/discovery/fake"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubefake "k8s.io/client-go/kubernetes/fake"
@@ -236,5 +237,106 @@ func TestScaleRequiresExplicitReplicas(t *testing.T) {
 	response := request(m, "POST", "/v1/manage/workloads/deployments/apps/sample/scale", []byte(`{"resourceVersion":"4"}`), map[string]string{"X-KuchDesk-Confirm": "deployments/apps/sample"})
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("missing replicas status %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestGenericResourceLifecycleAgainstFakeAPI(t *testing.T) {
+	m := testManager(t)
+	path := "/v1/manage/resources/core/v1/configmaps?namespace=apps"
+	create := request(m, "POST", path, []byte(`{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"new","namespace":"apps"},"data":{"key":"first"}}`), map[string]string{"X-KuchDesk-Confirm": "apps/new"})
+	if create.Code != http.StatusOK {
+		t.Fatalf("create %d: %s", create.Code, create.Body.String())
+	}
+	path += "&name=new"
+	read := request(m, "GET", path, nil, nil)
+	if read.Code != http.StatusOK || !bytes.Contains(read.Body.Bytes(), []byte(`"first"`)) {
+		t.Fatalf("read %d: %s", read.Code, read.Body.String())
+	}
+	update := request(m, "PUT", path, []byte(`{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"new","namespace":"apps","resourceVersion":"1"},"data":{"key":"second"}}`), map[string]string{"X-KuchDesk-Confirm": "apps/new"})
+	if update.Code != http.StatusOK || !bytes.Contains(update.Body.Bytes(), []byte(`"second"`)) {
+		t.Fatalf("update %d: %s", update.Code, update.Body.String())
+	}
+	patch := request(m, "PATCH", path, []byte(`{"data":{"extra":"third"}}`), map[string]string{"X-KuchDesk-Confirm": "apps/new", "If-Match": "1"})
+	if patch.Code != http.StatusOK || !bytes.Contains(patch.Body.Bytes(), []byte(`"third"`)) {
+		t.Fatalf("patch %d: %s", patch.Code, patch.Body.String())
+	}
+	remove := request(m, "DELETE", path, nil, map[string]string{"X-KuchDesk-Confirm": "apps/new", "If-Match": "1", "If-Match-UID": "test-uid"})
+	if remove.Code != http.StatusOK {
+		t.Fatalf("delete %d: %s", remove.Code, remove.Body.String())
+	}
+}
+
+func TestEventsAndBoundedPodLogsAgainstFakeAPI(t *testing.T) {
+	m := testManager(t)
+	_, err := m.Kube.CoreV1().Events("apps").Create(
+		httptest.NewRequest("GET", "/", nil).Context(),
+		&corev1.Event{ObjectMeta: metav1.ObjectMeta{Name: "warning", Namespace: "apps"}, Reason: "BackOff"},
+		metav1.CreateOptions{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	events := request(m, "GET", "/v1/manage/events/apps", nil, nil)
+	if events.Code != http.StatusOK || !bytes.Contains(events.Body.Bytes(), []byte(`"BackOff"`)) {
+		t.Fatalf("events %d: %s", events.Code, events.Body.String())
+	}
+	logs := request(m, "GET", "/v1/manage/pods/apps/sample/logs?tail=25", nil, nil)
+	if logs.Code != http.StatusOK || logs.Body.String() != "fake logs" {
+		t.Fatalf("logs %d: %s", logs.Code, logs.Body.String())
+	}
+	invalid := request(m, "GET", "/v1/manage/pods/apps/sample/logs?tail=1001", nil, nil)
+	if invalid.Code != http.StatusBadRequest {
+		t.Fatalf("unbounded logs status %d", invalid.Code)
+	}
+}
+
+func TestWorkloadScaleRestartAndStatusAgainstFakeAPI(t *testing.T) {
+	m := testManager(t)
+	m.Kube.(*kubefake.Clientset).PrependReactor("get", "deployments", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		if action.GetSubresource() == "scale" {
+			return true, &autoscalingv1.Scale{ObjectMeta: metav1.ObjectMeta{Name: "sample", Namespace: "apps", ResourceVersion: "7"}, Spec: autoscalingv1.ScaleSpec{Replicas: 1}}, nil
+		}
+		return true, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "sample", Namespace: "apps"}}, nil
+	})
+	m.Kube.(*kubefake.Clientset).PrependReactor("update", "deployments", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		if action.GetSubresource() != "scale" {
+			t.Fatal("unexpected update subresource")
+		}
+		return true, action.(k8stesting.UpdateAction).GetObject(), nil
+	})
+	m.Dynamic.(*dynamicfake.FakeDynamicClient).PrependReactor("patch", "deployments", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		patch := action.(k8stesting.PatchAction).GetPatch()
+		if !bytes.Contains(patch, []byte(`"resourceVersion":"7"`)) || !bytes.Contains(patch, []byte("restartedAt")) {
+			t.Errorf("unexpected restart patch: %s", patch)
+		}
+		return true, &unstructured.Unstructured{Object: map[string]any{"apiVersion": "apps/v1", "kind": "Deployment", "metadata": map[string]any{"name": "sample", "namespace": "apps"}}}, nil
+	})
+	path := "/v1/manage/workloads/deployments/apps/sample/"
+	confirmation := map[string]string{"X-KuchDesk-Confirm": "deployments/apps/sample"}
+	scale := request(m, "POST", path+"scale", []byte(`{"replicas":2,"resourceVersion":"7"}`), confirmation)
+	if scale.Code != http.StatusOK || !bytes.Contains(scale.Body.Bytes(), []byte(`"replicas":2`)) {
+		t.Fatalf("scale %d: %s", scale.Code, scale.Body.String())
+	}
+	restart := request(m, "POST", path+"restart", nil, map[string]string{"X-KuchDesk-Confirm": "deployments/apps/sample", "If-Match": "7"})
+	if restart.Code != http.StatusOK {
+		t.Fatalf("restart %d: %s", restart.Code, restart.Body.String())
+	}
+	status := request(m, "POST", path+"status", nil, nil)
+	if status.Code != http.StatusOK || !bytes.Contains(status.Body.Bytes(), []byte(`"name":"sample"`)) {
+		t.Fatalf("status %d: %s", status.Code, status.Body.String())
+	}
+}
+
+func TestResourceWatchStreamsBoundedEvents(t *testing.T) {
+	m := testManager(t)
+	watcher := watch.NewRaceFreeFake()
+	watcher.Add(&unstructured.Unstructured{Object: map[string]any{"apiVersion": "v1", "kind": "ConfigMap", "metadata": map[string]any{"name": "new", "namespace": "apps"}}})
+	watcher.Stop()
+	m.Dynamic.(*dynamicfake.FakeDynamicClient).PrependWatchReactor("configmaps", func(k8stesting.Action) (bool, watch.Interface, error) {
+		return true, watcher, nil
+	})
+	response := request(m, "GET", "/v1/manage/resources/core/v1/configmaps?namespace=apps&watch=true", nil, nil)
+	if response.Code != http.StatusOK || !bytes.Contains(response.Body.Bytes(), []byte(`"Type":"ADDED"`)) {
+		t.Fatalf("watch %d: %s", response.Code, response.Body.String())
 	}
 }

@@ -30,13 +30,28 @@ func lanIP(ctx context.Context, override string) (net.IP, error) {
 	if err != nil {
 		return nil, err
 	}
+	ip, err := privateIPv4(addrs)
+	if err != nil {
+		return nil, fmt.Errorf("interface %s: %w", device, err)
+	}
+	return ip, nil
+}
+
+func privateIPv4(addrs []net.Addr) (net.IP, error) {
+	var selected net.IP
 	for _, a := range addrs {
 		ip, _, err := net.ParseCIDR(a.String())
 		if err == nil && ip.To4() != nil && ip.IsPrivate() && !ip.IsLinkLocalUnicast() {
-			return ip.To4(), nil
+			if selected != nil && !selected.Equal(ip.To4()) {
+				return nil, fmt.Errorf("multiple private IPv4 addresses; use -target-ip")
+			}
+			selected = ip.To4()
 		}
 	}
-	return nil, fmt.Errorf("interface %s has no private IPv4 address", device)
+	if selected == nil {
+		return nil, fmt.Errorf("no private IPv4 address")
+	}
+	return selected, nil
 }
 
 func tunnelInterface(name string) bool {

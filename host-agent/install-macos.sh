@@ -12,9 +12,10 @@ if [[ -z "${kubectl_bin}" || ! -x "${kubectl_bin}" ]]; then
   echo "kubectl must be installed before the host agent." >&2
   exit 1
 fi
+kubectl_bin="$(cd "$(dirname "${kubectl_bin}")" && pwd -P)/$(basename "${kubectl_bin}")"
 kube_context="${KUCHDESK_HOST_AGENT_KUBE_CONTEXT:-}"
 if [[ -z "${kube_context}" ]]; then
-  kube_context="$(kubectl config current-context)"
+  kube_context="$("${kubectl_bin}" config current-context)"
 fi
 if [[ -z "${kube_context}" ]]; then
   echo "Select a Kubernetes context or set KUCHDESK_HOST_AGENT_KUBE_CONTEXT." >&2
@@ -23,6 +24,16 @@ fi
 zone="${KUCHDESK_HOST_AGENT_ZONE:-}"
 if [[ -z "${zone}" ]]; then
   echo "Set KUCHDESK_HOST_AGENT_ZONE to the DNS zone this agent may change." >&2
+  exit 1
+fi
+interval="${KUCHDESK_HOST_AGENT_INTERVAL:-30}"
+if [[ ! "${interval}" =~ ^[0-9]+$ || ${#interval} -gt 4 ]]; then
+  echo "KUCHDESK_HOST_AGENT_INTERVAL must be an integer between 5 and 3600 seconds." >&2
+  exit 1
+fi
+interval=$((10#${interval}))
+if (( interval < 5 || interval > 3600 )); then
+  echo "KUCHDESK_HOST_AGENT_INTERVAL must be between 5 and 3600 seconds." >&2
   exit 1
 fi
 bin_dir="${HOME}/.local/bin"
@@ -41,16 +52,17 @@ fi
 (cd "${script_dir}" && go build -o "${bin}.new" ./cmd/kuchdesk-host-agent)
 chmod 0700 "${bin}.new"
 
-python3 - "${plist}.new" "${label}" "${bin}" "${log_dir}" "${HOME}" "${kube_context}" "${zone}" "$(dirname "${kubectl_bin}")" <<'PY'
+python3 - "${plist}.new" "${label}" "${bin}" "${log_dir}" "${HOME}" "${kube_context}" "${zone}" "${kubectl_bin}" "${interval}" <<'PY'
 import os
 import plistlib
 import sys
 
-path, label, binary, log_dir, home, kube_context, zone, kubectl_dir = sys.argv[1:]
+path, label, binary, log_dir, home, kube_context, zone, kubectl_bin, interval = sys.argv[1:]
 arguments = [
     binary,
     '-kube-context', kube_context,
     '-zone', zone,
+    '-kubectl', kubectl_bin,
 ]
 for variable, option in (
     ('KUCHDESK_HOST_AGENT_INTERFACE', '-interface'),
@@ -61,12 +73,14 @@ for variable, option in (
     ('KUCHDESK_HOST_AGENT_PASSWORD_KEY', '-password-key'),
     ('KUCHDESK_HOST_AGENT_ADMIN_USER', '-admin-user'),
     ('KUCHDESK_HOST_AGENT_API_PORT', '-api-port'),
+    ('KUCHDESK_HOST_AGENT_TTL', '-ttl'),
+    ('KUCHDESK_HOST_AGENT_TIMEOUT', '-timeout'),
 ):
     if value := os.environ.get(variable):
         arguments.extend((option, value))
 environment = {
     'HOME': home,
-    'PATH': ':'.join((kubectl_dir, '/usr/bin', '/bin', '/usr/sbin', '/sbin')),
+    'PATH': ':'.join((os.path.dirname(kubectl_bin), '/usr/bin', '/bin', '/usr/sbin', '/sbin')),
 }
 if kubeconfig := os.environ.get('KUBECONFIG'):
     environment['KUBECONFIG'] = os.pathsep.join(
@@ -78,7 +92,7 @@ with open(path, 'wb') as file:
         'KuchDeskManaged': True,
         'ProgramArguments': arguments,
         'RunAtLoad': True,
-        'StartInterval': 30,
+        'StartInterval': int(interval),
         'EnvironmentVariables': environment,
         'StandardOutPath': log_dir + '/host-agent.log',
         'StandardErrorPath': log_dir + '/host-agent.error.log',
@@ -92,4 +106,4 @@ fi
 mv "${bin}.new" "${bin}"
 mv "${plist}.new" "${plist}"
 launchctl bootstrap "gui/$(id -u)" "${plist}"
-echo "Installed ${label}; checks the current LAN IP every 30 seconds."
+echo "Installed ${label}; checks the current LAN IP every ${interval} seconds."
