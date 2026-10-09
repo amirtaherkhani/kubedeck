@@ -5,7 +5,7 @@ metadata:
   namespace: platform-system
   labels:
     app.kubernetes.io/name: traefik-lan
-    app.kubernetes.io/part-of: kubedeck-platform
+    app.kubernetes.io/part-of: kuchdesk-platform
 spec:
   type: LoadBalancer
   selector:

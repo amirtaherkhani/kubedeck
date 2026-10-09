@@ -208,7 +208,7 @@ func writeJSON(path string, value any) error {
 }
 
 func writeOutput(dir string, result output) error {
-	marker := filepath.Join(dir, ".kubedeck-site-render")
+	marker := filepath.Join(dir, ".kuchdesk-site-render")
 	if entries, err := os.ReadDir(dir); err == nil && len(entries) > 0 {
 		if _, err := os.Stat(marker); err != nil {
 			return fmt.Errorf("%s is not a site-render output directory", dir)

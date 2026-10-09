@@ -1,0 +1,9 @@
+apiVersion: v2
+name: kuchdesk-agent
+description: Kubernetes discovery, metrics, SSE, and opt-in CoreDNS alias agent.
+home: https://github.com/amirtaherkhani/kuchdesk
+sources:
+  - https://github.com/amirtaherkhani/kuchdesk/tree/main/kuchdesk-agent
+type: application
+version: 0.7.0
+appVersion: "0.4.0"

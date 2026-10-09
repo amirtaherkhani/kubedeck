@@ -1,0 +1,43 @@
+# Illustrative contract fixture. This is not an installed module or a catalog registration.
+apiVersion: catalog.kuchdesk.io/v1alpha1
+kind: ServiceModule
+module:
+  id: example-managed-module
+  displayName: Example Managed Module
+  category: example
+  ownership: managed
+  purpose: Demonstrates module metadata for a homelab-managed tool.
+components:
+  - id: example-database
+    type: database
+    purpose: Demonstrates a database component without selecting a real product.
+    provides:
+      - example.database
+    requires: []
+    externalConnections: []
+    workloadRefs:
+      - apiVersion: apps/v1
+        kind: StatefulSet
+        name: example-database
+        namespace: example
+    endpoints:
+      - name: client
+        protocol: tcp
+        addressRef: service:example/example-database
+        portName: database
+    healthChecks:
+      - name: ready
+        type: kubernetes-readiness
+        targetRef: workload:example/example-database
+    observability:
+      dashboards: []
+      metrics: []
+      logs: []
+    secretRefs:
+      - provider: infisical
+        projectRef: example-project
+        environmentRef: local
+        path: /example/database
+        secretName: example-database
+        keys:
+          - DATABASE_URL

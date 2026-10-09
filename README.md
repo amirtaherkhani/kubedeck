@@ -1,11 +1,11 @@
-# KubeDeck agents, observability, and k6
+# KuchDesk agents, observability, and k6
 
-This repository contains two Go agents, the Grafana observability stack, and k6 Operator. The Kubernetes agent discovers cluster resources and exposes an internal API; the macOS host agent reconciles a configured DNS wildcard through an existing Technitium installation. The KubeDeck dashboard is not included.
+This repository contains two Go agents, the Grafana observability stack, and k6 Operator. The Kubernetes agent discovers cluster resources and exposes an internal API; the macOS host agent reconciles a configured DNS wildcard through an existing Technitium installation. The KuchDesk dashboard is not included.
 
 | Component | Purpose |
 | --- | --- |
-| [`kubedeck-agent/`](kubedeck-agent/README.md) | Kubernetes discovery, metrics, events, and optional authenticated management and CoreDNS aliases |
-| [`kubedeck-agent/chart/`](kubedeck-agent/chart/README.md) | Standalone Helm chart for the Kubernetes agent |
+| [`kuchdesk-agent/`](kuchdesk-agent/README.md) | Kubernetes discovery, metrics, events, and optional authenticated management and CoreDNS aliases |
+| [`kuchdesk-agent/chart/`](kuchdesk-agent/chart/README.md) | Standalone Helm chart for the Kubernetes agent |
 | [`host-agent/`](host-agent/README.md) | Host DNS reconciler CLI and macOS installer |
 | [`lab/`](lab/README.md) | Grafana, image renderer, Prometheus Stack, Loki, Tempo, Alloy, k6 Operator, and their HTTPS/secret dependencies |
 
@@ -18,8 +18,8 @@ The Kubernetes agent runs in any compatible Kubernetes cluster when given a uniq
 ## Verify
 
 ```bash
-(cd kubedeck-agent && go test ./... && go vet ./...)
+(cd kuchdesk-agent && go test ./... && go vet ./...)
 (cd host-agent && go test ./...)
-helm lint kubedeck-agent/chart --set cluster.id=example --set cluster.name='Example cluster' --set image.repository=example.invalid/kubedeck-agent --set image.tag=0.3.0
-helm template kubedeck-agent kubedeck-agent/chart --set cluster.id=example --set cluster.name='Example cluster' --set image.repository=example.invalid/kubedeck-agent --set image.tag=0.3.0
+helm lint kuchdesk-agent/chart --set cluster.id=example --set cluster.name='Example cluster' --set image.repository=example.invalid/kuchdesk-agent --set image.tag=0.4.0
+helm template kuchdesk-agent kuchdesk-agent/chart --set cluster.id=example --set cluster.name='Example cluster' --set image.repository=example.invalid/kuchdesk-agent --set image.tag=0.4.0
 ```
