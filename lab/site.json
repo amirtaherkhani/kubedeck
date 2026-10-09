@@ -1,0 +1,24 @@
+{
+  "domain": "local.dev",
+  "hosts": {
+    "grafana": "grafana",
+    "infisical": "infisical"
+  },
+  "tls": {
+    "issuer": {
+      "type": "private-ca",
+      "name": "local-dev-ca",
+      "selfSignedName": "local-dev-selfsigned",
+      "caSecretName": "local-dev-ca",
+      "caNamespace": "platform-system",
+      "caCommonName": "Home Lab Local Development CA"
+    },
+    "certificateNamespaces": [
+      "platform-system",
+      "platform-secrets",
+      "observability",
+      "kube-system"
+    ],
+    "defaultTlsStoreNamespace": "kube-system"
+  }
+}

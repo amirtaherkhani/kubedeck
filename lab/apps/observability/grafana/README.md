@@ -5,7 +5,7 @@ Primary home-lab observability UI.
 | Field | Value |
 |---|---|
 | Namespace | `observability` |
-| UI | Yes: `https://grafana.local.dev` |
+| UI | Yes: generated `grafanaUrl` from `lab/site.json` |
 | Port | HTTPS through Traefik; service `3000` |
 | Storage | `standard` PVC, 10 Gi |
 | Datasources | Prometheus, Loki, Tempo, Alertmanager |
