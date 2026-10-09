@@ -2,12 +2,17 @@ package management
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	authv1 "k8s.io/api/authorization/v1"
@@ -20,9 +25,38 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	discoveryfake "k8s.io/client-go/discovery/fake"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/kubernetes"
 	kubefake "k8s.io/client-go/kubernetes/fake"
+	clientauthv1 "k8s.io/client-go/kubernetes/typed/authorization/v1"
 	k8stesting "k8s.io/client-go/testing"
 )
+
+type reviewClient struct {
+	kubernetes.Interface
+	review clientauthv1.SelfSubjectAccessReviewInterface
+}
+
+func (c reviewClient) AuthorizationV1() clientauthv1.AuthorizationV1Interface {
+	return reviewAuthorization{AuthorizationV1Interface: c.Interface.AuthorizationV1(), review: c.review}
+}
+
+type reviewAuthorization struct {
+	clientauthv1.AuthorizationV1Interface
+	review clientauthv1.SelfSubjectAccessReviewInterface
+}
+
+func (a reviewAuthorization) SelfSubjectAccessReviews() clientauthv1.SelfSubjectAccessReviewInterface {
+	return a.review
+}
+
+type reviewCreator struct {
+	clientauthv1.SelfSubjectAccessReviewInterface
+	create func(context.Context, *authv1.SelfSubjectAccessReview) (*authv1.SelfSubjectAccessReview, error)
+}
+
+func (c reviewCreator) Create(ctx context.Context, object *authv1.SelfSubjectAccessReview, _ metav1.CreateOptions) (*authv1.SelfSubjectAccessReview, error) {
+	return c.create(ctx, object)
+}
 
 func testManager(t *testing.T) *Manager {
 	t.Helper()
@@ -126,9 +160,12 @@ func TestCapabilitiesExcludeSecrets(t *testing.T) {
 func TestCapabilitiesCheckNamespaceAndSubresourceAuthorization(t *testing.T) {
 	m := testManager(t)
 	var checked []authv1.ResourceAttributes
+	var checkedMu sync.Mutex
 	m.Kube.(*kubefake.Clientset).PrependReactor("create", "selfsubjectaccessreviews", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		attrs := *action.(k8stesting.CreateAction).GetObject().(*authv1.SelfSubjectAccessReview).Spec.ResourceAttributes
+		checkedMu.Lock()
 		checked = append(checked, attrs)
+		checkedMu.Unlock()
 		return true, &authv1.SelfSubjectAccessReview{Status: authv1.SubjectAccessReviewStatus{Allowed: attrs.Verb == "get"}}, nil
 	})
 	response := request(m, "GET", "/v1/manage/capabilities?namespace=apps", nil, nil)
@@ -170,6 +207,67 @@ func TestCapabilitiesCheckNamespaceAndSubresourceAuthorization(t *testing.T) {
 	}
 	if !checkedStatus {
 		t.Fatal("no status subresource authorization review")
+	}
+}
+
+func TestCapabilitiesBoundConcurrentReviewsAndKeepDeniedVerbs(t *testing.T) {
+	m := testManager(t)
+	var resources []metav1.APIResource
+	verbs := metav1.Verbs{"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"}
+	for i := range 6 {
+		resources = append(resources, metav1.APIResource{Name: "configmaps" + string(rune('a'+i)), Kind: "ConfigMap", Namespaced: true, Verbs: verbs})
+	}
+	resources = append(resources, metav1.APIResource{Name: "secrets", Kind: "Secret", Namespaced: true, Verbs: verbs})
+	m.Discovery.(*discoveryfake.FakeDiscovery).Resources = []*metav1.APIResourceList{{GroupVersion: "v1", APIResources: resources}}
+	var active, peak, total atomic.Int32
+	m.Kube = reviewClient{Interface: m.Kube, review: reviewCreator{create: func(_ context.Context, object *authv1.SelfSubjectAccessReview) (*authv1.SelfSubjectAccessReview, error) {
+		attrs := object.Spec.ResourceAttributes
+		current := active.Add(1)
+		for {
+			previous := peak.Load()
+			if current <= previous || peak.CompareAndSwap(previous, current) {
+				break
+			}
+		}
+		time.Sleep(5 * time.Millisecond)
+		active.Add(-1)
+		total.Add(1)
+		return &authv1.SelfSubjectAccessReview{Status: authv1.SubjectAccessReviewStatus{Allowed: attrs.Verb != "delete"}}, nil
+	}}}
+	response := request(m, "GET", "/v1/manage/capabilities?namespace=apps", nil, nil)
+	if response.Code != http.StatusOK {
+		t.Fatalf("capabilities status %d: %s", response.Code, response.Body.String())
+	}
+	if total.Load() != 48 || peak.Load() < 2 || peak.Load() > 8 {
+		t.Fatalf("unexpected review bounds: total=%d peak=%d", total.Load(), peak.Load())
+	}
+	var body struct {
+		Resources []struct {
+			Resource     string          `json:"resource"`
+			AllowedVerbs map[string]bool `json:"allowedVerbs"`
+		} `json:"resources"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Resources) != 6 {
+		t.Fatalf("unexpected resource count: %d", len(body.Resources))
+	}
+	for _, resource := range body.Resources {
+		if resource.AllowedVerbs["delete"] || !resource.AllowedVerbs["get"] {
+			t.Fatalf("incorrect authorization for %s: %+v", resource.Resource, resource.AllowedVerbs)
+		}
+	}
+}
+
+func TestCapabilitiesReviewFailureReturnsNoPartialCatalog(t *testing.T) {
+	m := testManager(t)
+	m.Kube.(*kubefake.Clientset).PrependReactor("create", "selfsubjectaccessreviews", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("simulated authorization failure")
+	})
+	response := request(m, "GET", "/v1/manage/capabilities?namespace=apps", nil, nil)
+	if response.Code != http.StatusInternalServerError || bytes.Contains(response.Body.Bytes(), []byte(`"resources"`)) || bytes.Contains(response.Body.Bytes(), []byte("simulated authorization failure")) {
+		t.Fatalf("unexpected failure response: %d %s", response.Code, response.Body.String())
 	}
 }
 

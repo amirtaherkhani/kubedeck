@@ -10,7 +10,18 @@ CoreDNS service-alias configuration:
 
   http://{{ include "kuchdesk-agent.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}/v1/dns/config
 
+{{ if .Values.rbac.clusterAdmin }}
+The agent ServiceAccount has the built-in cluster-admin role, including
+cluster-wide read and write permissions. Protect the bearer token and internal
+Service endpoint.
+{{ else }}
 The discovery ClusterRole is read-only and does not grant access to Secrets or
-node proxy APIs. CoreDNS writes are disabled by default. When enabled, a
-namespaced Role can update only ConfigMap
-{{ .Values.dnsManagement.namespace }}/{{ .Values.dnsManagement.configMapName }}.
+node proxy APIs.
+{{ end }}
+{{ if .Values.dnsManagement.enabled }}
+CoreDNS alias management is enabled for the existing ConfigMap
+{{ .Values.dnsManagement.namespace }}/{{ .Values.dnsManagement.configMapName }};
+the chart does not rewrite its Corefile.
+{{ else }}
+CoreDNS alias writes are disabled.
+{{ end }}

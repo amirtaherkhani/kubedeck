@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	authv1 "k8s.io/api/authorization/v1"
@@ -64,6 +65,13 @@ func (m *Manager) capabilities(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resources := make([]map[string]any, 0)
+	allowedByResource := make([][]bool, 0)
+	type reviewTask struct {
+		resourceIndex int
+		verbIndex     int
+		attributes    authv1.ResourceAttributes
+	}
+	var reviews []reviewTask
 	seen := make(map[string]bool)
 	appendResources := func(list *metav1.APIResourceList) error {
 		gv, err := schema.ParseGroupVersion(list.GroupVersion)
@@ -84,19 +92,16 @@ func (m *Manager) capabilities(w http.ResponseWriter, r *http.Request) {
 			if len(parts) == 2 {
 				subresource = parts[1]
 			}
-			allowed := make(map[string]bool)
-			for _, verb := range res.Verbs {
+			resourceIndex := len(resources)
+			allowedByResource = append(allowedByResource, make([]bool, len(res.Verbs)))
+			for verbIndex, verb := range res.Verbs {
 				// A namespaced review needs a concrete namespace to be meaningful.
 				if res.Namespaced && namespace == "" {
 					continue
 				}
-				review, err := m.Kube.AuthorizationV1().SelfSubjectAccessReviews().Create(r.Context(), &authv1.SelfSubjectAccessReview{Spec: authv1.SelfSubjectAccessReviewSpec{ResourceAttributes: &authv1.ResourceAttributes{Namespace: namespaceForReview(res.Namespaced, namespace), Verb: verb, Group: gv.Group, Version: gv.Version, Resource: parts[0], Subresource: subresource}}}, metav1.CreateOptions{})
-				if err != nil {
-					return err
-				}
-				allowed[verb] = review.Status.Allowed && !review.Status.Denied && review.Status.EvaluationError == ""
+				reviews = append(reviews, reviewTask{resourceIndex: resourceIndex, verbIndex: verbIndex, attributes: authv1.ResourceAttributes{Namespace: namespaceForReview(res.Namespaced, namespace), Verb: verb, Group: gv.Group, Version: gv.Version, Resource: parts[0], Subresource: subresource}})
 			}
-			resources = append(resources, map[string]any{"groupVersion": list.GroupVersion, "resource": res.Name, "kind": res.Kind, "namespaced": res.Namespaced, "verbs": res.Verbs, "allowedVerbs": allowed})
+			resources = append(resources, map[string]any{"groupVersion": list.GroupVersion, "resource": res.Name, "kind": res.Kind, "namespaced": res.Namespaced, "verbs": res.Verbs})
 		}
 		return nil
 	}
@@ -118,6 +123,57 @@ func (m *Manager) capabilities(w http.ResponseWriter, r *http.Request) {
 			writeError(w, err)
 			return
 		}
+	}
+	// Keep authorization answers exact, but bound parallel reviews so a large
+	// API catalog does not make the endpoint wait on every network round trip.
+	if len(reviews) > 0 {
+		ctx, cancel := context.WithCancel(r.Context())
+		defer cancel()
+		jobs := make(chan reviewTask)
+		var workers sync.WaitGroup
+		var firstErr error
+		var once sync.Once
+		workerCount := min(8, len(reviews))
+		for range workerCount {
+			workers.Add(1)
+			go func() {
+				defer workers.Done()
+				for task := range jobs {
+					review, err := m.Kube.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, &authv1.SelfSubjectAccessReview{Spec: authv1.SelfSubjectAccessReviewSpec{ResourceAttributes: &task.attributes}}, metav1.CreateOptions{})
+					if err != nil {
+						once.Do(func() { firstErr = err; cancel() })
+						return
+					}
+					allowedByResource[task.resourceIndex][task.verbIndex] = review.Status.Allowed && !review.Status.Denied && review.Status.EvaluationError == ""
+				}
+			}()
+		}
+	sendReviews:
+		for _, task := range reviews {
+			select {
+			case jobs <- task:
+			case <-ctx.Done():
+				break sendReviews
+			}
+		}
+		close(jobs)
+		workers.Wait()
+		if firstErr != nil {
+			writeError(w, firstErr)
+			return
+		}
+		if r.Context().Err() != nil {
+			return
+		}
+	}
+	for i, resource := range resources {
+		allowed := make(map[string]bool)
+		if !resource["namespaced"].(bool) || namespace != "" {
+			for j, verb := range resource["verbs"].(metav1.Verbs) {
+				allowed[verb] = allowedByResource[i][j]
+			}
+		}
+		resource["allowedVerbs"] = allowed
 	}
 	metrics := false
 	if _, err := m.Discovery.ServerResourcesForGroupVersion("metrics.k8s.io/v1beta1"); err == nil {
