@@ -174,7 +174,7 @@ func (s Spec) Plan() ([]string, error) {
 		steps = append(steps, "docker push", "resolve image digest")
 	}
 	if s.KindPrepull {
-		steps = append(steps, "discover KIND nodes", "prepull digest through KIND CRI")
+		steps = append(steps, "discover KIND nodes", "fetch digest through KIND containerd", "register digest with KIND CRI")
 	}
 	return append(steps, "helm template", "helm upgrade --install --atomic --wait", "kubectl rollout status"), nil
 }
@@ -336,7 +336,14 @@ func (w Workflow) prepullKind(ctx context.Context, spec Spec, image string) erro
 		if !namePattern.MatchString(name) {
 			return errors.New("KIND node name invalid")
 		}
-		if err := w.run(ctx, spec.SourceDir, "prepull digest through KIND CRI", "docker", "exec", name, "crictl", "pull", image); err != nil {
+		// On this Docker Desktop KIND runtime, CRI's direct digest fetch can
+		// short-read a registry manifest after HEAD. Fetch the exact digest via
+		// containerd first, then require CRI to register the same reference for
+		// kubelet's imagePullPolicy=Never path.
+		if err := w.run(ctx, spec.SourceDir, "fetch digest through KIND containerd", "docker", "exec", name, "ctr", "-n", "k8s.io", "images", "pull", "--plain-http", image); err != nil {
+			return err
+		}
+		if err := w.run(ctx, spec.SourceDir, "register digest with KIND CRI", "docker", "exec", name, "crictl", "pull", image); err != nil {
 			return err
 		}
 	}

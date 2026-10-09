@@ -178,14 +178,14 @@ Docker Desktop's image daemon cannot use that host-local endpoint. Set
 `github.com/google/go-containerregistry/cmd/crane` on the host PATH. The
 workflow saves the built Docker image to a temporary archive, pushes it from
 the host with `crane`, and resolves its registry digest. `kindPrepull: true`
-discovers the nodes from the explicit Kubernetes context, pre-pulls the exact
-tag and digest on each node through `crictl` (the kubelet's CRI), and sets Helm's
-`image.pullPolicy=Never` only after every pre-pull succeeds. This is a
-Docker Desktop KIND profile, not a generic Kubernetes registry solution.
-The first live workflow run exposed that a direct `ctr` pull alone could leave
-kubelet at `ErrImageNeverPull`; a matching `crictl pull` made the image visible
-and the digest-pinned Helm rollout reached 1/1 Ready. Future workflow runs use
-CRI directly.
+discovers the nodes from the explicit Kubernetes context, fetches the exact
+tag and digest through `ctr`, then registers that reference through `crictl`
+(the kubelet's CRI). Helm uses `image.pullPolicy=Never` only after both steps
+succeed on every node. A direct CRI digest fetch short-read this registry's
+manifest in the current Docker Desktop KIND runtime; `ctr` fetched the same
+digest successfully, and CRI then recognized it. `ctr` alone is insufficient
+for kubelet visibility. This is a Docker Desktop KIND profile, not a generic
+Kubernetes registry solution.
 The registry Service and persistent data are retained. Existing cloud-hosted
 images in other charts are unaffected.
 
