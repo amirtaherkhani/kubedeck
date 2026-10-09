@@ -1,6 +1,6 @@
 # Observability runtime
 
-This is the checked-in deployment profile. [`site.json`](site.json) contains this installation's DNS domain, service host labels, TLS issuer, and certificate namespaces. Edit it or pass another file to `render_site.py --profile path/to/site.json`; no domain is embedded in deployable Ingress, Certificate, TLSStore, or Helm values. The agent code has no site default.
+This is the checked-in deployment profile. [`site.json`](site.json) contains this installation's DNS domain, service host labels, TLS issuer, and certificate namespaces. Edit it or pass another file to `go run ./cmd/render-site --profile path/to/site.json`; no domain is embedded in deployable Ingress, Certificate, TLSStore, or Helm values. The agent code has no site default.
 
 For another cluster, select its Kubernetes context, DNS zone, issuer, ingress class, storage classes, Secret names, and Infisical scope. The site renderer handles domain and TLS references only; the other Helm values and PostgreSQL manifest remain site-specific overlays. The observability components use Kubernetes search-domain Service names rather than assuming `cluster.local`. Grafana's Infisical endpoint, credential Secret, and path are configurable in `values.homelab.yaml`. Existing PVC storage classes are immutable; changing storage class requires a separate data migration, never just a site render.
 
@@ -18,6 +18,7 @@ The runtime on Docker Desktop Kubernetes consists of Grafana and its image rende
 ## Deployment order
 
 The pinned versions below match the verified local stack. Run these commands from `lab/`.
+Go 1.23 or newer is required. `--get` reads the last rendered summary from `.generated`; pass the same `--output` directory when using a separate profile output.
 
 ```bash
 helm repo add cert-manager https://charts.jetstack.io
@@ -26,21 +27,21 @@ helm repo add infisical-helm-charts https://dl.cloudsmith.io/public/infisical/he
 helm repo add grafana https://grafana.github.io/helm-charts
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
-python3 render_site.py
-SITE_CERT_NAME=$(python3 -c 'import json; print(json.load(open(".generated/site-summary.json"))["secretName"])')
+go run ./cmd/render-site
+SITE_CERT_NAME=$(go run ./cmd/render-site --get secretName)
 kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
 kubectl create namespace observability-tests --dry-run=client -o yaml | kubectl apply -f -
 helm upgrade --install cert-manager cert-manager/cert-manager -n platform-system --create-namespace --version v1.21.0 -f apps/platform/cert-manager/values.yaml --wait
 if test -f .generated/manifests/00-selfsigned-issuer.json; then
-  CA_CERT_NAME=$(python3 -c 'import json; print(json.load(open(".generated/site-summary.json"))["caSecretName"])')
-  CA_NAMESPACE=$(python3 -c 'import json; print(json.load(open(".generated/site-summary.json"))["caNamespace"])')
+  CA_CERT_NAME=$(go run ./cmd/render-site --get caSecretName)
+  CA_NAMESPACE=$(go run ./cmd/render-site --get caNamespace)
   kubectl apply -f .generated/manifests/00-selfsigned-issuer.json
   kubectl apply -f .generated/manifests/01-ca-certificate.json
   kubectl -n "$CA_NAMESPACE" wait --for=condition=Ready "certificate/$CA_CERT_NAME" --timeout=180s
   kubectl apply -f .generated/manifests/02-ca-issuer.json
 fi
 for certificate in .generated/manifests/10-certificate-*.json; do kubectl apply -f "$certificate"; done
-for namespace in $(python3 -c 'import json; print(" ".join(json.load(open(".generated/site-summary.json"))["certificateNamespaces"]))'); do
+for namespace in $(go run ./cmd/render-site --get certificateNamespaces); do
   kubectl -n "$namespace" wait --for=condition=Ready "certificate/$SITE_CERT_NAME" --timeout=180s
 done
 helm upgrade --install traefik traefik/traefik -n platform-system --version 39.0.7 -f core/ingress/traefik-docker-desktop-values.yaml --wait
@@ -68,7 +69,7 @@ The k6 Operator uses Prometheus's enabled remote-write receiver. The dashboard C
 kubectl -n observability get pods,pvc
 kubectl -n observability get infisicalsecret grafana-admin
 kubectl -n observability-tests get deploy,servicemonitor,testruns.k6.io
-curl --fail "$(python3 -c 'import json; print(json.load(open(".generated/site-summary.json"))["grafanaUrl"])')/api/health"
+curl --fail "$(go run ./cmd/render-site --get grafanaUrl)/api/health"
 kubectl get --raw '/api/v1/namespaces/observability/services/http:loki:3100/proxy/ready'
 kubectl get --raw '/api/v1/namespaces/observability/services/http:tempo:3200/proxy/ready'
 kubectl get --raw '/api/v1/namespaces/observability/services/http:monitoring-kube-prometheus-prometheus:9090/proxy/-/ready'
@@ -76,7 +77,7 @@ kubectl get --raw '/api/v1/namespaces/observability/services/http:monitoring-kub
 
 ## Domain and certificate changes
 
-1. Change `domain` in `site.json`, or render a separate profile with `python3 render_site.py --profile path/to/site.json --output path/to/generated`. For a public domain, select an already configured `ClusterIssuer` with `tls.issuer.type: existing` and its name. A wildcard certificate needs a suitable DNS-01 issuer. For a private CA, its Secret namespace must match cert-manager's configured cluster-resource namespace. The renderer does not create DNS records or ACME credentials.
+1. Change `domain` in `site.json`, or render a separate profile with `go run ./cmd/render-site --profile path/to/site.json --output path/to/generated`. For a public domain, select an already configured `ClusterIssuer` with `tls.issuer.type: existing` and its name. A wildcard certificate needs a suitable DNS-01 issuer. For a private CA, its Secret namespace must match cert-manager's configured cluster-resource namespace. The renderer does not create DNS records or ACME credentials.
 2. Inspect generated manifests and Helm overlays. Apply the new Certificate resources and wait for each certificate to be `Ready` **before** switching Ingress or the default TLSStore. The domain-derived Secret name lets old and new certificates coexist. For an external issuer, skip the private-CA issuer/CA steps. Apply the TLSStore only after its namespace's Secret exists.
 3. Update the Technitium DNS zone and the host agent's `KUBEDECK_HOST_AGENT_ZONE` setting to the new domain, then confirm resolution. Update the existing `platform-secrets/infisical-secrets` `SITE_URL` through the established secret workflow to match generated `infisicalUrl`; never put its other secret values in Git. Upgrade Infisical and Grafana with the generated overlays, then verify HTTPS, redirects, and login. Keep old DNS and certificates during a planned transition; remove them separately after verification.
 

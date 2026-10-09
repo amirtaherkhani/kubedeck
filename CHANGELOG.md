@@ -6,7 +6,7 @@ All notable KubeDeck changes are documented in this file.
 
 ### Added
 
-- Render site-specific HTTPS certificates, Traefik fallback TLS, and Grafana/Infisical domain overlays from one validated profile. Support a different DNS zone and an existing external ClusterIssuer without editing application manifests.
+- Render site-specific HTTPS certificates, Traefik fallback TLS, and Grafana/Infisical domain overlays from one validated Go-powered profile. Support a different DNS zone and an existing external ClusterIssuer without editing application manifests.
 
 ### Fixed
 

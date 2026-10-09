@@ -1,7 +1,6 @@
 # Local configuration and generated artifacts
 .env*
 .DS_Store
-__pycache__/
 *.pem
 *.tsbuildinfo
 /node_modules/
