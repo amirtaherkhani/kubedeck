@@ -89,8 +89,12 @@ not an application smoke test. Helm's `--atomic` covers upgrade failures; if the
 `kubectl rollout status` check fails, inspect the release before retrying
 because the successful Helm upgrade remains installed. The workflow has
 fake-runner and chart-render tests. A host-side `crane` push and node-side
-`ctr` pull have succeeded against the live registry, but kubelet pulling and
-the complete Helm rollout remain unverified.
+`ctr` pull have succeeded against the live registry. A temporary unprivileged
+Pod also reached `Pulled`, `Created`, and `Started` with
+`imagePullPolicy=Always`; it exited because the deliberately omitted
+`KUCHDESK_CLUSTER_ID` is required and was then removed. The image layers were
+already cached, so a fresh-blob kubelet download and the complete Helm rollout
+remain unverified.
 
 When a registry is available only through a macOS localhost port-forward,
 Docker Desktop's image daemon cannot use that host-local endpoint. Set

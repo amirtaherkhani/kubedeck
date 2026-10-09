@@ -17,7 +17,7 @@ All notable KuchDesk changes are documented in this file.
 
 ### Fixed
 
-- Push locally built images through the macOS host's port-forwarded registry using `crane`, with optional digest pre-pull on dynamically discovered KIND nodes before Helm runs.
+- Push locally built images through the macOS host's port-forwarded registry using `crane`, with optional digest pre-pull on dynamically discovered KIND nodes before Helm runs. A temporary Pod verified kubelet image pull and container creation with cached layers.
 - Manage opt-in CoreDNS service aliases on Docker Desktop KIND through a bounded block in the existing Corefile, preserving unrelated directives and rejecting stale or unsafe updates.
 - Let new Infisical PostgreSQL installations use the cluster's default StorageClass instead of assuming K3s `local-path`; preserve the existing StatefulSet and PVC during upgrades.
 - Let the Kubernetes agent use a developer's kubeconfig when no in-cluster credentials exist, with an explicit context override and multi-file `KUBECONFIG` support.
