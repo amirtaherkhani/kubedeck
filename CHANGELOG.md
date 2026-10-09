@@ -6,6 +6,7 @@ All notable KuchDesk changes are documented in this file.
 
 ### Added
 
+- Add a local stdio Infisical MCP server with typed capability discovery and name-only secret listing. Its Universal Auth client uses two host environment variables and renews short-lived access tokens in memory; no identity or live service is provisioned.
 - Document required MCP access to the proposed host-side Infisical service, unattended Universal Auth, Helm/Kubernetes Secret delivery, capability boundaries, and phased acceptance criteria. This is a plan; no new service or identity is deployed.
 - Render site-specific HTTPS certificates, Traefik fallback TLS, and Grafana/Infisical domain overlays from one validated Go-powered profile. Support a different DNS zone and an existing external ClusterIssuer without editing application manifests.
 - Scrape the existing macOS node_exporter and probe Technitium's site and recursive DNS plus Docker Desktop's host DNS path from Prometheus, with a Grafana Host and DNS dashboard.
@@ -22,6 +23,7 @@ All notable KuchDesk changes are documented in this file.
 
 ### Changed
 
+- Require Go 1.25 for the host-agent module to use the official MCP Go SDK.
 - Let operators configure the host DNS record TTL, run timeout, and macOS polling interval; pin the installed `kubectl` executable for launchd runs.
 - Rename the repository, both agents, Helm chart, API identity, and macOS integration to KuchDesk. The agent chart is now 0.8.0 and its app version is 0.5.0.
 - Remove embedded `local.dev` hostnames from deployment values and static TLS manifests. Document certificate-first domain migration and application configuration rollouts.

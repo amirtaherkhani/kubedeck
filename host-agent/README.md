@@ -26,3 +26,18 @@ If a VPN changes the default route to a tunnel interface, the agent refuses to p
 The agent's Kubernetes credential can read the existing admin Secret. Treat that user account and kubeconfig as privileged; a dedicated scoped Technitium API credential and finer host permissions belong to later hardening work. The admin API is reachable only through a localhost port-forward.
 
 The DNS reconciler opens its own temporary localhost port-forward. This repository does not install a fixed-port Technitium admin forwarder or a local image registry.
+
+## Infisical MCP: first implementation slice
+
+`cmd/kuchdesk-infisical-mcp` is a separate, long-running stdio MCP server. It does not change the periodic DNS LaunchAgent or run as a network listener. It uses the official MCP Go SDK v1.6.0 and Infisical's documented REST API from the deployed v0.151.0 OpenAPI; the host-agent Go module now requires Go 1.25. The local client implements Universal Auth login, in-memory token renewal from `expiresIn`, restart re-login, one bounded retry of a read after HTTP 401, and a pause after a repeated 401. It does not assume a year-long access token.
+
+Only `INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` carry the bootstrap credential. Supply them in the trusted host process environment, never in command arguments, Git, MCP configuration text, or prompts. Pass the HTTPS origin separately:
+
+```sh
+cd host-agent
+go run ./cmd/kuchdesk-infisical-mcp -url https://YOUR-INFISICAL-HOST
+```
+
+The MCP tools are `infisical_capabilities` and `infisical_list_secret_names`. The latter requires an explicit project ID, environment slug, and absolute secret path. It requests `viewSecretValue=false` and returns only names and paths, discarding any value fields from the API response. Discovery works without credentials; a secret-list call then returns `credentials_not_configured`. No real identity, credential, role, or live MCP service is provisioned by this source change. Permissions and bootstrap credential lifetime remain unverified against this installation.
+
+Secret writes, project/identity administration, value delivery, a host HTTP API, Kubernetes-agent bridging, and Helm execution are not implemented. Existing Grafana Operator sync remains independent.
