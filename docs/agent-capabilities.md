@@ -15,7 +15,7 @@ The chart is installed as `development-tools/kuchdesk-agent` on the checked Dock
 | CoreDNS exact service aliases | Required DNS capability, write opt-in | Managed Corefile block, dry run, resource-version check and rollback implemented | GET and empty-alias dry run succeeded; live Corefile version 227 did not change. No alias write was authorized or performed |
 | Exec/attach/port-forward, Job lifecycle, Secret value operations | Required for full management | Not implemented as dedicated capabilities; generic resource operations do not cover these safely | Need transport, authorization and audit designs |
 | Helm chart plan/apply/rollback and Infisical Secret readiness | Required | Not implemented | Must avoid secret values in rendered manifests and Helm history |
-| Build image, publish to the local registry, then deploy/test a pinned image through Helm | Required | Host CLI/MCP profile workflow supports host-side `crane` push and optional KIND pre-pull | Host push, node pull and kubelet start succeeded; a manual Helm install of the digest-pinned image reached 1/1 Ready. The end-to-end CLI/MCP apply path and fresh-blob kubelet pull remain untested |
+| Build image, publish to the local registry, then deploy/test a pinned image through Helm | Required | Host CLI/MCP profile workflow supports host-side `crane` push and optional KIND CRI pre-pull | Host push, node pull and kubelet start succeeded. A manual Helm install and a full CLI apply both reached 1/1 Ready; the first CLI rollout required a corrective CRI pull after `ctr` alone left `ErrImageNeverPull`. Fresh-blob kubelet pull remains untested |
 | Redeploy and replica changes | Required | Workload scale/restart endpoints implemented | Controller-managed Pods must be changed through workload desired state; deleting one Pod causes its controller to replace it |
 | Pod details, logs, termination, and Job lifecycle | Required | Snapshot and bounded logs exist; generic Pod delete is behind management mode | Pod stop/delete semantics and Job lifecycle require explicit workflows and live verification |
 | KIND node-count changes | Required where supported | Not implemented | Node topology is a cluster lifecycle operation, not a Pod scale operation; inspect Docker Desktop KIND support and preserve cluster data before designing it |
@@ -47,7 +47,7 @@ The Infisical MCP server and management-enabled Kubernetes agent accept independ
 | CoreDNS aliases | Parser, idempotency, conflict, dry-run and preservation tests | GET and empty-alias dry run 200; Corefile version unchanged; no live alias write |
 | Host DNS and Technitium | Interface and reconciliation tests | LaunchAgent last exit 0, existing zone and interface retained; no extended failure-injection run |
 | Infisical MCP and Universal Auth | Mock transport tests for renewal, 401 retry, redaction, typed tools and bounded jobs | No approved live host identity; credential revocation and real admin/value permissions untested |
-| Build, registry and Helm delivery | Fake command runner tests for push failure, digest pin, pre-pull failure, and MCP profile boundaries | Registry/CRI/kubelet and manual Helm install verified; full CLI/MCP apply and rollback failure path untested live |
+| Build, registry and Helm delivery | Fake command runner tests for push failure, digest pin, CRI pre-pull failure, and MCP profile boundaries | Registry/CRI/kubelet, manual Helm install and full CLI apply verified; failure rollback and MCP apply remain untested live |
 
 ## Configuration and propagation
 

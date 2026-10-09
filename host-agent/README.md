@@ -93,8 +93,9 @@ fake-runner and chart-render tests. A host-side `crane` push and node-side
 Pod also reached `Pulled`, `Created`, and `Started` with
 `imagePullPolicy=Always`; it exited because the deliberately omitted
 `KUCHDESK_CLUSTER_ID` is required and was then removed. The image layers were
-already cached, so a fresh-blob kubelet download and the complete Helm rollout
-remain unverified.
+already cached. A manual Helm install and a subsequent full CLI build/push/
+upgrade reached 1/1 Ready; the latter needed a corrective CRI pull after the
+older `ctr` pre-pull step. A fresh-blob kubelet download remains unverified.
 
 When a registry is available only through a macOS localhost port-forward,
 Docker Desktop's image daemon cannot use that host-local endpoint. Set
@@ -105,9 +106,13 @@ Docker Desktop's image daemon cannot use that host-local endpoint. Set
 workflow saves the built Docker image to a temporary archive, pushes it from
 the host with `crane`, and resolves its registry digest. `kindPrepull: true`
 discovers the nodes from the explicit Kubernetes context, pre-pulls the exact
-tag and digest on each node through `ctr`, and sets Helm's
+tag and digest on each node through `crictl` (the kubelet's CRI), and sets Helm's
 `image.pullPolicy=Never` only after every pre-pull succeeds. This is a
 Docker Desktop KIND profile, not a generic Kubernetes registry solution.
+The first live workflow run exposed that a direct `ctr` pull alone could leave
+kubelet at `ErrImageNeverPull`; a matching `crictl pull` made the image visible
+and the digest-pinned Helm rollout reached 1/1 Ready. Future workflow runs use
+CRI directly.
 The registry Service and persistent data are retained. Existing cloud-hosted
 images in other charts are unaffected.
 
