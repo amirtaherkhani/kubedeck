@@ -6,7 +6,7 @@ All notable KuchDesk changes are documented in this file.
 
 ### Added
 
-- Document the proposed host-side Infisical integration, capability checks, credential boundaries, and phased acceptance criteria. This is a plan; no new API service or identity is deployed.
+- Document required MCP access to the proposed host-side Infisical service, unattended Universal Auth, Helm/Kubernetes Secret delivery, capability boundaries, and phased acceptance criteria. This is a plan; no new service or identity is deployed.
 - Render site-specific HTTPS certificates, Traefik fallback TLS, and Grafana/Infisical domain overlays from one validated Go-powered profile. Support a different DNS zone and an existing external ClusterIssuer without editing application manifests.
 - Scrape the existing macOS node_exporter and probe Technitium's site and recursive DNS plus Docker Desktop's host DNS path from Prometheus, with a Grafana Host and DNS dashboard.
 
