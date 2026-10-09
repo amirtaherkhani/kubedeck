@@ -10,8 +10,8 @@ nameOverride: ""
 fullnameOverride: ""
 
 cluster:
-  id: homelab
-  name: Homelab
+  id: ""
+  name: ""
   domain: cluster.local
 
 agent:

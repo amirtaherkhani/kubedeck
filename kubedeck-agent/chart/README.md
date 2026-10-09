@@ -2,7 +2,7 @@
 
 This standalone chart deploys the Kubernetes agent as one internal cluster service. Discovery is read-only by default. It does not install an image registry, secret manager, DNS server, dashboard, or other shared services.
 
-Supply an image already available to the Kubernetes runtime and use an immutable tag. Create the bearer token Secret in the target namespace before installation; the chart reads it but does not manage its lifecycle. For example, with a token obtained through your normal secret workflow:
+Supply an image already available to the Kubernetes runtime and use an immutable tag. Set a unique cluster ID and display name for each cluster; the chart has no home-lab identity baked in. Create the bearer token Secret in the target namespace before installation; the chart reads it but does not manage its lifecycle. For example, with a token obtained through your normal secret workflow:
 
 ```bash
 kubectl create namespace development-tools --dry-run=client -o yaml | kubectl apply -f -
@@ -10,6 +10,8 @@ kubectl -n development-tools create secret generic kubedeck-agent-auth \
   --from-literal=KUBEDECK_AGENT_TOKEN="${KUBEDECK_AGENT_TOKEN}"
 helm upgrade --install kubedeck-agent ./kubedeck-agent/chart \
   --namespace development-tools \
+  --set cluster.id=development \
+  --set cluster.name='Development cluster' \
   --set image.repository=REGISTRY/kubedeck-agent \
   --set image.tag=IMMUTABLE_TAG
 ```
@@ -22,12 +24,18 @@ The default ClusterRole allows discovery and metrics reads. CoreDNS alias writes
 
 The agent can start without `metrics.k8s.io`; CPU and memory usage remain unavailable until a compatible metrics-server is installed.
 
+When upgrading from chart 0.4.x, set `cluster.id` and `cluster.name` explicitly. Reuse the previous values for an existing installation so its identity does not change.
+
 ```bash
 helm lint ./kubedeck-agent/chart \
+  --set cluster.id=example \
+  --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kubedeck-agent \
   --set image.tag=0.2.0
 helm template kubedeck-agent ./kubedeck-agent/chart \
   --namespace development-tools \
+  --set cluster.id=example \
+  --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kubedeck-agent \
   --set image.tag=0.2.0
 ```
