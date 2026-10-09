@@ -2,6 +2,31 @@
 
 This is the checked-in deployment profile. [`site.json`](site.json) contains this installation's DNS domain, service host labels, TLS issuer, and certificate namespaces. Edit it or pass another file to `go run ./cmd/render-site --profile path/to/site.json`; no domain is embedded in deployable Ingress, Certificate, TLSStore, or Helm values. The agent code has no site default.
 
+For controlled changes to the local site profile, `render-site config` provides
+`snapshot`, `validate`, `plan`, `dry-run`, `apply`, and `rollback`. Pass absolute
+paths to the current profile and candidate. `plan` lists changed fields and
+returns a `planId`; `apply` requires that exact ID and rejects a profile that
+changed since planning. It saves a private revision backup beside the profile
+before replacing the file atomically. `rollback` requires both the saved
+revision and the current revision as confirmation. A lock prevents concurrent
+applies. The backup and lock files are Git-ignored for the checked-in profile.
+
+```sh
+cd lab
+go run ./cmd/render-site config snapshot -profile "$PWD/site.json"
+go run ./cmd/render-site config validate -profile "$PWD/site.json" -candidate /absolute/site.next.json
+go run ./cmd/render-site config plan -profile "$PWD/site.json" -candidate /absolute/site.next.json
+go run ./cmd/render-site config dry-run -profile "$PWD/site.json" -candidate /absolute/site.next.json
+go run ./cmd/render-site config apply -profile "$PWD/site.json" -candidate /absolute/site.next.json -confirm PLAN_ID
+go run ./cmd/render-site config rollback -profile "$PWD/site.json" -revision SAVED_REVISION -confirm CURRENT_REVISION
+```
+
+These commands change only the selected JSON profile. They do not apply DNS,
+TLS, Helm, Kubernetes, firewall, or host-network changes. After an apply or
+rollback, render and review the generated files, then update live components
+through their existing workflows. This is a deliberate apply boundary; there
+is no automatic hot reload of all services.
+
 For another cluster, select its Kubernetes context, DNS zone, issuer, ingress class, storage classes, Secret names, and Infisical scope. The site renderer handles domain and TLS references only; the other Helm values and PostgreSQL manifest remain site-specific overlays. The observability components use Kubernetes search-domain Service names rather than assuming `cluster.local`. Grafana's Infisical endpoint, credential Secret, and path are configurable in `values.homelab.yaml`. Existing PVC storage classes are immutable; changing storage class requires a separate data migration, never just a site render.
 
 This directory keeps the Grafana observability stack, k6 Operator, and the platform configuration required for local HTTPS and Infisical-backed Grafana credentials. It does not manage the KuchDesk dashboard, shared application databases, or unrelated home-lab services.

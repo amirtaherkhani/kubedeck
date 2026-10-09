@@ -10,6 +10,7 @@ All notable KuchDesk changes are documented in this file.
 
 ### Added
 
+- Add a scoped site-profile configuration CLI with snapshot, strict validation, field diff, dry-run, revision-confirmed apply, private rollback, and concurrent-write protection; live infrastructure still uses explicit deployment workflows.
 - Add a project-local, Git-ignored `.env` credential reader shared by the Infisical CLI and MCP, with an explicit macOS Keychain backend and no automatic fallback.
 - Gate local build and Helm apply on read-only Doctor checks for DNS, Docker/KIND, registry, disk, and node resource use; deployment profiles now require an explicit preflight domain and registry URL.
 - Add a Doctor CLI and MCP diagnostic tool with structured, redacted checks; expose an MCP prompt, JSON schema, typed repair-plan validation, and fresh post-action verification through the existing AI harness.
