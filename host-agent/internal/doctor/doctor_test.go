@@ -1,0 +1,219 @@
+package doctor
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+)
+
+type commandFake struct {
+	outputs map[string][]byte
+	errors  map[string]error
+}
+
+func (f commandFake) Output(_ context.Context, name string, args ...string) ([]byte, error) {
+	key := name + " " + strings.Join(args, " ")
+	return f.outputs[key], f.errors[key]
+}
+
+type resolverFake struct {
+	addresses []net.IPAddr
+	err       error
+}
+
+func (f resolverFake) LookupIPAddr(context.Context, string) ([]net.IPAddr, error) {
+	return f.addresses, f.err
+}
+
+type providerFunc func(context.Context, []Check) ([]byte, error)
+
+func (f providerFunc) Interpret(ctx context.Context, facts []Check) ([]byte, error) {
+	return f(ctx, facts)
+}
+
+func fixture(t *testing.T) (Service, Config) {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
+	t.Cleanup(server.Close)
+	commands := commandFake{errors: map[string]error{}, outputs: map[string][]byte{
+		"route -n get default":                                                                        []byte("interface: en0\npassword=LEAKED_SECRET\n"),
+		"docker info --format {{.ServerVersion}}":                                                     []byte("28.3.0\n"),
+		"kubectl --context docker-desktop get nodes -o json":                                          []byte(`{"items":[{"status":{"conditions":[{"type":"Ready","status":"True"}]},"token":"LEAKED_SECRET"}]}`),
+		"kubectl --context docker-desktop top nodes --no-headers":                                     []byte("desktop-control-plane 367m 3% 6928Mi 24%\n"),
+		"kubectl --context docker-desktop -n development-tools get deployment kuchdesk-agent -o json": []byte(`{"spec":{"replicas":1},"status":{"readyReplicas":1},"metadata":{"annotations":{"token":"LEAKED_SECRET"}}}`),
+	}}
+	service := Service{Commands: commands, Resolver: resolverFake{addresses: []net.IPAddr{{IP: net.ParseIP("192.0.2.1")}}}, HTTP: server.Client(), DiskFree: func(string) (uint64, error) { return 5 << 30, nil }}
+	config := Config{Domain: "infisical.local.dev", KubeContext: "docker-desktop", RegistryURL: server.URL, DiskPath: t.TempDir(), Services: []Target{{Namespace: "development-tools", Deployment: "kuchdesk-agent"}}}
+	return service, config
+}
+
+func TestDoctorSanitizesChecksAndAIInput(t *testing.T) {
+	service, config := fixture(t)
+	var observed []Check
+	service.Provider = providerFunc(func(_ context.Context, facts []Check) ([]byte, error) {
+		observed = append([]Check(nil), facts...)
+		return []byte(`{"items":[{"checkId":"docker","explanation":"Docker is responding."}]}`), nil
+	})
+	report, err := service.Run(context.Background(), config, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !report.Healthy || len(report.Findings) != 0 || report.AI == nil || report.AI.Status != "ok" {
+		t.Fatalf("unexpected report: %+v", report)
+	}
+	want := []string{"network", "dns", "docker", "kind", "registry", "disk", "resources", "service:development-tools/kuchdesk-agent"}
+	for i, id := range want {
+		if report.Checks[i].ID != id || report.Checks[i].Status != "ok" {
+			t.Fatalf("check %d: %+v", i, report.Checks[i])
+		}
+	}
+	encoded, _ := json.Marshal(report)
+	observedJSON, _ := json.Marshal(observed)
+	if strings.Contains(string(encoded), "LEAKED_SECRET") || strings.Contains(string(observedJSON), "LEAKED_SECRET") || strings.Contains(string(observedJSON), "192.0.2.1") {
+		t.Fatal("raw diagnostics or address escaped sanitization")
+	}
+}
+
+func TestDoctorReportsFailuresWithoutRawErrors(t *testing.T) {
+	service, config := fixture(t)
+	fake := service.Commands.(commandFake)
+	fake.errors["docker info --format {{.ServerVersion}}"] = errors.New("token=LEAKED_SECRET")
+	fake.outputs["kubectl --context docker-desktop get nodes -o json"] = []byte(`{"items":[{"status":{"conditions":[]}}]}`)
+	service.Commands = fake
+	service.Resolver = resolverFake{err: errors.New("LEAKED_SECRET")}
+	service.DiskFree = func(string) (uint64, error) { return 1 << 30, nil }
+	report, err := service.Run(context.Background(), config, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Healthy || len(report.Findings) < 3 {
+		t.Fatalf("failures omitted: %+v", report)
+	}
+	encoded, _ := json.Marshal(report)
+	if strings.Contains(string(encoded), "LEAKED_SECRET") {
+		t.Fatal("raw error leaked")
+	}
+	for _, finding := range report.Findings {
+		if finding.Recommendation == "" {
+			t.Fatalf("finding lacks action: %+v", finding)
+		}
+	}
+}
+
+func TestDoctorAIModesAndMalformedOutput(t *testing.T) {
+	service, config := fixture(t)
+	report, err := service.Run(context.Background(), config, true)
+	if err != nil || report.AI == nil || report.AI.Status != "unavailable" || report.AI.Reason != "provider_not_configured" {
+		t.Fatalf("offline AI result: %+v %v", report.AI, err)
+	}
+	for _, raw := range []string{`not json`, `{"items":[{"checkId":"invented","explanation":"made up"}]}`, `{"items":[],"extra":true}`, `{"items":[]} trailing`} {
+		service.Provider = providerFunc(func(context.Context, []Check) ([]byte, error) { return []byte(raw), nil })
+		result, err := service.Run(context.Background(), config, true)
+		if err != nil || result.AI.Reason != "malformed_ai_output" || !result.Healthy {
+			t.Fatalf("malformed response accepted: %+v %v", result.AI, err)
+		}
+	}
+	service.Provider = providerFunc(func(ctx context.Context, _ []Check) ([]byte, error) { <-ctx.Done(); return nil, ctx.Err() })
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	result, err := service.Run(ctx, config, true)
+	if err != nil || result.AI.Reason != "ai_timeout" {
+		t.Fatalf("AI timeout: %+v %v", result.AI, err)
+	}
+}
+
+func TestDoctorRejectsUnsafeInput(t *testing.T) {
+	_, config := fixture(t)
+	for _, change := range []func(*Config){
+		func(c *Config) { c.Domain = "bad_domain" },
+		func(c *Config) { c.KubeContext = ";rm -rf /" },
+		func(c *Config) { c.RegistryURL = "https://example.com" },
+		func(c *Config) { c.RegistryURL = "http://user:pass@127.0.0.1:5001" },
+		func(c *Config) { c.DiskPath = "relative" },
+		func(c *Config) { c.Services = append(c.Services, c.Services[0]) },
+	} {
+		candidate := config
+		change(&candidate)
+		if err := candidate.Validate(); err == nil {
+			t.Fatalf("unsafe configuration accepted: %+v", candidate)
+		}
+	}
+}
+
+func TestDoctorConcurrentRequestsRemainIndependent(t *testing.T) {
+	service, config := fixture(t)
+	var group sync.WaitGroup
+	for range 8 {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			report, err := service.Run(context.Background(), config, false)
+			if err != nil || !report.Healthy {
+				t.Errorf("concurrent report: %+v %v", report, err)
+			}
+		}()
+	}
+	group.Wait()
+}
+
+func TestDoctorFlagsVPNDefaultRouteWithoutBlockingOtherChecks(t *testing.T) {
+	service, config := fixture(t)
+	fake := service.Commands.(commandFake)
+	fake.outputs["route -n get default"] = []byte("interface: utun6\n")
+	service.Commands = fake
+	report, err := service.Run(context.Background(), config, false)
+	if err != nil || !report.Healthy || report.Checks[0].Status != "warn" || len(report.Findings) != 1 {
+		t.Fatalf("VPN report: %+v %v", report, err)
+	}
+}
+
+func TestDoctorReportsNodePressure(t *testing.T) {
+	service, config := fixture(t)
+	fake := service.Commands.(commandFake)
+	fake.outputs["kubectl --context docker-desktop top nodes --no-headers"] = []byte("node 950m 95% 1024Mi 91%\n")
+	service.Commands = fake
+	report, err := service.Run(context.Background(), config, false)
+	if err != nil || report.Healthy || report.Checks[6].Status != "fail" || report.Checks[6].Evidence["maxCPUPercent"] != 95 {
+		t.Fatalf("pressure report: %+v %v", report.Checks[6], err)
+	}
+	fake.outputs["kubectl --context docker-desktop top nodes --no-headers"] = []byte("node 850m 85% 1024Mi 84%\n")
+	report, err = service.Run(context.Background(), config, false)
+	if err != nil || !report.Healthy || report.Checks[6].Status != "warn" {
+		t.Fatalf("warning report: %+v %v", report.Checks[6], err)
+	}
+}
+
+func TestAIProviderCannotMutateDeterministicChecks(t *testing.T) {
+	service, config := fixture(t)
+	service.Provider = providerFunc(func(_ context.Context, facts []Check) ([]byte, error) {
+		facts[0].Status = "fail"
+		facts[0].Evidence["interface"] = "altered"
+		return []byte(`{"items":[{"checkId":"network","explanation":"Route observed."}]}`), nil
+	})
+	report, err := service.Run(context.Background(), config, true)
+	if err != nil || !report.Healthy || report.Checks[0].Status != "ok" || report.Checks[0].Evidence["interface"] != "en0" {
+		t.Fatalf("provider changed deterministic report: %+v %v", report, err)
+	}
+}
+
+func TestRegistryProbeDoesNotFollowRedirect(t *testing.T) {
+	service, config := fixture(t)
+	var hits atomic.Int32
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { hits.Add(1); w.WriteHeader(200) }))
+	defer target.Close()
+	redirect := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, target.URL, http.StatusFound) }))
+	defer redirect.Close()
+	config.RegistryURL = redirect.URL
+	report, err := service.Run(context.Background(), config, false)
+	if err != nil || report.Healthy || report.Checks[4].Status != "fail" || hits.Load() != 0 {
+		t.Fatalf("redirect followed: %+v hits=%d err=%v", report.Checks[4], hits.Load(), err)
+	}
+}

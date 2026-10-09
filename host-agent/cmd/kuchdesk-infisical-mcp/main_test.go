@@ -38,8 +38,8 @@ func TestMCPDiscoveryAndRedactedErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(tools.Tools) != 9 {
-		t.Fatalf("expected nine MCP tools, got %+v", tools.Tools)
+	if len(tools.Tools) != 10 {
+		t.Fatalf("expected ten MCP tools, got %+v", tools.Tools)
 	}
 	for _, tool := range tools.Tools {
 		if tool.InputSchema == nil {
@@ -53,6 +53,10 @@ func TestMCPDiscoveryAndRedactedErrors(t *testing.T) {
 	encoded, _ := json.Marshal(capabilities.StructuredContent)
 	if !strings.Contains(string(encoded), `"configured":false`) {
 		t.Fatalf("unexpected capability output: %s", encoded)
+	}
+	invalidDoctor, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "kuchdesk_doctor", Arguments: map[string]any{"domain": "infisical.local.dev", "kubeContext": "docker-desktop", "registryUrl": "https://example.com", "diskPath": "/tmp"}})
+	if err != nil || !invalidDoctor.IsError {
+		t.Fatalf("unsafe Doctor input accepted: %v %+v", err, invalidDoctor)
 	}
 	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "infisical_list_secret_names", Arguments: map[string]any{
 		"projectId": "project", "environment": "dev", "secretPath": "/",

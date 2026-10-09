@@ -27,6 +27,34 @@ The agent's Kubernetes credential can read the existing admin Secret. Treat that
 
 The DNS reconciler opens its own temporary localhost port-forward. This repository does not install a fixed-port Technitium admin forwarder or a local image registry.
 
+## Doctor diagnostics
+
+`cmd/kuchdesk-doctor` runs bounded, read-only checks of the Mac default route,
+one configured DNS name, Docker, Kubernetes node readiness, a loopback
+registry, build-volume free space, node metrics, and optional Deployment
+readiness. It reports ordered checks, sanitized evidence, findings, and
+specific recommendations as JSON. A VPN-owned default route is a warning.
+The command does not change network settings, cluster resources, or Secrets.
+
+```sh
+cd host-agent
+go run ./cmd/kuchdesk-doctor \
+  -domain infisical.local.dev \
+  -kube-context docker-desktop \
+  -registry-url http://127.0.0.1:5001 \
+  -disk-path /absolute/path/to/project \
+  -service development-tools/kuchdesk-agent \
+  -service platform-system/kuchdesk-local-registry
+```
+
+The `kuchdesk_doctor` MCP tool uses the same collector. `-ai` or `ai=true`
+requests optional interpretation, but no external AI provider or credential
+is configured by this project. In that state, deterministic checks still run
+and the AI section says `provider_not_configured`. A future provider must
+receive only the same sanitized checks and return bounded explanations tied
+to existing check IDs; no raw command output, addresses, tokens, or Secrets
+are passed to it.
+
 ## Infisical MCP: first implementation slice
 
 `cmd/kuchdesk-infisical-mcp` is a separate, long-running stdio MCP server. It does not change the periodic DNS LaunchAgent or run as a network listener. It uses the official MCP Go SDK v1.6.0 and Infisical's documented REST API from the deployed v0.151.0 OpenAPI; the host-agent Go module now requires Go 1.25. The local client implements Universal Auth login, in-memory token renewal from `expiresIn`, restart re-login, one bounded retry of a read after HTTP 401, and a pause after a repeated 401. It does not assume a year-long access token.

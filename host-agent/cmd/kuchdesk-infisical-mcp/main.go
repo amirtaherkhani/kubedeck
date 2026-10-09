@@ -13,6 +13,7 @@ import (
 
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/async"
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/deploy"
+	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/doctor"
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/infisical"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -86,6 +87,16 @@ type deployPlanOutput struct {
 	Steps       []string `json:"steps"`
 }
 
+type doctorInput struct {
+	Domain       string          `json:"domain" jsonschema:"required,DNS name to resolve on this Mac"`
+	KubeContext  string          `json:"kubeContext" jsonschema:"required,explicit Kubernetes context"`
+	RegistryURL  string          `json:"registryUrl" jsonschema:"required,loopback registry HTTP origin"`
+	DiskPath     string          `json:"diskPath" jsonschema:"required,absolute build-volume path"`
+	MinFreeBytes uint64          `json:"minFreeBytes,omitempty"`
+	Services     []doctor.Target `json:"services,omitempty"`
+	AI           bool            `json:"ai,omitempty"`
+}
+
 var profileNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,62}\.json$`)
 
 func (cfg deployConfig) load(profile string) (deploy.Spec, error) {
@@ -111,6 +122,10 @@ func (cfg deployConfig) load(profile string) (deploy.Spec, error) {
 }
 
 func newServerWithDeploy(service *infisical.Service, runner *async.Runner, cfg deployConfig) *mcp.Server {
+	return newServerWithServices(service, runner, cfg, doctor.Service{})
+}
+
+func newServerWithServices(service *infisical.Service, runner *async.Runner, cfg deployConfig, diagnostics doctor.Service) *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{Name: "kuchdesk-infisical", Version: "0.1.0"}, nil)
 	mcp.AddTool(server, &mcp.Tool{Name: "infisical_capabilities", Description: "Show implemented Infisical tools and local credential configuration without accessing secrets.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(context.Context, *mcp.CallToolRequest, capabilityInput) (*mcp.CallToolResult, capabilityOutput, error) {
@@ -220,6 +235,15 @@ func newServerWithDeploy(service *infisical.Service, runner *async.Runner, cfg d
 				return nil, jobOutput{}, publicError(err)
 			}
 			return nil, outputFor(status), nil
+		})
+	mcp.AddTool(server, &mcp.Tool{Name: "kuchdesk_doctor", Description: "Run bounded read-only Mac, DNS, Docker, KIND, registry, resource, and Deployment checks. Optional AI is unavailable until a provider is explicitly configured.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
+		func(ctx context.Context, _ *mcp.CallToolRequest, input doctorInput) (*mcp.CallToolResult, doctor.Report, error) {
+			config := doctor.Config{Domain: input.Domain, KubeContext: input.KubeContext, RegistryURL: input.RegistryURL, DiskPath: input.DiskPath, MinFreeBytes: input.MinFreeBytes, Services: input.Services}
+			report, err := diagnostics.Run(ctx, config, input.AI)
+			if err != nil {
+				return nil, doctor.Report{}, err
+			}
+			return nil, report, nil
 		})
 	return server
 }

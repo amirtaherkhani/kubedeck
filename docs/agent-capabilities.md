@@ -29,7 +29,7 @@ The current `dev.kuchdesk.host-agent` LaunchAgent is a **one-shot job every 30 s
 | --- | --- | --- | --- |
 | LAN interface and private IPv4 selection | Required | Reads selected/default-route interface, rejects ambiguous addresses, supports explicit target IP | Running for `en0`; current answer verified |
 | Technitium zone and wildcard A reconciliation | Required | Creates configured zone if missing; updates only `*.zone` when IP/TTL differs | Periodic job healthy; current zone `local.dev` |
-| Host network, route, DNS, connectivity and port inspection | Required | Only interface/default-route selection and DNS reconciliation in this agent | Host DNS probes and node_exporter are separate observability services; general inspection API absent |
+| Host network, route, DNS, connectivity and port inspection | Required | Doctor CLI/MCP collects sanitized route, DNS, Docker, KIND, registry, disk, metrics and Deployment facts read-only | Live deterministic run passed all nine configured checks; detailed port/process inventory is absent |
 | CPU, memory, disk, process and service monitoring/actions | Required | No host-agent management API | macOS node_exporter metrics are monitored separately; generic host actions absent |
 | Infisical via CLI and MCP | Required | Shared typed name-listing service, CLI, stdio MCP, Universal Auth token lifecycle implemented in source | Not installed or authenticated live; admin and value-delivery functions absent. The separate deployment MCP tools are source-tested and opt-in |
 | DNS/router/firewall/process/service mutation | Required only where an explicit action is needed; always opt-in | No general mutation API | Requires scoped commands, confirmation, recovery, audit and tests before enablement |
@@ -48,6 +48,7 @@ The Infisical MCP server and management-enabled Kubernetes agent accept independ
 | Host DNS and Technitium | Interface and reconciliation tests | LaunchAgent last exit 0, existing zone and interface retained; no extended failure-injection run |
 | Infisical MCP and Universal Auth | Mock transport tests for renewal, 401 retry, redaction, typed tools and bounded jobs | No approved live host identity; credential revocation and real admin/value permissions untested |
 | Build, registry and Helm delivery | Fake command runner tests for push failure, digest pin, CRI pre-pull failure, and MCP profile boundaries | Registry/CRI/kubelet, manual Helm install and full CLI apply verified; failure rollback and MCP apply remain untested live |
+| Doctor diagnostics and optional AI | Fake command, resolver, HTTP and disk tests for ordering, failures, redaction, bounds, malformed AI output, timeout and offline mode | Live deterministic command passed route, DNS, Docker, KIND, registry, disk, metrics and two Deployment checks. AI mode reported `provider_not_configured`; no data was sent externally |
 
 ## Configuration and propagation
 
