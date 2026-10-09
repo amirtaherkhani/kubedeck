@@ -48,6 +48,7 @@ The Infisical MCP server and management-enabled Kubernetes agent accept independ
 | Host DNS and Technitium | Interface and reconciliation tests | LaunchAgent last exit 0, existing zone and interface retained; no extended failure-injection run |
 | Infisical MCP and Universal Auth | Mock transport tests for renewal, 401 retry, redaction, typed tools and bounded jobs | No approved live host identity; credential revocation and real admin/value permissions untested |
 | Build, registry and Helm delivery | Fake command runner tests for push failure, digest pin, CRI pre-pull failure, and MCP profile boundaries | Registry/CRI/kubelet, manual Helm install and full CLI apply verified; failure rollback and MCP apply remain untested live |
+| Deployment preflight | Injected Doctor tests for health, failure, warning, timeout/error redaction, and block-before-build behavior | Live Doctor checks passed independently; next deployment through the integrated guard remains untested |
 | Doctor diagnostics and optional AI | Fake command, resolver, HTTP and disk tests for ordering, failures, redaction, bounds, malformed AI output, timeout and offline mode | Live deterministic command passed route, DNS, Docker, KIND, registry, disk, metrics and two Deployment checks. AI mode reported `provider_not_configured`; no data was sent externally |
 
 ## Configuration and propagation

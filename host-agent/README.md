@@ -91,6 +91,9 @@ paths, optional absolute `valuesFiles`, `imageRepository`, a 12-hex-commit
 `imageTag` such as `git-123456789abc`, `kubeContext`, `namespace`, `release`,
 `deployment`, and `test` (`go` or empty). Dockerfile and chart must be inside
 the clean Git source tree. The Git tag must match that source's HEAD. The CLI
+also requires `preflightDomain` (a host-resolvable DNS name) and
+`preflightRegistryUrl` (a loopback registry origin). For the `host-crane`
+profile, the registry URL must point to the local port 5001.
 uses first-party Docker, Helm, kubectl, and Go commands with explicit arguments
 and context; it never invokes a shell or passes Infisical bootstrap variables
 to child commands. Values files are operator-supplied; review them before
@@ -103,11 +106,16 @@ and `cluster.name`; the workflow supplies image repository, tag, and digest.
 ```sh
 cd host-agent
 go run ./cmd/kuchdesk-deploy -profile /absolute/path/to/profile.json
+go run ./cmd/kuchdesk-deploy -profile /absolute/path/to/profile.json -preflight
 go run ./cmd/kuchdesk-deploy -profile /absolute/path/to/profile.json \
   -apply -confirm kuchdesk-agent/development-tools
 ```
 
-Apply runs Helm lint, optional `go test ./...`, Docker build/push, image digest
+Apply first runs the read-only Doctor checks for the default route, DNS,
+Docker, Kubernetes node readiness, registry, source-volume free space, and
+node CPU/memory use. Any failed, warning, or unavailable check blocks apply
+before source validation and build. It then runs Helm lint, optional
+`go test ./...`, Docker build/push, image digest
 resolution, Helm template, atomic Helm upgrade, and `kubectl rollout status` in
 that order. It stops before Helm if push or digest lookup fails. The Helm chart
 uses `image.digest` to pin the pulled content. The CLI prints step names as
@@ -144,7 +152,7 @@ CRI directly.
 The registry Service and persistent data are retained. Existing cloud-hosted
 images in other charts are unaffected.
 
-The host MCP process offers `kuchdesk_deploy_plan`, `kuchdesk_deploy_start`,
+The host MCP process offers `kuchdesk_deploy_plan`, `kuchdesk_deploy_preflight`, `kuchdesk_deploy_start`,
 `kuchdesk_job_status`, and `kuchdesk_cancel_job`. Set an absolute
 `KUCHDESK_DEPLOY_PROFILE_DIR` to permit plan reads of named `.json` files in
 that directory. Start stays disabled unless `KUCHDESK_DEPLOY_ENABLED=true`

@@ -68,6 +68,7 @@ type deployConfig struct {
 	ProfileDir string
 	Enabled    bool
 	Runner     deploy.Runner
+	Preflight  deploy.Preflight
 }
 
 type deployInput struct {
@@ -85,6 +86,11 @@ type deployPlanOutput struct {
 	KubeContext string   `json:"kubeContext"`
 	Image       string   `json:"image"`
 	Steps       []string `json:"steps"`
+}
+
+type deployPreflightOutput struct {
+	Ready  bool          `json:"ready"`
+	Report doctor.Report `json:"report"`
 }
 
 type doctorInput struct {
@@ -192,6 +198,15 @@ func newServerWithServices(service *infisical.Service, runner *async.Runner, cfg
 			}
 			return nil, deployPlanOutput{Release: spec.Release, Namespace: spec.Namespace, KubeContext: spec.KubeContext, Image: spec.ImageRepository + ":" + spec.ImageTag, Steps: steps}, nil
 		})
+	mcp.AddTool(server, &mcp.Tool{Name: "kuchdesk_deploy_preflight", Description: "Run read-only host and cluster checks from a named deployment profile; report whether apply is ready.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
+		func(ctx context.Context, _ *mcp.CallToolRequest, input deployInput) (*mcp.CallToolResult, deployPreflightOutput, error) {
+			spec, err := cfg.load(input.Profile)
+			if err != nil {
+				return nil, deployPreflightOutput{}, err
+			}
+			report, checkErr := (deploy.Workflow{Preflight: cfg.Preflight}).Check(ctx, spec)
+			return nil, deployPreflightOutput{Ready: checkErr == nil, Report: report}, nil
+		})
 	mcp.AddTool(server, &mcp.Tool{Name: "kuchdesk_deploy_start", Description: "Start an opt-in local build, registry push, Helm upgrade, and rollout check from a named profile. Requires exact release/namespace confirmation."},
 		func(_ context.Context, _ *mcp.CallToolRequest, input deployStartInput) (*mcp.CallToolResult, jobStarted, error) {
 			if !cfg.Enabled {
@@ -209,7 +224,7 @@ func newServerWithServices(service *infisical.Service, runner *async.Runner, cfg
 			}
 			key := spec.KubeContext + "/" + spec.Namespace + "/" + spec.Release
 			id, err := runner.Submit(key, 20*time.Minute, func(ctx context.Context) (any, error) {
-				result, err := (deploy.Workflow{Runner: cfg.Runner}).Apply(ctx, spec)
+				result, err := (deploy.Workflow{Runner: cfg.Runner, Preflight: cfg.Preflight}).Apply(ctx, spec)
 				if err != nil {
 					return nil, err
 				}

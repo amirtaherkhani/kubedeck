@@ -11,9 +11,20 @@ import (
 
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/async"
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/deploy"
+	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/doctor"
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/infisical"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+type mcpHealthyPreflight struct{}
+
+func (mcpHealthyPreflight) Run(context.Context, doctor.Config, bool) (doctor.Report, error) {
+	checks := make([]doctor.Check, 7)
+	for i := range checks {
+		checks[i].Status = "ok"
+	}
+	return doctor.Report{Healthy: true, Checks: checks}, nil
+}
 
 func TestMCPDiscoveryAndRedactedErrors(t *testing.T) {
 	client, err := infisical.NewClient("https://infisical.example", "", "", nil)
@@ -38,8 +49,8 @@ func TestMCPDiscoveryAndRedactedErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(tools.Tools) != 10 {
-		t.Fatalf("expected ten MCP tools, got %+v", tools.Tools)
+	if len(tools.Tools) != 11 {
+		t.Fatalf("expected eleven MCP tools, got %+v", tools.Tools)
 	}
 	for _, tool := range tools.Tools {
 		if tool.InputSchema == nil {
@@ -88,7 +99,7 @@ func TestMCPDeployProfileBoundary(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	spec := deploy.Spec{SourceDir: source, Dockerfile: filepath.Join(source, "Dockerfile"), ChartDir: chart, ImageRepository: "localhost:5001/kuchdesk-agent", ImageTag: "git-123456789abc", KubeContext: "docker-desktop", Namespace: "development-tools", Release: "kuchdesk-agent", Deployment: "kuchdesk-agent"}
+	spec := deploy.Spec{SourceDir: source, Dockerfile: filepath.Join(source, "Dockerfile"), ChartDir: chart, ImageRepository: "localhost:5001/kuchdesk-agent", ImageTag: "git-123456789abc", KubeContext: "docker-desktop", Namespace: "development-tools", Release: "kuchdesk-agent", Deployment: "kuchdesk-agent", PreflightDomain: "infisical.local.dev", PreflightRegistryURL: "http://127.0.0.1:5001"}
 	data, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatal(err)
@@ -106,7 +117,7 @@ func TestMCPDeployProfileBoundary(t *testing.T) {
 	runner := async.NewRunner(ctx, 2, 4)
 	defer runner.Close()
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
-	serverSession, err := newServerWithDeploy(infisical.NewService(fakeNameLister{}), runner, deployConfig{ProfileDir: profiles}).Connect(ctx, serverTransport, nil)
+	serverSession, err := newServerWithDeploy(infisical.NewService(fakeNameLister{}), runner, deployConfig{ProfileDir: profiles, Preflight: mcpHealthyPreflight{}}).Connect(ctx, serverTransport, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,6 +135,14 @@ func TestMCPDeployProfileBoundary(t *testing.T) {
 	if !strings.Contains(string(encoded), "kuchdesk-agent") {
 		t.Fatalf("unexpected plan: %s", encoded)
 	}
+	preflight, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "kuchdesk_deploy_preflight", Arguments: map[string]any{"profile": "agent.json"}})
+	if err != nil || preflight.IsError {
+		t.Fatalf("preflight failed: %v %+v", err, preflight)
+	}
+	encoded, _ = json.Marshal(preflight.StructuredContent)
+	if !strings.Contains(string(encoded), `"ready":true`) {
+		t.Fatalf("unexpected preflight result: %s", encoded)
+	}
 	for _, profile := range []string{"../outside.json", "escape.json"} {
 		result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "kuchdesk_deploy_plan", Arguments: map[string]any{"profile": profile}})
 		if err != nil || !result.IsError {
@@ -135,7 +154,7 @@ func TestMCPDeployProfileBoundary(t *testing.T) {
 		t.Fatalf("disabled deploy accepted: %v %+v", err, start)
 	}
 	pushClient, pushServer := mcp.NewInMemoryTransports()
-	pushSession, err := newServerWithDeploy(infisical.NewService(fakeNameLister{}), runner, deployConfig{ProfileDir: profiles, Enabled: true, Runner: deployCommandRunner{}}).Connect(ctx, pushServer, nil)
+	pushSession, err := newServerWithDeploy(infisical.NewService(fakeNameLister{}), runner, deployConfig{ProfileDir: profiles, Enabled: true, Runner: deployCommandRunner{}, Preflight: mcpHealthyPreflight{}}).Connect(ctx, pushServer, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

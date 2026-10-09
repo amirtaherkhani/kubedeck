@@ -8,7 +8,30 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/doctor"
 )
+
+type fakePreflight struct {
+	checks []doctor.Check
+	err    error
+	calls  int
+}
+
+func (f *fakePreflight) Run(_ context.Context, config doctor.Config, ai bool) (doctor.Report, error) {
+	f.calls++
+	if ai || config.Domain != "infisical.local.dev" || config.RegistryURL != "http://127.0.0.1:5001" {
+		return doctor.Report{}, errors.New("bad preflight request")
+	}
+	if f.err != nil {
+		return doctor.Report{}, f.err
+	}
+	checks := f.checks
+	if checks == nil {
+		checks = []doctor.Check{{Status: "ok"}, {Status: "ok"}, {Status: "ok"}, {Status: "ok"}, {Status: "ok"}, {Status: "ok"}, {Status: "ok"}}
+	}
+	return doctor.Report{Healthy: true, Checks: checks}, nil
+}
 
 type call struct {
 	name string
@@ -55,7 +78,7 @@ func TestHostRegistryPushAndKindPrepull(t *testing.T) {
 	spec.KindPrepull = true
 	digest := "sha256:" + strings.Repeat("b", 64)
 	runner := &fakeRunner{digests: digest + "\n", nodes: `{"items":[{"metadata":{"name":"desktop-control-plane"}}]}`}
-	result, err := (Workflow{Runner: runner}).Apply(context.Background(), spec)
+	result, err := (Workflow{Runner: runner, Preflight: &fakePreflight{}}).Apply(context.Background(), spec)
 	if err != nil || result.Digest != digest {
 		t.Fatalf("host push failed: %+v %v", result, err)
 	}
@@ -95,7 +118,7 @@ func TestPrepullFailureStopsBeforeHelm(t *testing.T) {
 	spec.HostPushRepo = "127.0.0.1:5001/kuchdesk-agent"
 	spec.KindPrepull = true
 	runner := &fakeRunner{digests: "sha256:" + strings.Repeat("b", 64), nodes: `{"items":[{"metadata":{"name":"desktop-control-plane"}}]}`, failAt: "docker exec"}
-	if _, err := (Workflow{Runner: runner}).Apply(context.Background(), spec); err == nil {
+	if _, err := (Workflow{Runner: runner, Preflight: &fakePreflight{}}).Apply(context.Background(), spec); err == nil {
 		t.Fatal("accepted failed node pre-pull")
 	}
 	for _, call := range runner.calls {
@@ -118,14 +141,14 @@ func fixture(t *testing.T) Spec {
 			t.Fatal(err)
 		}
 	}
-	return Spec{SourceDir: source, Dockerfile: filepath.Join(source, "Dockerfile"), ChartDir: chart, ValuesFiles: []string{filepath.Join(chart, "values.yaml")}, ImageRepository: "localhost:5001/kuchdesk-agent", ImageTag: "git-123456789abc", KubeContext: "docker-desktop", Namespace: "development-tools", Release: "kuchdesk-agent", Deployment: "kuchdesk-agent", Test: "go"}
+	return Spec{SourceDir: source, Dockerfile: filepath.Join(source, "Dockerfile"), ChartDir: chart, ValuesFiles: []string{filepath.Join(chart, "values.yaml")}, ImageRepository: "localhost:5001/kuchdesk-agent", ImageTag: "git-123456789abc", KubeContext: "docker-desktop", Namespace: "development-tools", Release: "kuchdesk-agent", Deployment: "kuchdesk-agent", Test: "go", PreflightDomain: "infisical.local.dev", PreflightRegistryURL: "http://127.0.0.1:5001"}
 }
 
 func TestApplyPinsDigestAndValidatesRollout(t *testing.T) {
 	spec := fixture(t)
 	digest := "sha256:" + strings.Repeat("a", 64)
 	runner := &fakeRunner{digests: `["localhost:5001/kuchdesk-agent@` + digest + `"]`}
-	result, err := (Workflow{Runner: runner}).Apply(context.Background(), spec)
+	result, err := (Workflow{Runner: runner, Preflight: &fakePreflight{}}).Apply(context.Background(), spec)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +174,7 @@ func TestApplyPinsDigestAndValidatesRollout(t *testing.T) {
 func TestPushFailureNeverCallsHelmUpgrade(t *testing.T) {
 	spec := fixture(t)
 	runner := &fakeRunner{failAt: "docker push"}
-	if _, err := (Workflow{Runner: runner}).Apply(context.Background(), spec); err == nil || !strings.Contains(err.Error(), "docker push failed") {
+	if _, err := (Workflow{Runner: runner, Preflight: &fakePreflight{}}).Apply(context.Background(), spec); err == nil || !strings.Contains(err.Error(), "docker push failed") {
 		t.Fatalf("expected push failure, got %v", err)
 	}
 	for _, call := range runner.calls {
@@ -164,13 +187,47 @@ func TestPushFailureNeverCallsHelmUpgrade(t *testing.T) {
 func TestMissingDigestNeverCallsHelmUpgrade(t *testing.T) {
 	spec := fixture(t)
 	runner := &fakeRunner{digests: `[]`}
-	if _, err := (Workflow{Runner: runner}).Apply(context.Background(), spec); err == nil || !strings.Contains(err.Error(), "digest unavailable") {
+	if _, err := (Workflow{Runner: runner, Preflight: &fakePreflight{}}).Apply(context.Background(), spec); err == nil || !strings.Contains(err.Error(), "digest unavailable") {
 		t.Fatalf("expected digest failure, got %v", err)
 	}
 	for _, call := range runner.calls {
 		if call.name == "helm" && (call.args[0] == "template" || call.args[0] == "upgrade") {
 			t.Fatal("Helm ran without a resolved image digest")
 		}
+	}
+}
+
+func TestPreflightBlocksBeforeBuild(t *testing.T) {
+	for _, preflight := range []*fakePreflight{
+		{checks: []doctor.Check{{ID: "dns", Status: "fail", Message: "Configured domain does not resolve", Recommendation: "Check Technitium"}}},
+		{checks: []doctor.Check{{ID: "resources", Status: "warn", Message: "Node resource use is high", Recommendation: "Check capacity"}}},
+		{err: errors.New("secret-bearing internal error")},
+	} {
+		runner := &fakeRunner{}
+		_, err := (Workflow{Runner: runner, Preflight: preflight}).Apply(context.Background(), fixture(t))
+		if err == nil || preflight.calls != 1 || len(runner.calls) != 0 || strings.Contains(err.Error(), "secret-bearing") {
+			t.Fatalf("unsafe preflight outcome: error=%v calls=%+v", err, runner.calls)
+		}
+	}
+}
+
+func TestPreflightConfigurationRequired(t *testing.T) {
+	spec := fixture(t)
+	spec.PreflightDomain = ""
+	if _, err := spec.Plan(); err == nil {
+		t.Fatal("plan accepted missing domain")
+	}
+	spec = fixture(t)
+	spec.PreflightRegistryURL = "https://external.example"
+	if _, err := spec.Plan(); err == nil {
+		t.Fatal("plan accepted external registry probe")
+	}
+	spec = fixture(t)
+	spec.PushMode = "host-crane"
+	spec.HostPushRepo = "127.0.0.1:5001/kuchdesk-agent"
+	spec.PreflightRegistryURL = "http://127.0.0.1:9000"
+	if _, err := spec.Plan(); err == nil {
+		t.Fatal("plan accepted unrelated registry port")
 	}
 }
 
