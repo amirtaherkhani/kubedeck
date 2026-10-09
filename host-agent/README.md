@@ -186,6 +186,10 @@ manifest in the current Docker Desktop KIND runtime; `ctr` fetched the same
 digest successfully, and CRI then recognized it. `ctr` alone is insufficient
 for kubelet visibility. This is a Docker Desktop KIND profile, not a generic
 Kubernetes registry solution.
+The corrected full CLI apply completed on this installation: the pushed image
+was digest-pinned, Helm revision 4 deployed, and the new agent Pod reached
+1/1 Ready. An authenticated capabilities request for `development-tools`
+returned 218 resources in 0.030 seconds; the earlier build took 39.78 seconds.
 The registry Service and persistent data are retained. Existing cloud-hosted
 images in other charts are unaffected.
 
