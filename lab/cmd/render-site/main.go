@@ -156,6 +156,32 @@ func render(profile siteProfile, domainOverride string) (output, error) {
 		resources["10-certificate-"+namespace+".json"] = resource("cert-manager.io/v1", "Certificate", secretName, namespace, spec)
 	}
 	resources["20-default-tlsstore.json"] = resource("traefik.io/v1alpha1", "TLSStore", "default", defaultNS, map[string]any{"defaultCertificate": map[string]any{"secretName": secretName}})
+	resources["30-dns-blackbox-config.json"] = map[string]any{
+		"apiVersion": "v1", "kind": "ConfigMap",
+		"metadata": map[string]any{"name": "dns-blackbox-config", "namespace": "observability"},
+		"data": map[string]any{"blackbox.yml": fmt.Sprintf(`modules:
+  dns_site:
+    prober: dns
+    timeout: 5s
+    dns:
+      preferred_ip_protocol: ip4
+      query_name: %s
+      query_type: A
+      valid_rcodes: [NOERROR]
+      validate_answer_rrs:
+        fail_if_none_matches_regexp: ['\sIN\sA\s']
+  dns_recursive:
+    prober: dns
+    timeout: 5s
+    dns:
+      preferred_ip_protocol: ip4
+      query_name: example.com
+      query_type: A
+      valid_rcodes: [NOERROR]
+      validate_answer_rrs:
+        fail_if_none_matches_regexp: ['\sIN\sA\s']
+`, grafanaHost)},
+	}
 	overlays := map[string]any{
 		"grafana-values.json": map[string]any{
 			"ingress":     map[string]any{"hosts": []string{grafanaHost}, "tls": []any{map[string]any{"secretName": secretName, "hosts": []string{grafanaHost}}}},

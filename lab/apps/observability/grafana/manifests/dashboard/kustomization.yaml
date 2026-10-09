@@ -16,3 +16,6 @@ configMapGenerator:
   - name: platform-observability-dashboard
     files:
       - platform-observability-dashboard.json
+  - name: host-dns-dashboard
+    files:
+      - host-dns-dashboard.json

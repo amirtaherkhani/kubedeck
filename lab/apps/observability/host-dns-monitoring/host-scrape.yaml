@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: macos-host
+  labels:
+    release: monitoring
+spec:
+  jobName: macos-host
+  scrapeInterval: 30s
+  scrapeTimeout: 10s
+  staticConfigs:
+    - targets:
+        - host.docker.internal:9101
+      labels:
+        host: macos

@@ -1,0 +1,53 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: technitium-site-dns
+  labels:
+    release: monitoring
+spec:
+  jobName: technitium-site-dns
+  interval: 30s
+  scrapeTimeout: 10s
+  module: dns_site
+  prober:
+    url: dns-blackbox.observability.svc:9115
+  targets:
+    staticConfig:
+      static:
+        - technitium.technitium.svc:53
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: docker-host-site-dns
+  labels:
+    release: monitoring
+spec:
+  jobName: docker-host-site-dns
+  interval: 30s
+  scrapeTimeout: 10s
+  module: dns_site
+  prober:
+    url: dns-blackbox.observability.svc:9115
+  targets:
+    staticConfig:
+      static:
+        - host.docker.internal:53
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: technitium-recursive-dns
+  labels:
+    release: monitoring
+spec:
+  jobName: technitium-recursive-dns
+  interval: 30s
+  scrapeTimeout: 10s
+  module: dns_recursive
+  prober:
+    url: dns-blackbox.observability.svc:9115
+  targets:
+    staticConfig:
+      static:
+        - technitium.technitium.svc:53

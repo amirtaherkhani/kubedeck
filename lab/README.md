@@ -52,6 +52,9 @@ kubectl apply -f apps/platform/infisical/manifests/https-redirect.yaml
 helm upgrade --install infisical-operator infisical-helm-charts/secrets-operator -n platform-secrets --version 0.11.11 -f apps/platform/infisical-operator/values.yaml --wait
 helm upgrade --install loki grafana/loki -n observability --version 7.0.0 -f apps/observability/loki/values.yaml --wait
 helm upgrade --install monitoring prometheus-community/kube-prometheus-stack -n observability --version 87.15.1 -f apps/observability/kube-prometheus-stack/values.yaml --wait
+kubectl apply -f .generated/manifests/30-dns-blackbox-config.json
+kubectl apply -k apps/observability/host-dns-monitoring
+kubectl apply -k apps/observability/grafana/manifests/dashboard
 helm upgrade --install tempo grafana/tempo -n observability --version 1.24.4 -f apps/observability/tempo/values.yaml --wait
 helm upgrade --install alloy grafana/alloy -n observability --version 1.10.1 -f apps/observability/alloy/values.yaml --wait
 helm upgrade --install grafana ./apps/observability/grafana -n observability -f apps/observability/grafana/values.homelab.yaml -f .generated/grafana-values.json --set-string infisical.projectSlug="${INFISICAL_PROJECT_SLUG}" --set-string infisical.envSlug="${INFISICAL_ENV_SLUG}" --wait
@@ -60,6 +63,17 @@ kubectl apply -k apps/observability/k6/dashboard
 ```
 
 After installation, confirm `observability/grafana-admin` reports `ReadyToSyncSecrets=True` and the Grafana Deployment is Ready. The image renderer is part of the Grafana chart. For changes to a live release, render and server-side dry-run before applying.
+
+The Host and DNS dashboard covers the Docker Desktop Kubernetes node, the macOS host, and Technitium DNS. macOS node_exporter must be reachable from the cluster at `host.docker.internal:9101`; this installation already runs it as a LaunchAgent. `host-dns-monitoring/` scrapes that endpoint and probes the generated site hostname through Technitium and Docker Desktop's host DNS endpoint, plus public recursive DNS through Technitium, every 30 seconds. The DNS probe uses a rendered ConfigMap and automatically reloads it, so a site-domain change only needs the generated ConfigMap reapplied. The Technitium HTTP health endpoint can return HTTP 200 with an `invalid-token` payload and does not prove DNS works.
+
+The DNS reconciler is a one-shot macOS LaunchAgent that repeats every 30 seconds. Install it from the repository root with the intended site zone and cluster context. When a VPN owns the default route, set `KUBEDECK_HOST_AGENT_INTERFACE` to the physical LAN interface (currently `en0` on this Mac); select the appropriate interface on another host.
+
+```bash
+KUBEDECK_HOST_AGENT_ZONE=$(cd lab && go run ./cmd/render-site --get domain) \
+KUBEDECK_HOST_AGENT_KUBE_CONTEXT=docker-desktop \
+KUBEDECK_HOST_AGENT_INTERFACE=en0 \
+./host-agent/install-macos.sh
+```
 
 The k6 Operator uses Prometheus's enabled remote-write receiver. The dashboard ConfigMaps are discovered by Grafana's sidecar. The one-iteration smoke TestRun can be started with `kubectl apply -f apps/observability/k6/tests/smoke-test.yaml`.
 
@@ -73,6 +87,11 @@ curl --fail "$(go run ./cmd/render-site --get grafanaUrl)/api/health"
 kubectl get --raw '/api/v1/namespaces/observability/services/http:loki:3100/proxy/ready'
 kubectl get --raw '/api/v1/namespaces/observability/services/http:tempo:3200/proxy/ready'
 kubectl get --raw '/api/v1/namespaces/observability/services/http:monitoring-kube-prometheus-prometheus:9090/proxy/-/ready'
+kubectl -n observability get scrapeconfig macos-host
+kubectl -n observability get probe technitium-site-dns technitium-recursive-dns docker-host-site-dns
+kubectl -n observability rollout status deployment/dns-blackbox
+SITE_HOST=$(go run ./cmd/render-site --get grafanaUrl)
+dig @127.0.0.1 "${SITE_HOST#https://}" A
 ```
 
 ## Domain and certificate changes

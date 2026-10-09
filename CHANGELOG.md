@@ -7,10 +7,12 @@ All notable KubeDeck changes are documented in this file.
 ### Added
 
 - Render site-specific HTTPS certificates, Traefik fallback TLS, and Grafana/Infisical domain overlays from one validated Go-powered profile. Support a different DNS zone and an existing external ClusterIssuer without editing application manifests.
+- Scrape the existing macOS node_exporter and probe Technitium's site and recursive DNS plus Docker Desktop's host DNS path from Prometheus, with a Grafana Host and DNS dashboard.
 
 ### Fixed
 
 - Include a cert-manager Certificate in the default TLSStore namespace so Traefik's fallback certificate references a Secret that cert-manager can issue.
+- Restore the macOS DNS reconciler with its explicit site zone, Kubernetes context, and physical LAN interface when a VPN owns the default route.
 
 ### Changed
 
