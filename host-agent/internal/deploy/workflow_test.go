@@ -71,8 +71,11 @@ func TestHostRegistryPushAndKindPrepull(t *testing.T) {
 		if strings.Contains(joined, "docker push ") {
 			t.Fatal("used Docker daemon to push through host-only port-forward")
 		}
-		if strings.HasPrefix(joined, "docker exec desktop-control-plane ctr ") && strings.Contains(joined, spec.ImageRepository+":"+spec.ImageTag+"@"+digest) {
+		if strings.HasPrefix(joined, "docker exec desktop-control-plane crictl pull ") && strings.Contains(joined, spec.ImageRepository+":"+spec.ImageTag+"@"+digest) {
 			prepull = true
+		}
+		if strings.Contains(joined, " ctr ") {
+			t.Fatal("containerd image alias does not ensure kubelet CRI visibility")
 		}
 		if strings.HasPrefix(joined, "helm upgrade ") {
 			upgrade = true

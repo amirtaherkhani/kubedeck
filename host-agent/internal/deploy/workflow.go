@@ -159,7 +159,7 @@ func (s Spec) Plan() ([]string, error) {
 		steps = append(steps, "docker push", "resolve image digest")
 	}
 	if s.KindPrepull {
-		steps = append(steps, "discover KIND nodes", "prepull digest on KIND nodes")
+		steps = append(steps, "discover KIND nodes", "prepull digest through KIND CRI")
 	}
 	return append(steps, "helm template", "helm upgrade --install --atomic --wait", "kubectl rollout status"), nil
 }
@@ -291,7 +291,7 @@ func (w Workflow) prepullKind(ctx context.Context, spec Spec, image string) erro
 		if !namePattern.MatchString(name) {
 			return errors.New("KIND node name invalid")
 		}
-		if err := w.run(ctx, spec.SourceDir, "prepull digest on KIND nodes", "docker", "exec", name, "ctr", "-n", "k8s.io", "images", "pull", "--plain-http", image); err != nil {
+		if err := w.run(ctx, spec.SourceDir, "prepull digest through KIND CRI", "docker", "exec", name, "crictl", "pull", image); err != nil {
 			return err
 		}
 	}
