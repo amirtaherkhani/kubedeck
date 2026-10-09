@@ -6,7 +6,7 @@ Build a reusable Infisical interface for KuchDesk on this Mac and its Docker Des
 
 | Implemented in source | Still required |
 | --- | --- |
-| Stdio MCP discovery; name-only secret listing; two-variable Universal Auth bootstrap; in-memory access-token renewal, restart re-login, and bounded read retry. | Verify credential lifetime and live permissions; implement scoped secret writes, administration, host API and cluster-agent bridge, operator-backed chart delivery, Helm execution, and live MCP acceptance tests. |
+| Stdio MCP discovery and bounded in-memory start/status/cancel for name-only listing; a CLI using the same typed service; two-variable Universal Auth bootstrap; in-memory access-token renewal, restart re-login, and bounded read retry. | Verify credential lifetime and live permissions; implement scoped secret writes, administration, host API and cluster-agent bridge, operator-backed chart delivery, Helm execution, and live MCP acceptance tests. |
 
 | Area | Verified state | Limit or next check |
 | --- | --- | --- |

@@ -38,6 +38,18 @@ cd host-agent
 go run ./cmd/kuchdesk-infisical-mcp -url https://YOUR-INFISICAL-HOST
 ```
 
-The MCP tools are `infisical_capabilities` and `infisical_list_secret_names`. The latter requires an explicit project ID, environment slug, and absolute secret path. It requests `viewSecretValue=false` and returns only names and paths, discarding any value fields from the API response. Discovery works without credentials; a secret-list call then returns `credentials_not_configured`. No real identity, credential, role, or live MCP service is provisioned by this source change. Permissions and bootstrap credential lifetime remain unverified against this installation.
+The MCP tools are `infisical_capabilities`, `infisical_list_secret_names`, `infisical_start_list_secret_names`, `infisical_job_status`, and `infisical_cancel_job`. Name listing requires an explicit project ID, environment slug, and absolute secret path. It requests `viewSecretValue=false` and returns only names and paths, discarding any value fields from the API response. Discovery works without credentials; a secret-list call then returns `credentials_not_configured`.
+
+The persistent MCP process executes up to four independent operations in parallel, retains at most 64 in-memory records, and gives each operation a 30-second deadline. Operations targeting the same nonempty resource key serialize in the runner; the current name-only reads use no key. Status distinguishes queued, running, succeeded, failed, canceled, and timed out. A cancellation request is cooperative through Go context; process exit discards job history and cancels in-flight work. This is lightweight agent execution, not a durable task service.
+
+The command-line client shares the same typed Infisical service and runs synchronously:
+
+```sh
+cd host-agent
+go run ./cmd/kuchdesk-infisical -url https://YOUR-INFISICAL-HOST capabilities
+go run ./cmd/kuchdesk-infisical -url https://YOUR-INFISICAL-HOST list-secret-names -project PROJECT_ID -environment dev -path /app
+```
+
+No real identity, credential, role, or live MCP service is provisioned by this source change. Permissions and bootstrap credential lifetime remain unverified against this installation.
 
 Secret writes, project/identity administration, value delivery, a host HTTP API, Kubernetes-agent bridging, and Helm execution are not implemented. Existing Grafana Operator sync remains independent.

@@ -77,12 +77,19 @@ func NewClient(rawURL, clientID, clientSecret string, httpClient *http.Client) (
 
 func (c *Client) Configured() bool { return c.clientID != "" && c.clientSecret != "" }
 
+func ValidateScope(scope Scope) error {
+	if strings.TrimSpace(scope.ProjectID) == "" || strings.TrimSpace(scope.Environment) == "" || !strings.HasPrefix(scope.SecretPath, "/") || strings.Contains(scope.SecretPath, "..") {
+		return ErrInvalidScope
+	}
+	return nil
+}
+
 // ListSecretNames exposes names and paths only. Infisical's response may carry
 // values even when viewSecretValue=false; the response type intentionally drops
 // every other field before the caller or MCP layer sees it.
 func (c *Client) ListSecretNames(ctx context.Context, projectID, environment, secretPath string) ([]SecretName, error) {
-	if strings.TrimSpace(projectID) == "" || strings.TrimSpace(environment) == "" || !strings.HasPrefix(secretPath, "/") || strings.Contains(secretPath, "..") {
-		return nil, ErrInvalidScope
+	if err := ValidateScope(Scope{ProjectID: projectID, Environment: environment, SecretPath: secretPath}); err != nil {
+		return nil, err
 	}
 	query := url.Values{
 		"projectId":       {projectID},
