@@ -3,6 +3,7 @@ replicaCount: 1
 image:
   repository: ""
   tag: ""
+  digest: ""
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
