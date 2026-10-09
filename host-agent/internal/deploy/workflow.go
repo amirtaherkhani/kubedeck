@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/doctor"
 )
 
 var (
@@ -25,20 +27,22 @@ var (
 // accepted from the profile; the workflow owns the Docker, Helm, and kubectl
 // argument lists.
 type Spec struct {
-	SourceDir       string   `json:"sourceDir"`
-	Dockerfile      string   `json:"dockerfile"`
-	ChartDir        string   `json:"chartDir"`
-	ValuesFiles     []string `json:"valuesFiles,omitempty"`
-	ImageRepository string   `json:"imageRepository"`
-	ImageTag        string   `json:"imageTag"`
-	KubeContext     string   `json:"kubeContext"`
-	Namespace       string   `json:"namespace"`
-	Release         string   `json:"release"`
-	Deployment      string   `json:"deployment"`
-	Test            string   `json:"test"`
-	PushMode        string   `json:"pushMode,omitempty"`
-	HostPushRepo    string   `json:"hostPushRepository,omitempty"`
-	KindPrepull     bool     `json:"kindPrepull,omitempty"`
+	SourceDir            string   `json:"sourceDir"`
+	Dockerfile           string   `json:"dockerfile"`
+	ChartDir             string   `json:"chartDir"`
+	ValuesFiles          []string `json:"valuesFiles,omitempty"`
+	ImageRepository      string   `json:"imageRepository"`
+	ImageTag             string   `json:"imageTag"`
+	KubeContext          string   `json:"kubeContext"`
+	Namespace            string   `json:"namespace"`
+	Release              string   `json:"release"`
+	Deployment           string   `json:"deployment"`
+	Test                 string   `json:"test"`
+	PushMode             string   `json:"pushMode,omitempty"`
+	HostPushRepo         string   `json:"hostPushRepository,omitempty"`
+	KindPrepull          bool     `json:"kindPrepull,omitempty"`
+	PreflightDomain      string   `json:"preflightDomain"`
+	PreflightRegistryURL string   `json:"preflightRegistryUrl"`
 }
 
 type Result struct {
@@ -49,6 +53,10 @@ type Result struct {
 type Runner interface {
 	Run(context.Context, string, string, ...string) error
 	Output(context.Context, string, string, ...string) ([]byte, error)
+}
+
+type Preflight interface {
+	Run(context.Context, doctor.Config, bool) (doctor.Report, error)
 }
 
 type ExecRunner struct{}
@@ -81,8 +89,9 @@ func filteredEnvironment() []string {
 }
 
 type Workflow struct {
-	Runner Runner
-	OnStep func(string)
+	Runner    Runner
+	OnStep    func(string)
+	Preflight Preflight
 }
 
 func (s Spec) Validate() error {
@@ -108,6 +117,12 @@ func (s Spec) Validate() error {
 	}
 	if s.Test != "" && s.Test != "go" {
 		return errors.New("only test=go or no test is supported")
+	}
+	if err := (doctor.Config{Domain: s.PreflightDomain, KubeContext: s.KubeContext, RegistryURL: s.PreflightRegistryURL, DiskPath: s.SourceDir}).Validate(); err != nil {
+		return fmt.Errorf("preflight configuration invalid: %w", err)
+	}
+	if s.PushMode == "host-crane" && s.PreflightRegistryURL != "http://127.0.0.1:5001" && s.PreflightRegistryURL != "http://localhost:5001" {
+		return errors.New("host-crane preflight must check the local registry on port 5001")
 	}
 	for _, path := range []string{s.SourceDir, s.Dockerfile, s.ChartDir} {
 		if !filepath.IsAbs(path) {
@@ -148,7 +163,7 @@ func (s Spec) Plan() ([]string, error) {
 	if err := s.Validate(); err != nil {
 		return nil, err
 	}
-	steps := []string{"validate profile and source revision", "helm lint"}
+	steps := []string{"doctor preflight", "validate profile and source revision", "helm lint"}
 	if s.Test == "go" {
 		steps = append(steps, "go test")
 	}
@@ -172,12 +187,42 @@ func repositoryPath(repository string) string {
 	return parts[1]
 }
 
+// Check runs the same read-only guard used by Apply, without building or
+// changing the cluster. A warning blocks deployment because required evidence
+// is either missing or outside the configured resource limits.
+func (w Workflow) Check(ctx context.Context, s Spec) (doctor.Report, error) {
+	if err := s.Validate(); err != nil {
+		return doctor.Report{}, err
+	}
+	preflight := w.Preflight
+	if preflight == nil {
+		preflight = doctor.Service{}
+	}
+	report, err := preflight.Run(ctx, doctor.Config{Domain: s.PreflightDomain, KubeContext: s.KubeContext, RegistryURL: s.PreflightRegistryURL, DiskPath: s.SourceDir}, false)
+	if err != nil {
+		return doctor.Report{}, errors.New("doctor preflight unavailable")
+	}
+	for _, check := range report.Checks {
+		if check.Status != "ok" {
+			return report, fmt.Errorf("doctor preflight %s: %s; %s", check.ID, check.Message, check.Recommendation)
+		}
+	}
+	if !report.Healthy || len(report.Checks) < 7 {
+		return report, errors.New("doctor preflight incomplete")
+	}
+	return report, nil
+}
+
 func (w Workflow) Apply(ctx context.Context, s Spec) (Result, error) {
 	if _, err := s.Plan(); err != nil {
 		return Result{}, err
 	}
 	if w.Runner == nil {
 		return Result{}, errors.New("command runner is required")
+	}
+	w.progress("doctor preflight")
+	if _, err := w.Check(ctx, s); err != nil {
+		return Result{}, err
 	}
 	w.progress("validate profile and source revision")
 	// A git tag must identify exactly the clean source being built.

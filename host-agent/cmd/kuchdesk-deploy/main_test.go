@@ -10,7 +10,18 @@ import (
 	"testing"
 
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/deploy"
+	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/doctor"
 )
+
+type healthyPreflight struct{}
+
+func (healthyPreflight) Run(context.Context, doctor.Config, bool) (doctor.Report, error) {
+	checks := make([]doctor.Check, 7)
+	for i := range checks {
+		checks[i].Status = "ok"
+	}
+	return doctor.Report{Healthy: true, Checks: checks}, nil
+}
 
 type countingRunner struct{ calls int }
 
@@ -42,7 +53,7 @@ func testProfile(t *testing.T) string {
 			t.Fatal(err)
 		}
 	}
-	spec := deploy.Spec{SourceDir: source, Dockerfile: filepath.Join(source, "Dockerfile"), ChartDir: chart, ImageRepository: "localhost:5001/kuchdesk-agent", ImageTag: "git-123456789abc", KubeContext: "docker-desktop", Namespace: "development-tools", Release: "kuchdesk-agent", Deployment: "kuchdesk-agent", Test: "go"}
+	spec := deploy.Spec{SourceDir: source, Dockerfile: filepath.Join(source, "Dockerfile"), ChartDir: chart, ImageRepository: "localhost:5001/kuchdesk-agent", ImageTag: "git-123456789abc", KubeContext: "docker-desktop", Namespace: "development-tools", Release: "kuchdesk-agent", Deployment: "kuchdesk-agent", Test: "go", PreflightDomain: "infisical.local.dev", PreflightRegistryURL: "http://127.0.0.1:5001"}
 	profile := filepath.Join(root, "profile.json")
 	data, err := json.Marshal(spec)
 	if err != nil {
@@ -63,12 +74,17 @@ func TestPlanAndConfirmationBoundary(t *testing.T) {
 	}
 	out.Reset()
 	errOut.Reset()
+	if code := runWithPreflight([]string{"-profile", profile, "-preflight"}, &out, &errOut, runner, healthyPreflight{}); code != 0 || runner.calls != 0 || !strings.Contains(out.String(), `"healthy":true`) {
+		t.Fatalf("preflight changed state: code=%d calls=%d out=%q err=%q", code, runner.calls, out.String(), errOut.String())
+	}
+	out.Reset()
+	errOut.Reset()
 	if code := run([]string{"-profile", profile, "-apply", "-confirm", "wrong/namespace"}, &out, &errOut, runner); code != 2 || runner.calls != 0 {
 		t.Fatalf("mismatched confirmation was accepted: code=%d calls=%d", code, runner.calls)
 	}
 	out.Reset()
 	errOut.Reset()
-	if code := run([]string{"-profile", profile, "-apply", "-confirm", "kuchdesk-agent/development-tools"}, &out, &errOut, runner); code != 0 || runner.calls == 0 || !strings.Contains(out.String(), "sha256:") {
+	if code := runWithPreflight([]string{"-profile", profile, "-apply", "-confirm", "kuchdesk-agent/development-tools"}, &out, &errOut, runner, healthyPreflight{}); code != 0 || runner.calls == 0 || !strings.Contains(out.String(), "sha256:") {
 		t.Fatalf("confirmed workflow failed: code=%d calls=%d out=%q err=%q", code, runner.calls, out.String(), errOut.String())
 	}
 }
