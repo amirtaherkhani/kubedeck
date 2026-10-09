@@ -18,9 +18,9 @@ type fakePreflight struct {
 	calls  int
 }
 
-func (f *fakePreflight) Run(_ context.Context, config doctor.Config, ai bool) (doctor.Report, error) {
+func (f *fakePreflight) Run(_ context.Context, config doctor.Config) (doctor.Report, error) {
 	f.calls++
-	if ai || config.Domain != "infisical.local.dev" || config.RegistryURL != "http://127.0.0.1:5001" {
+	if config.Domain != "infisical.local.dev" || config.RegistryURL != "http://127.0.0.1:5001" {
 		return doctor.Report{}, errors.New("bad preflight request")
 	}
 	if f.err != nil {

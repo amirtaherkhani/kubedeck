@@ -33,16 +33,15 @@ func run(args []string, stdout, stderr io.Writer, service doctor.Service) int {
 	registryURL := flags.String("registry-url", "", "loopback registry HTTP origin")
 	diskPath := flags.String("disk-path", "", "absolute path of the build volume")
 	minFreeGiB := flags.Uint64("min-free-gib", 2, "minimum free disk space in GiB")
-	ai := flags.Bool("ai", false, "request optional AI interpretation of sanitized findings")
 	var services targets
 	flags.Var(&services, "service", "deployment to check as namespace/name; repeatable")
 	if err := flags.Parse(args); err != nil || flags.NArg() != 0 || *minFreeGiB > 1024 {
-		fmt.Fprintln(stderr, "usage: kuchdesk-doctor -domain name -kube-context context -registry-url http://127.0.0.1:5001 -disk-path /absolute/path [-service namespace/deployment] [-ai]")
+		fmt.Fprintln(stderr, "usage: kuchdesk-doctor -domain name -kube-context context -registry-url http://127.0.0.1:5001 -disk-path /absolute/path [-service namespace/deployment]")
 		return 2
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	report, err := service.Run(ctx, doctor.Config{Domain: *domain, KubeContext: *kubeContext, RegistryURL: *registryURL, DiskPath: *diskPath, MinFreeBytes: *minFreeGiB << 30, Services: services}, *ai)
+	report, err := service.Run(ctx, doctor.Config{Domain: *domain, KubeContext: *kubeContext, RegistryURL: *registryURL, DiskPath: *diskPath, MinFreeBytes: *minFreeGiB << 30, Services: services})
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 2

@@ -18,7 +18,7 @@ import (
 
 type mcpHealthyPreflight struct{}
 
-func (mcpHealthyPreflight) Run(context.Context, doctor.Config, bool) (doctor.Report, error) {
+func (mcpHealthyPreflight) Run(context.Context, doctor.Config) (doctor.Report, error) {
 	checks := make([]doctor.Check, 7)
 	for i := range checks {
 		checks[i].Status = "ok"
@@ -49,8 +49,8 @@ func TestMCPDiscoveryAndRedactedErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(tools.Tools) != 11 {
-		t.Fatalf("expected eleven MCP tools, got %+v", tools.Tools)
+	if len(tools.Tools) != 13 {
+		t.Fatalf("expected thirteen MCP tools, got %+v", tools.Tools)
 	}
 	for _, tool := range tools.Tools {
 		if tool.InputSchema == nil {
@@ -81,6 +81,73 @@ func TestMCPDiscoveryAndRedactedErrors(t *testing.T) {
 	encoded, _ = json.Marshal(result)
 	if !strings.Contains(string(encoded), "credentials_not_configured") || strings.Contains(string(encoded), "clientSecret") {
 		t.Fatalf("unexpected error output: %s", encoded)
+	}
+}
+
+type fakeDoctorRunner struct{ report doctor.Report }
+
+func (f fakeDoctorRunner) Run(context.Context, doctor.Config) (doctor.Report, error) {
+	return f.report, nil
+}
+
+func TestDoctorMCPPromptSchemaCatalogAndFailedVerification(t *testing.T) {
+	ctx := context.Background()
+	runner := async.NewRunner(ctx, 2, 4)
+	defer runner.Close()
+	check := doctor.Check{ID: "dns", Component: "host-dns", Status: "fail", Message: "Configured domain does not resolve", Source: "system-resolver", Context: "macos", ObservedAt: time.Now().UTC(), ErrorClass: "dns_lookup_failed", Truncated: false}
+	fake := fakeDoctorRunner{doctor.Report{SchemaVersion: "kuchdesk.doctor/v2", GeneratedAt: time.Now().UTC(), Healthy: false, Summary: doctor.Summary{Total: 1, Failed: 1}, Checks: []doctor.Check{check}, Findings: []doctor.Finding{{CheckID: "dns", Severity: "fail", Problem: check.Message, Recommendation: "Check DNS"}}, Limitations: []string{"Point-in-time"}}}
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	serverSession, err := newServerWithServices(infisical.NewService(fakeNameLister{}), runner, deployConfig{}, fake).Connect(ctx, serverTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer serverSession.Close()
+	client, err := mcp.NewClient(&mcp.Implementation{Name: "doctor-test"}, nil).Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	tools, err := client.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	known := make(map[string]bool)
+	for _, tool := range tools.Tools {
+		known[tool.Name] = true
+	}
+	for _, capability := range doctor.ToolCatalog() {
+		if !known[capability.Name] {
+			t.Fatalf("catalog lists unsupported tool %s", capability.Name)
+		}
+	}
+	prompts, err := client.ListPrompts(ctx, nil)
+	if err != nil || len(prompts.Prompts) != 1 || prompts.Prompts[0].Name != "kuchdesk_doctor_repair" {
+		t.Fatalf("prompt discovery failed: %+v %v", prompts, err)
+	}
+	arguments := map[string]string{"domain": "infisical.local.dev", "kubeContext": "docker-desktop", "registryUrl": "http://127.0.0.1:5001", "diskPath": t.TempDir()}
+	prompt, err := client.GetPrompt(ctx, &mcp.GetPromptParams{Name: "kuchdesk_doctor_repair", Arguments: arguments})
+	if err != nil || len(prompt.Messages) != 1 {
+		t.Fatalf("prompt retrieval failed: %+v %v", prompt, err)
+	}
+	encoded, _ := json.Marshal(prompt)
+	if !strings.Contains(string(encoded), "dns_lookup_failed") || !strings.Contains(string(encoded), "kuchdesk_deploy_start") || strings.Contains(string(encoded), "provider_not_configured") {
+		t.Fatalf("wrong MCP prompt content: %s", encoded)
+	}
+	schema, err := client.ReadResource(ctx, &mcp.ReadResourceParams{URI: "kuchdesk://doctor/report/v2"})
+	if err != nil || len(schema.Contents) != 1 || !strings.Contains(schema.Contents[0].Text, "kuchdesk.doctor/v2") {
+		t.Fatalf("schema resource unavailable: %+v %v", schema, err)
+	}
+	result, err := client.CallTool(ctx, &mcp.CallToolParams{Name: "kuchdesk_doctor_verify", Arguments: map[string]any{"domain": arguments["domain"], "kubeContext": arguments["kubeContext"], "registryUrl": arguments["registryUrl"], "diskPath": arguments["diskPath"], "checkIds": []string{"dns"}}})
+	if err != nil || result.IsError {
+		t.Fatalf("verification tool failed: %+v %v", result, err)
+	}
+	encoded, _ = json.Marshal(result.StructuredContent)
+	if !strings.Contains(string(encoded), `"success":false`) {
+		t.Fatalf("failed recheck marked repaired: %s", encoded)
+	}
+	unsupported, err := client.CallTool(ctx, &mcp.CallToolParams{Name: "kuchdesk_doctor_validate_plan", Arguments: map[string]any{"steps": []map[string]any{{"tool": "shell_exec", "profile": "agent.json"}}}})
+	if err != nil || !unsupported.IsError {
+		t.Fatalf("unsupported plan accepted: %+v %v", unsupported, err)
 	}
 }
 
@@ -183,6 +250,20 @@ func TestMCPDeployProfileBoundary(t *testing.T) {
 	bad, err := client.CallTool(ctx, &mcp.CallToolParams{Name: "kuchdesk_deploy_start", Arguments: map[string]any{"profile": "agent.json", "confirm": "wrong/namespace"}})
 	if err != nil || !bad.IsError {
 		t.Fatalf("missing exact confirmation accepted: %v %+v", err, bad)
+	}
+	planSteps := []map[string]any{
+		{"tool": "kuchdesk_deploy_plan", "profile": "agent.json"},
+		{"tool": "kuchdesk_deploy_preflight", "profile": "agent.json"},
+		{"tool": "kuchdesk_deploy_start", "profile": "agent.json", "confirm": "kuchdesk-agent/development-tools"},
+		{"tool": "kuchdesk_doctor_verify", "checkIds": []string{"service:development-tools/kuchdesk-agent"}},
+	}
+	validated, err := client.CallTool(ctx, &mcp.CallToolParams{Name: "kuchdesk_doctor_validate_plan", Arguments: map[string]any{"steps": planSteps}})
+	if err != nil || validated.IsError {
+		t.Fatalf("valid typed plan rejected: %+v %v", validated, err)
+	}
+	encoded, _ = json.Marshal(validated.StructuredContent)
+	if !strings.Contains(string(encoded), `"valid":true`) {
+		t.Fatalf("plan validation missing: %s", encoded)
 	}
 	started, err := client.CallTool(ctx, &mcp.CallToolParams{Name: "kuchdesk_deploy_start", Arguments: map[string]any{"profile": "agent.json", "confirm": "kuchdesk-agent/development-tools"}})
 	if err != nil || started.IsError {

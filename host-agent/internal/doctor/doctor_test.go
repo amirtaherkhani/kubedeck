@@ -11,7 +11,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 )
 
 type commandFake struct {
@@ -33,12 +32,6 @@ func (f resolverFake) LookupIPAddr(context.Context, string) ([]net.IPAddr, error
 	return f.addresses, f.err
 }
 
-type providerFunc func(context.Context, []Check) ([]byte, error)
-
-func (f providerFunc) Interpret(ctx context.Context, facts []Check) ([]byte, error) {
-	return f(ctx, facts)
-}
-
 func fixture(t *testing.T) (Service, Config) {
 	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
@@ -55,29 +48,23 @@ func fixture(t *testing.T) (Service, Config) {
 	return service, config
 }
 
-func TestDoctorSanitizesChecksAndAIInput(t *testing.T) {
+func TestDoctorSanitizesAndStructuresChecks(t *testing.T) {
 	service, config := fixture(t)
-	var observed []Check
-	service.Provider = providerFunc(func(_ context.Context, facts []Check) ([]byte, error) {
-		observed = append([]Check(nil), facts...)
-		return []byte(`{"items":[{"checkId":"docker","explanation":"Docker is responding."}]}`), nil
-	})
-	report, err := service.Run(context.Background(), config, true)
+	report, err := service.Run(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !report.Healthy || len(report.Findings) != 0 || report.AI == nil || report.AI.Status != "ok" {
+	if !report.Healthy || len(report.Findings) != 0 || report.SchemaVersion != "kuchdesk.doctor/v2" || report.Summary.Total != 8 || report.Summary.Passed != 8 || report.GeneratedAt.IsZero() {
 		t.Fatalf("unexpected report: %+v", report)
 	}
 	want := []string{"network", "dns", "docker", "kind", "registry", "disk", "resources", "service:development-tools/kuchdesk-agent"}
 	for i, id := range want {
-		if report.Checks[i].ID != id || report.Checks[i].Status != "ok" {
+		if report.Checks[i].ID != id || report.Checks[i].Status != "ok" || report.Checks[i].Component == "" || report.Checks[i].Source == "" || report.Checks[i].Context == "" || report.Checks[i].ObservedAt.IsZero() {
 			t.Fatalf("check %d: %+v", i, report.Checks[i])
 		}
 	}
 	encoded, _ := json.Marshal(report)
-	observedJSON, _ := json.Marshal(observed)
-	if strings.Contains(string(encoded), "LEAKED_SECRET") || strings.Contains(string(observedJSON), "LEAKED_SECRET") || strings.Contains(string(observedJSON), "192.0.2.1") {
+	if strings.Contains(string(encoded), "LEAKED_SECRET") || strings.Contains(string(encoded), "192.0.2.1") || !strings.Contains(string(encoded), "[REDACTED]") {
 		t.Fatal("raw diagnostics or address escaped sanitization")
 	}
 }
@@ -90,7 +77,7 @@ func TestDoctorReportsFailuresWithoutRawErrors(t *testing.T) {
 	service.Commands = fake
 	service.Resolver = resolverFake{err: errors.New("LEAKED_SECRET")}
 	service.DiskFree = func(string) (uint64, error) { return 1 << 30, nil }
-	report, err := service.Run(context.Background(), config, false)
+	report, err := service.Run(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,28 +92,6 @@ func TestDoctorReportsFailuresWithoutRawErrors(t *testing.T) {
 		if finding.Recommendation == "" {
 			t.Fatalf("finding lacks action: %+v", finding)
 		}
-	}
-}
-
-func TestDoctorAIModesAndMalformedOutput(t *testing.T) {
-	service, config := fixture(t)
-	report, err := service.Run(context.Background(), config, true)
-	if err != nil || report.AI == nil || report.AI.Status != "unavailable" || report.AI.Reason != "provider_not_configured" {
-		t.Fatalf("offline AI result: %+v %v", report.AI, err)
-	}
-	for _, raw := range []string{`not json`, `{"items":[{"checkId":"invented","explanation":"made up"}]}`, `{"items":[],"extra":true}`, `{"items":[]} trailing`} {
-		service.Provider = providerFunc(func(context.Context, []Check) ([]byte, error) { return []byte(raw), nil })
-		result, err := service.Run(context.Background(), config, true)
-		if err != nil || result.AI.Reason != "malformed_ai_output" || !result.Healthy {
-			t.Fatalf("malformed response accepted: %+v %v", result.AI, err)
-		}
-	}
-	service.Provider = providerFunc(func(ctx context.Context, _ []Check) ([]byte, error) { <-ctx.Done(); return nil, ctx.Err() })
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
-	defer cancel()
-	result, err := service.Run(ctx, config, true)
-	if err != nil || result.AI.Reason != "ai_timeout" {
-		t.Fatalf("AI timeout: %+v %v", result.AI, err)
 	}
 }
 
@@ -155,7 +120,7 @@ func TestDoctorConcurrentRequestsRemainIndependent(t *testing.T) {
 		group.Add(1)
 		go func() {
 			defer group.Done()
-			report, err := service.Run(context.Background(), config, false)
+			report, err := service.Run(context.Background(), config)
 			if err != nil || !report.Healthy {
 				t.Errorf("concurrent report: %+v %v", report, err)
 			}
@@ -169,7 +134,7 @@ func TestDoctorFlagsVPNDefaultRouteWithoutBlockingOtherChecks(t *testing.T) {
 	fake := service.Commands.(commandFake)
 	fake.outputs["route -n get default"] = []byte("interface: utun6\n")
 	service.Commands = fake
-	report, err := service.Run(context.Background(), config, false)
+	report, err := service.Run(context.Background(), config)
 	if err != nil || !report.Healthy || report.Checks[0].Status != "warn" || len(report.Findings) != 1 {
 		t.Fatalf("VPN report: %+v %v", report, err)
 	}
@@ -180,27 +145,14 @@ func TestDoctorReportsNodePressure(t *testing.T) {
 	fake := service.Commands.(commandFake)
 	fake.outputs["kubectl --context docker-desktop top nodes --no-headers"] = []byte("node 950m 95% 1024Mi 91%\n")
 	service.Commands = fake
-	report, err := service.Run(context.Background(), config, false)
+	report, err := service.Run(context.Background(), config)
 	if err != nil || report.Healthy || report.Checks[6].Status != "fail" || report.Checks[6].Evidence["maxCPUPercent"] != 95 {
 		t.Fatalf("pressure report: %+v %v", report.Checks[6], err)
 	}
 	fake.outputs["kubectl --context docker-desktop top nodes --no-headers"] = []byte("node 850m 85% 1024Mi 84%\n")
-	report, err = service.Run(context.Background(), config, false)
+	report, err = service.Run(context.Background(), config)
 	if err != nil || !report.Healthy || report.Checks[6].Status != "warn" {
 		t.Fatalf("warning report: %+v %v", report.Checks[6], err)
-	}
-}
-
-func TestAIProviderCannotMutateDeterministicChecks(t *testing.T) {
-	service, config := fixture(t)
-	service.Provider = providerFunc(func(_ context.Context, facts []Check) ([]byte, error) {
-		facts[0].Status = "fail"
-		facts[0].Evidence["interface"] = "altered"
-		return []byte(`{"items":[{"checkId":"network","explanation":"Route observed."}]}`), nil
-	})
-	report, err := service.Run(context.Background(), config, true)
-	if err != nil || !report.Healthy || report.Checks[0].Status != "ok" || report.Checks[0].Evidence["interface"] != "en0" {
-		t.Fatalf("provider changed deterministic report: %+v %v", report, err)
 	}
 }
 
@@ -212,7 +164,7 @@ func TestRegistryProbeDoesNotFollowRedirect(t *testing.T) {
 	redirect := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, target.URL, http.StatusFound) }))
 	defer redirect.Close()
 	config.RegistryURL = redirect.URL
-	report, err := service.Run(context.Background(), config, false)
+	report, err := service.Run(context.Background(), config)
 	if err != nil || report.Healthy || report.Checks[4].Status != "fail" || hits.Load() != 0 {
 		t.Fatalf("redirect followed: %+v hits=%d err=%v", report.Checks[4], hits.Load(), err)
 	}

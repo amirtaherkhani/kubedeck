@@ -48,8 +48,8 @@ The Infisical MCP server and management-enabled Kubernetes agent accept independ
 | Host DNS and Technitium | Interface and reconciliation tests | LaunchAgent last exit 0, existing zone and interface retained; no extended failure-injection run |
 | Infisical MCP and Universal Auth | Mock transport tests for renewal, 401 retry, redaction, typed tools, bounded jobs, private host-env parsing and no-echo setup file creation | No host credentials entered; CLI/MCP authentication and project permission remain untested |
 | Build, registry and Helm delivery | Fake command runner tests for push failure, digest pin, CRI pre-pull failure, and MCP profile boundaries | Registry/CRI/kubelet, manual Helm install and full CLI apply verified; failure rollback and MCP apply remain untested live |
-| Deployment preflight | Injected Doctor tests for health, failure, warning, timeout/error redaction, and block-before-build behavior | Live Doctor checks passed independently; next deployment through the integrated guard remains untested |
-| Doctor diagnostics and optional AI | Fake command, resolver, HTTP and disk tests for ordering, failures, redaction, bounds, malformed AI output, timeout and offline mode | Live deterministic command passed route, DNS, Docker, KIND, registry, disk, metrics and two Deployment checks. AI mode reported `provider_not_configured`; no data was sent externally |
+| Deployment preflight | Injected Doctor tests for health, failure, warning, error redaction, and block-before-build behavior | Integrated live preflight passed; a subsequent agent rollout stopped at registry-to-CRI image pull, leaving the prior release healthy |
+| Doctor diagnostics and MCP-guided repair | Fake command, resolver, HTTP, disk, report-schema, prompt, plan-limit, unsupported-tool, redaction and failed-recheck tests | Live deterministic command passed route, DNS, Docker, KIND, registry, disk, metrics and two Deployments. MCP prompt and typed repair flow are source-tested; no AI-driven live action has run |
 
 ## Configuration and propagation
 

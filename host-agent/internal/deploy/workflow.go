@@ -56,7 +56,7 @@ type Runner interface {
 }
 
 type Preflight interface {
-	Run(context.Context, doctor.Config, bool) (doctor.Report, error)
+	Run(context.Context, doctor.Config) (doctor.Report, error)
 }
 
 type ExecRunner struct{}
@@ -198,7 +198,7 @@ func (w Workflow) Check(ctx context.Context, s Spec) (doctor.Report, error) {
 	if preflight == nil {
 		preflight = doctor.Service{}
 	}
-	report, err := preflight.Run(ctx, doctor.Config{Domain: s.PreflightDomain, KubeContext: s.KubeContext, RegistryURL: s.PreflightRegistryURL, DiskPath: s.SourceDir}, false)
+	report, err := preflight.Run(ctx, doctor.Config{Domain: s.PreflightDomain, KubeContext: s.KubeContext, RegistryURL: s.PreflightRegistryURL, DiskPath: s.SourceDir})
 	if err != nil {
 		return doctor.Report{}, errors.New("doctor preflight unavailable")
 	}

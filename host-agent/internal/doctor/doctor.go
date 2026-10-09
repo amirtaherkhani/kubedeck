@@ -1,12 +1,9 @@
 package doctor
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
-	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -27,10 +24,41 @@ const (
 )
 
 var (
-	identifier  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,127}$`)
-	serviceName = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]{0,62}$`)
-	versionName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9.+_-]{0,39}$`)
+	identifier   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,127}$`)
+	serviceName  = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]{0,62}$`)
+	versionName  = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9.+_-]{0,39}$`)
+	secretValue  = regexp.MustCompile(`(?i)\b(password|token|secret|api[_-]?key|authorization)\s*[:=]\s*[^\s,;]+`)
+	bearerValue  = regexp.MustCompile(`(?i)\bBearer\s+[A-Za-z0-9._~+/-]+`)
+	urlValue     = regexp.MustCompile(`https?://[^\s]+`)
+	addressValue = regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}\b`)
+	emailValue   = regexp.MustCompile(`[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}`)
 )
+
+// NormalizeExcerpt bounds diagnostic text and removes common credential and
+// address forms. Excerpts remain untrusted source material, not instructions.
+func NormalizeExcerpt(raw []byte) (string, bool) {
+	clean := strings.Map(func(char rune) rune {
+		if char == '\n' || char == '\t' {
+			return ' '
+		}
+		if char < 0x20 || char == 0x7f {
+			return -1
+		}
+		return char
+	}, string(raw))
+	clean = bearerValue.ReplaceAllString(clean, "Bearer [REDACTED]")
+	clean = secretValue.ReplaceAllString(clean, "$1=[REDACTED]")
+	clean = urlValue.ReplaceAllString(clean, "[URL]")
+	clean = addressValue.ReplaceAllString(clean, "[IP]")
+	clean = emailValue.ReplaceAllString(clean, "[EMAIL]")
+	clean = strings.ReplaceAll(clean, "`", "′")
+	clean = strings.Join(strings.Fields(clean), " ")
+	runes := []rune(clean)
+	if len(runes) > 512 {
+		return string(runes[:512]), true
+	}
+	return clean, false
+}
 
 type Target struct {
 	Namespace  string `json:"namespace"`
@@ -97,10 +125,21 @@ func validDomain(domain string) bool {
 
 type Check struct {
 	ID             string         `json:"id"`
+	Component      string         `json:"component"`
 	Status         string         `json:"status"`
 	Message        string         `json:"message"`
 	Evidence       map[string]any `json:"evidence,omitempty"`
 	Recommendation string         `json:"recommendation,omitempty"`
+	Source         string         `json:"source"`
+	Context        string         `json:"context"`
+	ObservedAt     time.Time      `json:"observedAt"`
+	DurationMS     int64          `json:"durationMs"`
+	ExitCode       *int           `json:"exitCode,omitempty"`
+	ErrorClass     string         `json:"errorClass,omitempty"`
+	Version        string         `json:"version,omitempty"`
+	RawExcerpt     string         `json:"rawExcerpt,omitempty"`
+	Truncated      bool           `json:"truncated"`
+	Dependencies   []string       `json:"dependencies,omitempty"`
 }
 
 type Finding struct {
@@ -111,23 +150,22 @@ type Finding struct {
 	Recommendation string         `json:"recommendation"`
 }
 
-type AIItem struct {
-	CheckID     string `json:"checkId"`
-	Explanation string `json:"explanation"`
-}
-
-type AIResult struct {
-	Status string   `json:"status"`
-	Reason string   `json:"reason,omitempty"`
-	Items  []AIItem `json:"items,omitempty"`
+type Summary struct {
+	Total    int `json:"total"`
+	Passed   int `json:"passed"`
+	Warnings int `json:"warnings"`
+	Failed   int `json:"failed"`
 }
 
 type Report struct {
 	SchemaVersion string    `json:"schemaVersion"`
+	GeneratedAt   time.Time `json:"generatedAt"`
+	DurationMS    int64     `json:"durationMs"`
 	Healthy       bool      `json:"healthy"`
+	Summary       Summary   `json:"summary"`
 	Checks        []Check   `json:"checks"`
 	Findings      []Finding `json:"findings"`
-	AI            *AIResult `json:"ai,omitempty"`
+	Limitations   []string  `json:"limitations"`
 }
 
 type CommandRunner interface {
@@ -138,18 +176,11 @@ type Resolver interface {
 	LookupIPAddr(context.Context, string) ([]net.IPAddr, error)
 }
 
-// Provider receives only the whitelisted report facts, never command output,
-// credentials, URLs, addresses, or Kubernetes object bodies.
-type Provider interface {
-	Interpret(context.Context, []Check) ([]byte, error)
-}
-
 type Service struct {
 	Commands CommandRunner
 	Resolver Resolver
 	HTTP     *http.Client
 	DiskFree func(string) (uint64, error)
-	Provider Provider
 }
 
 type execRunner struct{}
@@ -199,26 +230,32 @@ func (s Service) withDefaults() Service {
 	return s
 }
 
-func (s Service) Run(ctx context.Context, config Config, ai bool) (Report, error) {
+func (s Service) Run(ctx context.Context, config Config) (Report, error) {
 	if err := config.Validate(); err != nil {
 		return Report{}, err
 	}
+	started := time.Now()
 	s = s.withDefaults()
 	if config.MinFreeBytes == 0 {
 		config.MinFreeBytes = defaultMinDisk
 	}
-	tasks := []func(context.Context) Check{
-		func(ctx context.Context) Check { return s.network(ctx) },
-		func(ctx context.Context) Check { return s.dns(ctx, config.Domain) },
-		func(ctx context.Context) Check { return s.docker(ctx) },
-		func(ctx context.Context) Check { return s.kind(ctx, config.KubeContext) },
-		func(ctx context.Context) Check { return s.registry(ctx, config.RegistryURL) },
-		func(context.Context) Check { return s.disk(config.DiskPath, config.MinFreeBytes) },
-		func(ctx context.Context) Check { return s.metrics(ctx, config.KubeContext) },
+	type task struct {
+		id, component, source, context string
+		dependencies                   []string
+		run                            func(context.Context) Check
+	}
+	tasks := []task{
+		{"network", "host-network", "route", "macos", nil, func(ctx context.Context) Check { return s.network(ctx) }},
+		{"dns", "host-dns", "system-resolver", "macos", []string{"network"}, func(ctx context.Context) Check { return s.dns(ctx, config.Domain) }},
+		{"docker", "docker", "docker-info", "macos", nil, func(ctx context.Context) Check { return s.docker(ctx) }},
+		{"kind", "kubernetes", "kubectl-get-nodes", config.KubeContext, []string{"docker"}, func(ctx context.Context) Check { return s.kind(ctx, config.KubeContext) }},
+		{"registry", "registry", "registry-http", "loopback", []string{"docker", "kind"}, func(ctx context.Context) Check { return s.registry(ctx, config.RegistryURL) }},
+		{"disk", "storage", "statfs", "macos", nil, func(context.Context) Check { return s.disk(config.DiskPath, config.MinFreeBytes) }},
+		{"resources", "kubernetes-resources", "kubectl-top-nodes", config.KubeContext, []string{"kind"}, func(ctx context.Context) Check { return s.metrics(ctx, config.KubeContext) }},
 	}
 	for _, target := range config.Services {
 		target := target
-		tasks = append(tasks, func(ctx context.Context) Check { return s.deployment(ctx, config.KubeContext, target) })
+		tasks = append(tasks, task{"service:" + target.Namespace + "/" + target.Deployment, "deployment", "kubectl-get-deployment", config.KubeContext, []string{"kind"}, func(ctx context.Context) Check { return s.deployment(ctx, config.KubeContext, target) }})
 	}
 	checks := make([]Check, len(tasks))
 	gate := make(chan struct{}, 4)
@@ -227,30 +264,43 @@ func (s Service) Run(ctx context.Context, config Config, ai bool) (Report, error
 		workers.Add(1)
 		go func() {
 			defer workers.Done()
+			checkStarted := time.Now()
 			select {
 			case gate <- struct{}{}:
 				defer func() { <-gate }()
 			case <-ctx.Done():
-				checks[index] = failure("canceled", "Doctor check canceled", "Run Doctor again when the request can complete")
+				checks[index] = failure(task.id, "Doctor check canceled", "Run Doctor again when the request can complete")
+				checks[index].ErrorClass = "request_canceled"
+				checks[index].Component, checks[index].Source, checks[index].Context = task.component, task.source, task.context
+				checks[index].ObservedAt, checks[index].DurationMS = time.Now().UTC(), time.Since(checkStarted).Milliseconds()
+				checks[index].Dependencies = task.dependencies
 				return
 			}
 			checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
-			checks[index] = task(checkCtx)
+			check := task.run(checkCtx)
+			check.Component, check.Source, check.Context = task.component, task.source, task.context
+			check.ObservedAt, check.DurationMS = time.Now().UTC(), time.Since(checkStarted).Milliseconds()
+			check.Dependencies = task.dependencies
+			checks[index] = check
 		}()
 	}
 	workers.Wait()
-	report := Report{SchemaVersion: "kuchdesk.doctor/v1", Healthy: true, Checks: checks, Findings: []Finding{}}
+	report := Report{SchemaVersion: "kuchdesk.doctor/v2", GeneratedAt: time.Now().UTC(), DurationMS: time.Since(started).Milliseconds(), Healthy: true, Checks: checks, Findings: []Finding{}, Limitations: []string{"Point-in-time observations only; Kubernetes authorizes every later action again.", "No arbitrary process, firewall, router, or Secret inspection is performed."}}
+	report.Summary.Total = len(checks)
 	for _, check := range checks {
-		if check.Status == "fail" {
+		switch check.Status {
+		case "ok":
+			report.Summary.Passed++
+		case "warn":
+			report.Summary.Warnings++
+		default:
+			report.Summary.Failed++
 			report.Healthy = false
 		}
 		if check.Status != "ok" {
 			report.Findings = append(report.Findings, Finding{CheckID: check.ID, Severity: check.Status, Problem: check.Message, Evidence: check.Evidence, Recommendation: check.Recommendation})
 		}
-	}
-	if ai {
-		report.AI = s.interpret(ctx, checks)
 	}
 	return report, nil
 }
@@ -265,27 +315,46 @@ func warning(id, message, recommendation string) Check {
 	return Check{ID: id, Status: "warn", Message: message, Recommendation: recommendation}
 }
 
+func commandExitCode(err error) *int {
+	var exit *exec.ExitError
+	if errors.As(err, &exit) {
+		code := exit.ExitCode()
+		return &code
+	}
+	return nil
+}
+
 func (s Service) network(ctx context.Context) Check {
 	raw, err := s.Commands.Output(ctx, "route", "-n", "get", "default")
 	if err != nil {
-		return failure("network", "Default route unavailable", "Check the Mac network route and VPN state")
+		check := failure("network", "Default route unavailable", "Check the Mac network route and VPN state")
+		check.ErrorClass = "command_failed"
+		check.ExitCode = commandExitCode(err)
+		return check
 	}
+	excerpt, truncated := NormalizeExcerpt(raw)
 	for _, line := range strings.Split(string(raw), "\n") {
 		fields := strings.Fields(strings.TrimSpace(line))
 		if len(fields) == 2 && fields[0] == "interface:" && serviceName.MatchString(fields[1]) {
 			if strings.HasPrefix(fields[1], "utun") {
-				return Check{ID: "network", Status: "warn", Message: "VPN owns the default route", Evidence: map[string]any{"interface": fields[1]}, Recommendation: "Verify the physical interface used for local ingress and DNS"}
+				return Check{ID: "network", Status: "warn", Message: "VPN owns the default route", Evidence: map[string]any{"interface": fields[1]}, Recommendation: "Verify the physical interface used for local ingress and DNS", ErrorClass: "vpn_route", RawExcerpt: excerpt, Truncated: truncated}
 			}
-			return ok("network", "Default route found", map[string]any{"interface": fields[1]})
+			check := ok("network", "Default route found", map[string]any{"interface": fields[1]})
+			check.RawExcerpt, check.Truncated = excerpt, truncated
+			return check
 		}
 	}
-	return failure("network", "Default route interface unknown", "Inspect the Mac route table")
+	check := failure("network", "Default route interface unknown", "Inspect the Mac route table")
+	check.ErrorClass, check.RawExcerpt, check.Truncated = "parse_error", excerpt, truncated
+	return check
 }
 
 func (s Service) dns(ctx context.Context, domain string) Check {
 	addresses, err := s.Resolver.LookupIPAddr(ctx, domain)
 	if err != nil || len(addresses) == 0 {
-		return failure("dns", "Configured domain does not resolve", "Check Technitium and the host DNS resolver")
+		check := failure("dns", "Configured domain does not resolve", "Check Technitium and the host DNS resolver")
+		check.ErrorClass = "dns_lookup_failed"
+		return check
 	}
 	return ok("dns", "Configured domain resolves", map[string]any{"answerCount": len(addresses)})
 }
@@ -294,9 +363,13 @@ func (s Service) docker(ctx context.Context) Check {
 	raw, err := s.Commands.Output(ctx, "docker", "info", "--format", "{{.ServerVersion}}")
 	version := strings.TrimSpace(string(raw))
 	if err != nil || !versionName.MatchString(version) {
-		return failure("docker", "Docker daemon unavailable", "Start Docker Desktop and check the selected context")
+		check := failure("docker", "Docker daemon unavailable", "Start Docker Desktop and check the selected context")
+		check.ErrorClass, check.ExitCode = "command_failed", commandExitCode(err)
+		return check
 	}
-	return ok("docker", "Docker daemon responds", map[string]any{"serverVersion": version})
+	check := ok("docker", "Docker daemon responds", map[string]any{"serverVersion": version})
+	check.Version = version
+	return check
 }
 
 func (s Service) kind(ctx context.Context, kubeContext string) Check {
@@ -312,7 +385,9 @@ func (s Service) kind(ctx context.Context, kubeContext string) Check {
 		} `json:"items"`
 	}
 	if err != nil || len(raw) > maxCommandOutput || json.Unmarshal(raw, &body) != nil || len(body.Items) == 0 {
-		return failure("kind", "Kubernetes nodes unavailable", "Check Docker Desktop Kubernetes and the selected context")
+		check := failure("kind", "Kubernetes nodes unavailable", "Check Docker Desktop Kubernetes and the selected context")
+		check.ErrorClass, check.ExitCode = "command_or_parse_failed", commandExitCode(err)
+		return check
 	}
 	ready := 0
 	for _, node := range body.Items {
@@ -325,7 +400,7 @@ func (s Service) kind(ctx context.Context, kubeContext string) Check {
 	}
 	evidence := map[string]any{"nodes": len(body.Items), "readyNodes": ready}
 	if ready != len(body.Items) {
-		return Check{ID: "kind", Status: "fail", Message: "Kubernetes has unready nodes", Evidence: evidence, Recommendation: "Inspect node conditions before deployment"}
+		return Check{ID: "kind", Status: "fail", Message: "Kubernetes has unready nodes", Evidence: evidence, Recommendation: "Inspect node conditions before deployment", ErrorClass: "node_unready"}
 	}
 	return ok("kind", "Kubernetes nodes ready", evidence)
 }
@@ -339,11 +414,13 @@ func (s Service) registry(ctx context.Context, origin string) Check {
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	response, err := client.Do(request)
 	if err != nil {
-		return failure("registry", "Local registry unreachable", "Check the registry Deployment and host port-forward")
+		check := failure("registry", "Local registry unreachable", "Check the registry Deployment and host port-forward")
+		check.ErrorClass = "transport_error"
+		return check
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return Check{ID: "registry", Status: "fail", Message: "Local registry rejected the probe", Evidence: map[string]any{"httpStatus": response.StatusCode}, Recommendation: "Check registry authentication and host forwarding"}
+		return Check{ID: "registry", Status: "fail", Message: "Local registry rejected the probe", Evidence: map[string]any{"httpStatus": response.StatusCode}, Recommendation: "Check registry authentication and host forwarding", ErrorClass: "http_status"}
 	}
 	return ok("registry", "Local registry responds", map[string]any{"httpStatus": response.StatusCode})
 }
@@ -351,11 +428,13 @@ func (s Service) registry(ctx context.Context, origin string) Check {
 func (s Service) disk(path string, minimum uint64) Check {
 	free, err := s.DiskFree(path)
 	if err != nil {
-		return failure("disk", "Free disk space unavailable", "Check the source volume and filesystem")
+		check := failure("disk", "Free disk space unavailable", "Check the source volume and filesystem")
+		check.ErrorClass = "statfs_failed"
+		return check
 	}
 	evidence := map[string]any{"freeGiB": free / (1 << 30), "minimumGiB": minimum / (1 << 30)}
 	if free < minimum {
-		return Check{ID: "disk", Status: "fail", Message: "Insufficient free disk space", Evidence: evidence, Recommendation: "Free space before building or pulling images"}
+		return Check{ID: "disk", Status: "fail", Message: "Insufficient free disk space", Evidence: evidence, Recommendation: "Free space before building or pulling images", ErrorClass: "low_disk"}
 	}
 	return ok("disk", "Disk space sufficient", evidence)
 }
@@ -363,34 +442,45 @@ func (s Service) disk(path string, minimum uint64) Check {
 func (s Service) metrics(ctx context.Context, kubeContext string) Check {
 	raw, err := s.Commands.Output(ctx, "kubectl", "--context", kubeContext, "top", "nodes", "--no-headers")
 	if err != nil || len(raw) > maxCommandOutput {
-		return warning("resources", "Node metrics unavailable", "Check metrics-server before resource-sensitive deployment")
+		check := warning("resources", "Node metrics unavailable", "Check metrics-server before resource-sensitive deployment")
+		check.ErrorClass, check.ExitCode = "metrics_unavailable", commandExitCode(err)
+		return check
 	}
+	excerpt, truncated := NormalizeExcerpt(raw)
 	count, maxCPU, maxMemory := 0, 0, 0
 	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) != 5 {
-			return warning("resources", "Node metrics unavailable", "Check metrics-server before resource-sensitive deployment")
+			check := warning("resources", "Node metrics unavailable", "Check metrics-server before resource-sensitive deployment")
+			check.ErrorClass, check.RawExcerpt, check.Truncated = "metrics_parse_failed", excerpt, truncated
+			return check
 		}
 		cpu, cpuErr := strconv.Atoi(strings.TrimSuffix(fields[2], "%"))
 		memory, memoryErr := strconv.Atoi(strings.TrimSuffix(fields[4], "%"))
 		if cpuErr != nil || memoryErr != nil || !strings.HasSuffix(fields[2], "%") || !strings.HasSuffix(fields[4], "%") || cpu < 0 || cpu > 100 || memory < 0 || memory > 100 {
-			return warning("resources", "Node metrics unavailable", "Check metrics-server before resource-sensitive deployment")
+			check := warning("resources", "Node metrics unavailable", "Check metrics-server before resource-sensitive deployment")
+			check.ErrorClass, check.RawExcerpt, check.Truncated = "metrics_parse_failed", excerpt, truncated
+			return check
 		}
 		count++
 		maxCPU = max(maxCPU, cpu)
 		maxMemory = max(maxMemory, memory)
 	}
 	if count == 0 {
-		return warning("resources", "Node metrics unavailable", "Check metrics-server before resource-sensitive deployment")
+		check := warning("resources", "Node metrics unavailable", "Check metrics-server before resource-sensitive deployment")
+		check.ErrorClass = "metrics_empty"
+		return check
 	}
 	evidence := map[string]any{"metricNodes": count, "maxCPUPercent": maxCPU, "maxMemoryPercent": maxMemory}
 	if maxCPU >= 95 || maxMemory >= 95 {
-		return Check{ID: "resources", Status: "fail", Message: "Node resource use is critical", Evidence: evidence, Recommendation: "Reduce load or add capacity before deployment"}
+		return Check{ID: "resources", Status: "fail", Message: "Node resource use is critical", Evidence: evidence, Recommendation: "Reduce load or add capacity before deployment", ErrorClass: "node_pressure", RawExcerpt: excerpt, Truncated: truncated}
 	}
 	if maxCPU >= 85 || maxMemory >= 85 {
-		return Check{ID: "resources", Status: "warn", Message: "Node resource use is high", Evidence: evidence, Recommendation: "Check node capacity before deployment"}
+		return Check{ID: "resources", Status: "warn", Message: "Node resource use is high", Evidence: evidence, Recommendation: "Check node capacity before deployment", ErrorClass: "node_pressure", RawExcerpt: excerpt, Truncated: truncated}
 	}
-	return ok("resources", "Node resource use within limits", evidence)
+	check := ok("resources", "Node resource use within limits", evidence)
+	check.RawExcerpt, check.Truncated = excerpt, truncated
+	return check
 }
 
 func (s Service) deployment(ctx context.Context, kubeContext string, target Target) Check {
@@ -405,7 +495,9 @@ func (s Service) deployment(ctx context.Context, kubeContext string, target Targ
 		} `json:"status"`
 	}
 	if err != nil || len(raw) > maxCommandOutput || json.Unmarshal(raw, &body) != nil {
-		return failure(id, "Deployment unavailable", "Inspect the named Kubernetes Deployment")
+		check := failure(id, "Deployment unavailable", "Inspect the named Kubernetes Deployment")
+		check.ErrorClass, check.ExitCode = "command_or_parse_failed", commandExitCode(err)
+		return check
 	}
 	desired := 1
 	if body.Spec.Replicas != nil {
@@ -413,53 +505,7 @@ func (s Service) deployment(ctx context.Context, kubeContext string, target Targ
 	}
 	evidence := map[string]any{"desired": desired, "ready": body.Status.ReadyReplicas}
 	if desired == 0 || body.Status.ReadyReplicas < desired {
-		return Check{ID: id, Status: "fail", Message: "Deployment not ready", Evidence: evidence, Recommendation: "Inspect Pods, events, and rollout status"}
+		return Check{ID: id, Status: "fail", Message: "Deployment not ready", Evidence: evidence, Recommendation: "Inspect Pods, events, and rollout status", ErrorClass: "deployment_unready"}
 	}
 	return ok(id, "Deployment ready", evidence)
-}
-
-func (s Service) interpret(ctx context.Context, checks []Check) *AIResult {
-	if s.Provider == nil {
-		return &AIResult{Status: "unavailable", Reason: "provider_not_configured"}
-	}
-	aiCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	facts := make([]Check, len(checks))
-	for index, check := range checks {
-		facts[index] = check
-		facts[index].Evidence = maps.Clone(check.Evidence)
-	}
-	raw, err := s.Provider.Interpret(aiCtx, facts)
-	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(aiCtx.Err(), context.DeadlineExceeded) {
-			return &AIResult{Status: "error", Reason: "ai_timeout"}
-		}
-		return &AIResult{Status: "error", Reason: "ai_provider_failed"}
-	}
-	if len(raw) == 0 || len(raw) > 4096 {
-		return &AIResult{Status: "error", Reason: "malformed_ai_output"}
-	}
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	var parsed struct {
-		Items []AIItem `json:"items"`
-	}
-	if decoder.Decode(&parsed) != nil || !errors.Is(decoder.Decode(&struct{}{}), io.EOF) || len(parsed.Items) > 8 {
-		return &AIResult{Status: "error", Reason: "malformed_ai_output"}
-	}
-	if aiCtx.Err() != nil {
-		return &AIResult{Status: "error", Reason: "ai_timeout"}
-	}
-	known := make(map[string]bool)
-	for _, check := range checks {
-		known[check.ID] = true
-	}
-	seen := make(map[string]bool)
-	for _, item := range parsed.Items {
-		if !known[item.CheckID] || seen[item.CheckID] || len(item.Explanation) == 0 || len(item.Explanation) > 500 {
-			return &AIResult{Status: "error", Reason: "malformed_ai_output"}
-		}
-		seen[item.CheckID] = true
-	}
-	return &AIResult{Status: "ok", Items: parsed.Items}
 }
