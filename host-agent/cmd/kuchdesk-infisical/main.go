@@ -21,7 +21,12 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, getenv fu
 		fmt.Fprintln(stderr, "usage: kuchdesk-infisical -url HTTPS_ORIGIN [-timeout 10s] capabilities|list-secret-names")
 		return 2
 	}
-	client, err := infisical.NewClient(*baseURL, getenv("INFISICAL_CLIENT_ID"), getenv("INFISICAL_CLIENT_SECRET"), nil)
+	clientID, clientSecret, err := infisical.HostCredentials(getenv)
+	if err != nil {
+		fmt.Fprintln(stderr, "invalid Infisical host credential file:", err)
+		return 2
+	}
+	client, err := infisical.NewClient(*baseURL, clientID, clientSecret, nil)
 	if err != nil {
 		fmt.Fprintln(stderr, "invalid Infisical configuration:", err)
 		return 2

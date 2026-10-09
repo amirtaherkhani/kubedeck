@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/infisical"
 )
 
 func TestCLINameOnlyAndMissingCredential(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/v1/auth/universal-auth/login":
@@ -50,10 +54,28 @@ func TestCLINameOnlyAndMissingCredential(t *testing.T) {
 }
 
 func TestCLIRejectsIncompleteScope(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	var out, errOut bytes.Buffer
 	code := run(context.Background(), []string{"-url", "https://infisical.example", "list-secret-names", "-project", "p", "-environment", "dev", "-path", "relative"}, &out, &errOut, func(string) string { return "" })
 	if code != 2 || strings.TrimSpace(errOut.String()) != "invalid_scope" {
 		t.Fatalf("invalid scope should fail before a request: code=%d err=%q", code, errOut.String())
+	}
+}
+
+func TestCLIReadsPrivateHostCredentialFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "infisical", "host.env")
+	if err := infisical.SaveHostCredentials(path, "id", "sensitive-value"); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	code := run(context.Background(), []string{"-url", "https://infisical.example", "capabilities"}, &out, &errOut, func(key string) string {
+		if key == "KUCHDESK_INFISICAL_ENV_FILE" {
+			return path
+		}
+		return ""
+	})
+	if code != 0 || !strings.Contains(out.String(), `"configured":true`) || strings.Contains(out.String()+errOut.String(), "sensitive-value") {
+		t.Fatalf("private file not consumed safely: code=%d out=%q err=%q", code, out.String(), errOut.String())
 	}
 }
 

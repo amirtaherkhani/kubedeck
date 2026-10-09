@@ -292,7 +292,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "provide -url with the Infisical HTTPS origin")
 		os.Exit(2)
 	}
-	client, err := infisical.NewClient(*baseURL, os.Getenv("INFISICAL_CLIENT_ID"), os.Getenv("INFISICAL_CLIENT_SECRET"), nil)
+	client, err := hostClient(*baseURL, os.Getenv)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "invalid Infisical configuration:", err)
 		os.Exit(2)
@@ -303,4 +303,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Infisical MCP server stopped")
 		os.Exit(1)
 	}
+}
+
+func hostClient(baseURL string, getenv func(string) string) (*infisical.Client, error) {
+	clientID, clientSecret, err := infisical.HostCredentials(getenv)
+	if err != nil {
+		return nil, err
+	}
+	return infisical.NewClient(baseURL, clientID, clientSecret, nil)
 }
