@@ -1,4 +1,4 @@
-hostAPI: http://infisical-backend.platform-secrets.svc.cluster.local:8080/api
+hostAPI: http://infisical-backend.platform-secrets.svc:8080/api
 
 controllerManager:
   replicas: 1

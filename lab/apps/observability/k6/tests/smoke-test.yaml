@@ -18,7 +18,7 @@ data:
       },
     };
 
-    const targetUrl = __ENV.TARGET_URL || 'http://grafana.observability.svc.cluster.local/api/health';
+    const targetUrl = __ENV.TARGET_URL || 'http://grafana.observability.svc/api/health';
     const project = __ENV.PROJECT || 'platform-smoke';
 
     export default function () {
@@ -58,10 +58,10 @@ spec:
       - name: K6_ADDRESS
         value: 0.0.0.0:6565
       - name: K6_PROMETHEUS_RW_SERVER_URL
-        value: http://monitoring-kube-prometheus-prometheus.observability.svc.cluster.local:9090/api/v1/write
+        value: http://monitoring-kube-prometheus-prometheus.observability.svc:9090/api/v1/write
       - name: K6_PROMETHEUS_RW_TREND_STATS
         value: p(95),p(99),min,max,avg
       - name: TARGET_URL
-        value: http://grafana.observability.svc.cluster.local/api/health
+        value: http://grafana.observability.svc/api/health
       - name: PROJECT
         value: platform-smoke

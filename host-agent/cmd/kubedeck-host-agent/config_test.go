@@ -20,6 +20,15 @@ func TestParseConfigUsesExplicitClusterAndZone(t *testing.T) {
 	}
 }
 
+func TestParseConfigAcceptsExplicitHostAndRoutableTargets(t *testing.T) {
+	for _, target := range []string{"127.0.0.1", "8.8.8.8"} {
+		cfg, err := parseConfig([]string{"-kube-context", "kind-team", "-zone", "dev.example", "-target-ip", target})
+		if err != nil || cfg.TargetIP != target {
+			t.Fatalf("target %s: cfg=%+v err=%v", target, cfg, err)
+		}
+	}
+}
+
 func TestParseConfigRejectsUnsafeOrAmbiguousInputs(t *testing.T) {
 	tests := []struct {
 		name string
@@ -29,7 +38,7 @@ func TestParseConfigRejectsUnsafeOrAmbiguousInputs(t *testing.T) {
 		{name: "missing zone", args: []string{"-kube-context", "kind-team"}, want: "-zone"},
 		{name: "missing context", args: []string{"-zone", "dev.example"}, want: "-kube-context"},
 		{name: "invalid zone", args: []string{"-kube-context", "kind-team", "-zone", "*"}, want: "-zone"},
-		{name: "public target", args: []string{"-kube-context", "kind-team", "-zone", "dev.example", "-target-ip", "8.8.8.8"}, want: "-target-ip"},
+		{name: "multicast target", args: []string{"-kube-context", "kind-team", "-zone", "dev.example", "-target-ip", "224.0.0.1"}, want: "-target-ip"},
 		{name: "ambiguous target", args: []string{"-kube-context", "kind-team", "-zone", "dev.example", "-target-ip", "10.2.3.4", "-interface", "en0"}, want: "cannot be used together"},
 		{name: "invalid namespace", args: []string{"-kube-context", "kind-team", "-zone", "dev.example", "-namespace", "dns.system"}, want: "namespace"},
 		{name: "invalid port", args: []string{"-kube-context", "kind-team", "-zone", "dev.example", "-api-port", "0"}, want: "-api-port"},

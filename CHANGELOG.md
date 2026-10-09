@@ -4,6 +4,26 @@ All notable KubeDeck changes are documented in this file.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-09
+
+### Changed
+
+- Require a configured cluster ID and name for direct Kubernetes agent runs, matching the Helm chart's explicit identity requirement.
+- Derive the agent's HTTP listener port from the chart Service target port; the chart version is 0.6.0 and the agent version is 0.3.0.
+- Make the host DNS CLI usable on Linux with an OS-specific default-route adapter while keeping the macOS installer separate. The installer now requires an explicit DNS zone and stores absolute kubeconfig paths without Homebrew-specific PATH assumptions.
+- Use cluster-domain-independent Service names for observability connections and configure Grafana's Infisical endpoint and credential location through chart values.
+
+### Breaking Changes
+
+- Direct Kubernetes agent invocations must set `KUBEDECK_CLUSTER_ID` and `KUBEDECK_CLUSTER_NAME`.
+- Chart users must replace `agent.listenAddress` with `agent.listenHost` and `service.targetPort`.
+- macOS host-agent installations must set `KUBEDECK_HOST_AGENT_ZONE` explicitly.
+
+### Migration
+
+- Preserve the previous cluster identity when upgrading an existing agent. Reapply the previous HTTP port through `service.targetPort` if it differed from 8080.
+- Set the existing DNS zone explicitly before rerunning the macOS installer. The installer and this release do not change any running agent or DNS configuration automatically.
+
 ## [0.8.0] - 2026-10-09
 
 ### Added
@@ -173,3 +193,4 @@ All notable KubeDeck changes are documented in this file.
 [0.6.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.5.0...v0.6.0
 [0.7.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.6.0...v0.7.0
 [0.8.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.7.0...v0.8.0
+[0.9.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.8.0...v0.9.0

@@ -34,8 +34,8 @@ type Config struct {
 func Load() (Config, error) {
 	cfg := Config{
 		ListenAddress:          envOrDefault("KUBEDECK_AGENT_LISTEN_ADDRESS", ":8080"),
-		ClusterID:              envOrDefault("KUBEDECK_CLUSTER_ID", "default"),
-		ClusterName:            envOrDefault("KUBEDECK_CLUSTER_NAME", "Kubernetes"),
+		ClusterID:              strings.TrimSpace(os.Getenv("KUBEDECK_CLUSTER_ID")),
+		ClusterName:            strings.TrimSpace(os.Getenv("KUBEDECK_CLUSTER_NAME")),
 		ClusterDomain:          strings.Trim(envOrDefault("KUBEDECK_CLUSTER_DOMAIN", "cluster.local"), "."),
 		Kubeconfig:             strings.TrimSpace(os.Getenv("KUBECONFIG")),
 		BearerToken:            strings.TrimSpace(os.Getenv("KUBEDECK_AGENT_TOKEN")),
@@ -73,7 +73,10 @@ func Load() (Config, error) {
 	}
 
 	if cfg.ClusterID == "" {
-		return Config{}, errors.New("KUBEDECK_CLUSTER_ID cannot be empty")
+		return Config{}, errors.New("KUBEDECK_CLUSTER_ID is required")
+	}
+	if cfg.ClusterName == "" {
+		return Config{}, errors.New("KUBEDECK_CLUSTER_NAME is required")
 	}
 	if cfg.ClusterDomain == "" {
 		return Config{}, errors.New("KUBEDECK_CLUSTER_DOMAIN cannot be empty")
@@ -109,7 +112,7 @@ func RESTConfig(cfg Config) (*rest.Config, error) {
 		return nil, fmt.Errorf("load Kubernetes client configuration: %w", err)
 	}
 
-	restConfig.UserAgent = "kubedeck-agent/0.2.0"
+	restConfig.UserAgent = "kubedeck-agent/0.3.0"
 	restConfig.QPS = 30
 	restConfig.Burst = 60
 	restConfig.Timeout = 30 * time.Second

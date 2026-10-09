@@ -24,6 +24,8 @@ The default ClusterRole allows discovery and metrics reads. CoreDNS alias writes
 
 The agent can start without `metrics.k8s.io`; CPU and memory usage remain unavailable until a compatible metrics-server is installed.
 
+`service.targetPort` sets both the container port and the agent's HTTP listener. Use `agent.listenHost` only to change the bind host; the default listens on all interfaces. Remove any old `agent.listenAddress` override when upgrading from chart 0.5.x. Direct binary invocations also require `KUBEDECK_CLUSTER_ID` and `KUBEDECK_CLUSTER_NAME`; they no longer silently identify an unknown cluster as `default`.
+
 When upgrading from chart 0.4.x, set `cluster.id` and `cluster.name` explicitly. Reuse the previous values for an existing installation so its identity does not change.
 
 ```bash
@@ -31,11 +33,11 @@ helm lint ./kubedeck-agent/chart \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kubedeck-agent \
-  --set image.tag=0.2.0
+  --set image.tag=0.3.0
 helm template kubedeck-agent ./kubedeck-agent/chart \
   --namespace development-tools \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kubedeck-agent \
-  --set image.tag=0.2.0
+  --set image.tag=0.3.0
 ```

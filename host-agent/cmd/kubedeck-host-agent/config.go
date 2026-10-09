@@ -23,8 +23,8 @@ type config struct {
 func parseConfig(args []string) (config, error) {
 	var cfg config
 	flags := flag.NewFlagSet("kubedeck-host-agent", flag.ContinueOnError)
-	flags.StringVar(&cfg.InterfaceName, "interface", "", "LAN interface override; default is the macOS default route interface")
-	flags.StringVar(&cfg.TargetIP, "target-ip", "", "private IPv4 address for the DNS wildcard; default is the selected interface address")
+	flags.StringVar(&cfg.InterfaceName, "interface", "", "LAN interface override; default is the operating system's default route interface")
+	flags.StringVar(&cfg.TargetIP, "target-ip", "", "explicit IPv4 address for the DNS wildcard; default is the selected interface's private address")
 	flags.StringVar(&cfg.Zone, "zone", "", "DNS zone to reconcile, for example local.dev")
 	flags.StringVar(&cfg.KubeContext, "kube-context", "", "Kubernetes context containing Technitium")
 	flags.StringVar(&cfg.Namespace, "namespace", "technitium", "Technitium Kubernetes namespace")
@@ -51,8 +51,8 @@ func parseConfig(args []string) (config, error) {
 	}
 	if cfg.TargetIP != "" {
 		ip := net.ParseIP(cfg.TargetIP)
-		if ip == nil || ip.To4() == nil || !ip.IsPrivate() {
-			return config{}, fmt.Errorf("-target-ip must be a private IPv4 address")
+		if ip == nil || ip.To4() == nil || (!ip.IsGlobalUnicast() && !ip.IsLoopback()) {
+			return config{}, fmt.Errorf("-target-ip must be a usable IPv4 address")
 		}
 	}
 	if !validDNSName(cfg.Namespace) || strings.Contains(cfg.Namespace, ".") ||
