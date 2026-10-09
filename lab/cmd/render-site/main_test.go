@@ -48,6 +48,10 @@ func TestCurrentSiteAndFallbackCertificate(t *testing.T) {
 	if server["root_url"] != "https://grafana.local.dev" {
 		t.Fatalf("unexpected root_url: %v", server["root_url"])
 	}
+	config := object(t, object(t, result.resources["30-dns-blackbox-config.json"])["data"])["blackbox.yml"].(string)
+	if !strings.Contains(config, "query_name: grafana.local.dev") {
+		t.Fatalf("DNS probe does not query the rendered site: %s", config)
+	}
 }
 
 func TestAlternateDomainAndExistingIssuer(t *testing.T) {
