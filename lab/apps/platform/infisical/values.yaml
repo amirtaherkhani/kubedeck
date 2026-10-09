@@ -32,11 +32,8 @@ ingress:
   ingressClassName: traefik
   annotations:
     traefik.ingress.kubernetes.io/router.middlewares: platform-secrets-infisical-https-redirect@kubernetescrd
-  hostName: infisical.local.dev
-  tls:
-    - secretName: local-dev-tls
-      hosts:
-        - infisical.local.dev
+  hostName: "" # Set by the generated site overlay.
+  tls: []
   nginx:
     enabled: false
 

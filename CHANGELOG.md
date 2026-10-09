@@ -4,6 +4,18 @@ All notable KubeDeck changes are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Render site-specific HTTPS certificates, Traefik fallback TLS, and Grafana/Infisical domain overlays from one validated profile. Support a different DNS zone and an existing external ClusterIssuer without editing application manifests.
+
+### Fixed
+
+- Include a cert-manager Certificate in the default TLSStore namespace so Traefik's fallback certificate references a Secret that cert-manager can issue.
+
+### Changed
+
+- Remove embedded `local.dev` hostnames from deployment values and static TLS manifests. Document certificate-first domain migration and application configuration rollouts.
+
 ## [0.9.0] - 2026-10-09
 
 ### Changed

@@ -5,9 +5,9 @@ Secret backend used by the Grafana observability stack.
 | Field | Value |
 |---|---|
 | Namespace | `platform-secrets` |
-| UI | Yes: `https://infisical.local.dev` |
+| UI | Yes: generated `infisicalUrl` from `lab/site.json` |
 | Storage | Dedicated PostgreSQL and Redis in `platform-secrets` (Infisical exception to shared data services) |
-| HTTPS | Traefik and `local-dev-tls` |
+| HTTPS | Traefik and the domain-derived cert-manager TLS Secret |
 | Integration | Infisical Secrets Operator |
 
 The active project and environment are configured at deployment time. Grafana
@@ -19,3 +19,5 @@ The runtime requires the existing `infisical-secrets`,
 Provision these through the established secret workflow before a fresh
 installation; this repository does not store their values. The separate
 PostgreSQL StatefulSet manifest and the Redis subchart reuse their PVCs.
+When changing the site domain, update `SITE_URL` in `infisical-secrets` through
+the existing secret workflow, then roll the backend so it reads the new URL.

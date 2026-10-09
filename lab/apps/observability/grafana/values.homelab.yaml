@@ -71,12 +71,8 @@ ingress:
   ingressClassName: traefik
   path: /
   pathType: Prefix
-  hosts:
-    - grafana.local.dev
-  tls:
-    - secretName: local-dev-tls
-      hosts:
-        - grafana.local.dev
+  hosts: [] # Set by the generated site overlay.
+  tls: []
 
 persistence:
   enabled: true
@@ -125,8 +121,7 @@ grafana.ini:
   log:
     mode: console
   server:
-    domain: grafana.local.dev
-    root_url: https://grafana.local.dev
+    # domain and root_url are set by the generated site overlay.
   security:
     cookie_secure: true
     cookie_samesite: lax
