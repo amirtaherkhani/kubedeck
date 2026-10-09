@@ -68,6 +68,9 @@ permission to scrape kubelet Summary APIs.
 | `GET /v1/manage/events/{namespace}` | Up to 100 namespace events |
 | `GET /v1/manage/workloads/{kind}/{namespace}/{name}/{action}` | Deployment/StatefulSet status or scale; DaemonSet status |
 | `POST /v1/manage/workloads/{kind}/{namespace}/{name}/{action}` | Deployment/StatefulSet scale, restart, status; DaemonSet restart/status |
+| `POST /v1/manage/workloads/{kind}/{namespace}/{name}/{action}/jobs` | Start an in-process scale or restart job after the same exact confirmation and version checks |
+| `GET /v1/manage/jobs/{id}` | Check a job's state and Kubernetes API response status without storing a workload response body |
+| `DELETE /v1/manage/jobs/{id}` | Request cooperative cancellation of a queued or running job |
 
 Management is disabled by default with `KUCHDESK_MANAGEMENT_ENABLED=false`.
 It requires a non-empty bearer token and an intentionally granted Kubernetes
@@ -93,6 +96,15 @@ resources; without one, their `allowedVerbs` are empty. Authorization results
 are informational snapshots, not grants, and Kubernetes checks every actual
 operation again. `GET` workload status returns the typed workload object;
 `GET` scale returns the typed Scale object with its resource version.
+
+Asynchronous workload jobs are available only when management is enabled. Four
+can run concurrently; 64 records are retained in memory. Jobs for the same
+workload serialize, and each has a 30-second deadline. The returned
+`succeeded` state means the Kubernetes API accepted the scale or restart
+request; it does **not** mean the rollout became healthy. Query the workload
+status and Pods separately. Cancellation cannot undo a mutation already
+accepted by Kubernetes. Agent restart cancels in-flight work and loses job
+history; this feature is not a durable task service.
 
 Raw Secret resources are excluded from generic discovery and operations. Logs,
 events, ConfigMaps, and other resources can contain sensitive content; limit

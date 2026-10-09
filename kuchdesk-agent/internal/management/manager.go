@@ -33,6 +33,7 @@ type Manager struct {
 	Discovery discovery.DiscoveryInterface
 	Kube      kubernetes.Interface
 	Logger    *slog.Logger
+	Jobs      *WorkloadJobs
 }
 
 func (m *Manager) Handler() http.Handler {
@@ -43,6 +44,11 @@ func (m *Manager) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/manage/pods/{namespace}/{name}/logs", m.logs)
 	mux.HandleFunc("GET /v1/manage/events/{namespace}", m.events)
 	mux.HandleFunc("POST /v1/manage/workloads/{kind}/{namespace}/{name}/{action}", m.workload)
+	if m.Jobs != nil {
+		mux.HandleFunc("POST /v1/manage/workloads/{kind}/{namespace}/{name}/{action}/jobs", m.submitWorkloadJob)
+		mux.HandleFunc("GET /v1/manage/jobs/{id}", m.workloadJobStatus)
+		mux.HandleFunc("DELETE /v1/manage/jobs/{id}", m.cancelWorkloadJob)
+	}
 	return mux
 }
 
@@ -117,7 +123,7 @@ func (m *Manager) capabilities(w http.ResponseWriter, r *http.Request) {
 	if _, err := m.Discovery.ServerResourcesForGroupVersion("metrics.k8s.io/v1beta1"); err == nil {
 		metrics = true
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"managementEnabled": true, "metricsAvailable": metrics, "resources": resources, "authorizationNamespace": namespace, "workloadActions": []string{"scale", "restart", "status"}, "podLogs": true, "events": true, "note": "allowedVerbs are point-in-time authorization checks; each operation is authorized again by Kubernetes"})
+	writeJSON(w, http.StatusOK, map[string]any{"managementEnabled": true, "metricsAvailable": metrics, "resources": resources, "authorizationNamespace": namespace, "workloadActions": []string{"scale", "restart", "status"}, "asyncWorkloadActions": m.Jobs != nil, "podLogs": true, "events": true, "note": "allowedVerbs are point-in-time authorization checks; each operation is authorized again by Kubernetes"})
 }
 
 func namespaceForReview(namespaced bool, namespace string) string {
@@ -466,68 +472,37 @@ func (m *Manager) workload(w http.ResponseWriter, r *http.Request) {
 	}
 	if action == "scale" {
 		if kind == "daemonsets" {
-			http.Error(w, "DaemonSet scale unsupported", 400)
+			http.Error(w, "DaemonSet scale unsupported", http.StatusBadRequest)
 			return
 		}
-		var req struct {
-			Replicas        *int32 `json:"replicas"`
-			ResourceVersion string `json:"resourceVersion"`
-		}
-		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&req) != nil || req.Replicas == nil || *req.Replicas < 0 || *req.Replicas > 100 || req.ResourceVersion == "" {
-			http.Error(w, "replicas 0..100 and resourceVersion required", 400)
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 4096))
+		if err != nil {
+			http.Error(w, "invalid body", http.StatusBadRequest)
 			return
 		}
-		if kind == "deployments" {
-			current, err := m.Kube.AppsV1().Deployments(namespace).GetScale(ctx, name, metav1.GetOptions{})
-			if err != nil {
-				writeError(w, err)
-				return
-			}
-			if current.ResourceVersion != req.ResourceVersion {
-				http.Error(w, "stale resourceVersion", 409)
-				return
-			}
-			current.Spec.Replicas = *req.Replicas
-			result, err := m.Kube.AppsV1().Deployments(namespace).UpdateScale(ctx, name, current, metav1.UpdateOptions{DryRun: dryRun(r)})
-			if err != nil {
-				writeError(w, err)
-				return
-			}
-			writeJSON(w, 200, result)
+		replicas, resourceVersion, err := parseScale(body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		current, err := m.Kube.AppsV1().StatefulSets(namespace).GetScale(ctx, name, metav1.GetOptions{})
+		result, err := m.scale(ctx, kind, namespace, name, replicas, resourceVersion, len(dryRun(r)) > 0)
 		if err != nil {
 			writeError(w, err)
 			return
 		}
-		if current.ResourceVersion != req.ResourceVersion {
-			http.Error(w, "stale resourceVersion", 409)
-			return
-		}
-		current.Spec.Replicas = *req.Replicas
-		result, err := m.Kube.AppsV1().StatefulSets(namespace).UpdateScale(ctx, name, current, metav1.UpdateOptions{DryRun: dryRun(r)})
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-		writeJSON(w, 200, result)
+		writeJSON(w, http.StatusOK, result)
 		return
 	}
-	// Restart only changes the pod template annotation; the controller performs rollout.
 	if r.Header.Get("If-Match") == "" {
-		http.Error(w, "If-Match resourceVersion required", 409)
+		http.Error(w, "If-Match resourceVersion required", http.StatusConflict)
 		return
 	}
-	patch := map[string]any{"metadata": map[string]any{"resourceVersion": r.Header.Get("If-Match")}, "spec": map[string]any{"template": map[string]any{"metadata": map[string]any{"annotations": map[string]string{"kubectl.kubernetes.io/restartedAt": time.Now().UTC().Format(time.RFC3339Nano)}}}}}
-	body, _ := json.Marshal(patch)
-	target := m.Dynamic.Resource(schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: kind}).Namespace(namespace)
-	result, err := target.Patch(ctx, name, types.StrategicMergePatchType, body, metav1.PatchOptions{DryRun: dryRun(r)})
+	result, err := m.restart(ctx, kind, namespace, name, r.Header.Get("If-Match"), len(dryRun(r)) > 0)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, 200, result)
+	writeJSON(w, http.StatusOK, result)
 }
 
 func readObject(w http.ResponseWriter, r *http.Request, namespace, name, groupVersion, kind string) (*unstructured.Unstructured, error) {
@@ -563,17 +538,24 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(w).Encode(value)
 }
 func writeError(w http.ResponseWriter, err error) {
-	status := 500
-	if apierrors.IsNotFound(err) {
-		status = 404
-	} else if apierrors.IsForbidden(err) {
-		status = 403
-	} else if apierrors.IsConflict(err) {
-		status = 409
-	} else if apierrors.IsBadRequest(err) {
-		status = 400
-	}
+	status := statusForError(err)
 	http.Error(w, http.StatusText(status), status)
+}
+func statusForError(err error) int {
+	if err == nil {
+		return http.StatusOK
+	}
+	status := http.StatusInternalServerError
+	if apierrors.IsNotFound(err) {
+		status = http.StatusNotFound
+	} else if apierrors.IsForbidden(err) {
+		status = http.StatusForbidden
+	} else if apierrors.IsConflict(err) {
+		status = http.StatusConflict
+	} else if apierrors.IsBadRequest(err) {
+		status = http.StatusBadRequest
+	}
+	return status
 }
 func (m *Manager) audit(r *http.Request, resource, namespace, name, action string) {
 	if m.Logger != nil {

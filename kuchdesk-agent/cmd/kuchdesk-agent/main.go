@@ -36,6 +36,12 @@ func run(logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	signalContext, stopSignals := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+	defer stopSignals()
 	restConfig, err := config.RESTConfig(cfg)
 	if err != nil {
 		return err
@@ -74,7 +80,9 @@ func run(logger *slog.Logger) error {
 		if err != nil {
 			return err
 		}
-		api.SetManagementHandler((&management.Manager{Dynamic: dynamicClient, Discovery: kube.Discovery(), Kube: kube, Logger: logger}).Handler())
+		jobs := management.NewWorkloadJobs(signalContext)
+		defer jobs.Close()
+		api.SetManagementHandler((&management.Manager{Dynamic: dynamicClient, Discovery: kube.Discovery(), Kube: kube, Logger: logger, Jobs: jobs}).Handler())
 	}
 	server := &http.Server{
 		Addr:              cfg.ListenAddress,
@@ -85,12 +93,6 @@ func run(logger *slog.Logger) error {
 		MaxHeaderBytes:    1 << 20,
 	}
 
-	signalContext, stopSignals := signal.NotifyContext(
-		context.Background(),
-		syscall.SIGINT,
-		syscall.SIGTERM,
-	)
-	defer stopSignals()
 	ctx, cancel := context.WithCancel(signalContext)
 	defer cancel()
 
