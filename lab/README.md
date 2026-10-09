@@ -13,12 +13,15 @@ The runtime on Docker Desktop Kubernetes consists of Grafana and its image rende
 - The `docker-desktop` Kubernetes context is selected and its node is Ready.
 - DNS resolves the generated `grafanaUrl` and `infisicalUrl` hosts to the ingress address. For a private CA, trust its root certificate on the client host.
 - `platform-secrets/infisical-secrets`, `platform-secrets/infisical-postgresql`, and `platform-secrets/infisical-universal-auth` exist. Provision credentials through the established secret workflow; do not place them in Helm values or Git.
+- A new Infisical PostgreSQL installation needs a default StorageClass. The checked-in StatefulSet manifest leaves its class unset. On an existing installation, keep the bound PVC and StatefulSet template unchanged; this field is immutable and reapplying the manifest will fail.
 - Set `INFISICAL_PROJECT_SLUG` and `INFISICAL_ENV_SLUG` to the active Infisical project and environment. Override the chart's sample scope for every deployment.
 
 ## Deployment order
 
 The pinned versions below match the verified local stack. Run these commands from `lab/`.
 Go 1.23 or newer is required. `--get` reads the last rendered summary from `.generated`; pass the same `--output` directory when using a separate profile output.
+
+For a **new** PostgreSQL installation only, first check `kubectl get storageclass` and confirm one default class exists, then apply `apps/platform/infisical/manifests/postgresql.yaml` after provisioning its Secret. Do not apply that manifest over the existing `infisical-postgresql` StatefulSet: its current `local-path` volume template cannot be changed in place. Keep the existing bound PVC and use a planned data migration if its storage class ever needs to change.
 
 ```bash
 helm repo add cert-manager https://charts.jetstack.io
@@ -46,7 +49,6 @@ for namespace in $(go run ./cmd/render-site --get certificateNamespaces); do
 done
 helm upgrade --install traefik traefik/traefik -n platform-system --version 39.0.7 -f core/ingress/traefik-docker-desktop-values.yaml --wait
 kubectl apply -f .generated/manifests/20-default-tlsstore.json -f core/exposure/docker-desktop/traefik-lan.yaml
-kubectl apply -f apps/platform/infisical/manifests/postgresql.yaml
 helm upgrade --install infisical infisical-helm-charts/infisical -n platform-secrets --version 0.4.2 -f apps/platform/infisical/values.yaml -f .generated/infisical-values.json --wait
 kubectl apply -f apps/platform/infisical/manifests/https-redirect.yaml
 helm upgrade --install infisical-operator infisical-helm-charts/secrets-operator -n platform-secrets --version 0.11.11 -f apps/platform/infisical-operator/values.yaml --wait

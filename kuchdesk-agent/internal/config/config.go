@@ -14,42 +14,47 @@ import (
 )
 
 type Config struct {
-	ListenAddress          string
-	ClusterID              string
-	ClusterName            string
-	ClusterDomain          string
-	Kubeconfig             string
-	KubeContext            string
-	BearerToken            string
-	DNSManagementEnabled   bool
-	ManagementEnabled      bool
-	CoreDNSNamespace       string
-	CoreDNSCustomConfigMap string
-	CoreDNSOverrideKey     string
-	MetricsInterval        time.Duration
-	RefreshDebounce        time.Duration
-	SSEHeartbeat           time.Duration
-	SSEHistory             int
-	EventLimit             int
+	ListenAddress        string
+	ClusterID            string
+	ClusterName          string
+	ClusterDomain        string
+	Kubeconfig           string
+	KubeContext          string
+	BearerToken          string
+	DNSManagementEnabled bool
+	ManagementEnabled    bool
+	CoreDNSNamespace     string
+	CoreDNSConfigMap     string
+	CoreDNSCorefileKey   string
+	MetricsInterval      time.Duration
+	RefreshDebounce      time.Duration
+	SSEHeartbeat         time.Duration
+	SSEHistory           int
+	EventLimit           int
 }
 
 func Load() (Config, error) {
+	for _, legacy := range []string{"KUCHDESK_COREDNS_CUSTOM_CONFIGMAP", "KUCHDESK_COREDNS_OVERRIDE_KEY"} {
+		if _, present := os.LookupEnv(legacy); present {
+			return Config{}, fmt.Errorf("%s is no longer supported; use KUCHDESK_COREDNS_CONFIGMAP and KUCHDESK_COREDNS_COREFILE_KEY", legacy)
+		}
+	}
 	cfg := Config{
-		ListenAddress:          envOrDefault("KUCHDESK_AGENT_LISTEN_ADDRESS", ":8080"),
-		ClusterID:              strings.TrimSpace(os.Getenv("KUCHDESK_CLUSTER_ID")),
-		ClusterName:            strings.TrimSpace(os.Getenv("KUCHDESK_CLUSTER_NAME")),
-		ClusterDomain:          strings.Trim(envOrDefault("KUCHDESK_CLUSTER_DOMAIN", "cluster.local"), "."),
-		Kubeconfig:             os.Getenv("KUBECONFIG"),
-		KubeContext:            strings.TrimSpace(os.Getenv("KUCHDESK_KUBE_CONTEXT")),
-		BearerToken:            strings.TrimSpace(os.Getenv("KUCHDESK_AGENT_TOKEN")),
-		CoreDNSNamespace:       envOrDefault("KUCHDESK_COREDNS_NAMESPACE", "kube-system"),
-		CoreDNSCustomConfigMap: envOrDefault("KUCHDESK_COREDNS_CUSTOM_CONFIGMAP", "coredns-custom"),
-		CoreDNSOverrideKey:     envOrDefault("KUCHDESK_COREDNS_OVERRIDE_KEY", "kuchdesk.override"),
-		MetricsInterval:        10 * time.Second,
-		RefreshDebounce:        250 * time.Millisecond,
-		SSEHeartbeat:           15 * time.Second,
-		SSEHistory:             256,
-		EventLimit:             100,
+		ListenAddress:      envOrDefault("KUCHDESK_AGENT_LISTEN_ADDRESS", ":8080"),
+		ClusterID:          strings.TrimSpace(os.Getenv("KUCHDESK_CLUSTER_ID")),
+		ClusterName:        strings.TrimSpace(os.Getenv("KUCHDESK_CLUSTER_NAME")),
+		ClusterDomain:      strings.Trim(envOrDefault("KUCHDESK_CLUSTER_DOMAIN", "cluster.local"), "."),
+		Kubeconfig:         os.Getenv("KUBECONFIG"),
+		KubeContext:        strings.TrimSpace(os.Getenv("KUCHDESK_KUBE_CONTEXT")),
+		BearerToken:        strings.TrimSpace(os.Getenv("KUCHDESK_AGENT_TOKEN")),
+		CoreDNSNamespace:   envOrDefault("KUCHDESK_COREDNS_NAMESPACE", "kube-system"),
+		CoreDNSConfigMap:   envOrDefault("KUCHDESK_COREDNS_CONFIGMAP", "coredns"),
+		CoreDNSCorefileKey: envOrDefault("KUCHDESK_COREDNS_COREFILE_KEY", "Corefile"),
+		MetricsInterval:    10 * time.Second,
+		RefreshDebounce:    250 * time.Millisecond,
+		SSEHeartbeat:       15 * time.Second,
+		SSEHistory:         256,
+		EventLimit:         100,
 	}
 
 	var err error
@@ -88,11 +93,8 @@ func Load() (Config, error) {
 		if cfg.BearerToken == "" {
 			return Config{}, errors.New("KUCHDESK_AGENT_TOKEN is required when DNS management is enabled")
 		}
-		if cfg.CoreDNSNamespace == "" || cfg.CoreDNSCustomConfigMap == "" {
-			return Config{}, errors.New("CoreDNS namespace and custom ConfigMap cannot be empty")
-		}
-		if !strings.HasSuffix(cfg.CoreDNSOverrideKey, ".override") {
-			return Config{}, errors.New("KUCHDESK_COREDNS_OVERRIDE_KEY must end with .override")
+		if cfg.CoreDNSNamespace == "" || cfg.CoreDNSConfigMap == "" || cfg.CoreDNSCorefileKey == "" {
+			return Config{}, errors.New("CoreDNS namespace, ConfigMap, and Corefile key cannot be empty")
 		}
 	}
 	if cfg.ManagementEnabled && cfg.BearerToken == "" {
@@ -126,7 +128,7 @@ func RESTConfig(cfg Config) (*rest.Config, error) {
 		return nil, fmt.Errorf("load Kubernetes client configuration: %w", err)
 	}
 
-	restConfig.UserAgent = "kuchdesk-agent/0.4.0"
+	restConfig.UserAgent = "kuchdesk-agent/0.5.0"
 	restConfig.QPS = 30
 	restConfig.Burst = 60
 	restConfig.Timeout = 30 * time.Second

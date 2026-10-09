@@ -11,6 +11,8 @@ All notable KuchDesk changes are documented in this file.
 
 ### Fixed
 
+- Manage opt-in CoreDNS service aliases on Docker Desktop KIND through a bounded block in the existing Corefile, preserving unrelated directives and rejecting stale or unsafe updates.
+- Let new Infisical PostgreSQL installations use the cluster's default StorageClass instead of assuming K3s `local-path`; preserve the existing StatefulSet and PVC during upgrades.
 - Let the Kubernetes agent use a developer's kubeconfig when no in-cluster credentials exist, with an explicit context override and multi-file `KUBECONFIG` support.
 - Handle Ingress resource backends without crashing the cluster snapshot or assigning their URLs to unnamed Services.
 - Reject ambiguous private IPv4 addresses on the selected Mac interface instead of publishing an arbitrary DNS answer.
@@ -20,16 +22,18 @@ All notable KuchDesk changes are documented in this file.
 ### Changed
 
 - Let operators configure the host DNS record TTL, run timeout, and macOS polling interval; pin the installed `kubectl` executable for launchd runs.
-- Rename the repository, both agents, Helm chart, API identity, and macOS integration to KuchDesk. The agent chart is now 0.7.0 and its app version is 0.4.0.
+- Rename the repository, both agents, Helm chart, API identity, and macOS integration to KuchDesk. The agent chart is now 0.8.0 and its app version is 0.5.0.
 - Remove embedded `local.dev` hostnames from deployment values and static TLS manifests. Document certificate-first domain migration and application configuration rollouts.
 
 ### Breaking Changes
 
+- DNS management now targets `kube-system/coredns` key `Corefile`. Replace `KUCHDESK_COREDNS_CUSTOM_CONFIGMAP` and `KUCHDESK_COREDNS_OVERRIDE_KEY` with `KUCHDESK_COREDNS_CONFIGMAP` and `KUCHDESK_COREDNS_COREFILE_KEY`. Old Helm `dnsManagement.overrideKey` and `createConfigMap` values are rejected.
 - The Kubernetes agent Go module, chart/release name, resource names, `KUCHDESK_*` environment variables, `kuchdesk.io/v1alpha1` snapshot identity, and `X-KuchDesk-Confirm` request header replace their former KubeDeck equivalents. Client integrations and existing agent installations must update together.
 - The macOS LaunchAgent label and binary name change to `dev.kuchdesk.host-agent` and `kuchdesk-host-agent`. The installer does not remove an existing KubeDeck job.
 
 ### Migration
 
+- Back up the existing Corefile, enable DNS writes only after a dry run, and remove old alias overrides through a separate reviewed change if present. Never reapply the changed Infisical PostgreSQL StatefulSet template over an existing installation; its volume claim template is immutable.
 - Update imports, Helm paths, image references, bearer Secret names, and agent environment variables. Recreate or explicitly migrate the old chart release and Secret; Helm treats the renamed chart as a separate release. Preserve the existing CoreDNS override until the new agent and aliases are verified.
 - Stop the old macOS LaunchAgent before installing the new one with the same DNS zone, context, and interface. Verify DNS resolution, then remove the old job and binary. Preserve retained PVCs when renaming local Kubernetes resources.
 
