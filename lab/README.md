@@ -1,5 +1,7 @@
 # Observability runtime
 
+This is the checked-in local deployment profile. Its `local.dev` domains, namespace names, and Infisical references describe this installation; they are not defaults required by either KubeDeck agent. Copy or override the Helm values and manifests for another cluster instead of changing the agent code.
+
 This directory keeps the Grafana observability stack, k6 Operator, and the platform configuration required for local HTTPS and Infisical-backed Grafana credentials. It does not manage the KubeDeck dashboard, shared application databases, or unrelated home-lab services.
 
 The runtime on Docker Desktop Kubernetes consists of Grafana and its image renderer, Prometheus Stack, Loki, Tempo, Alloy, and k6 Operator. cert-manager and Traefik provide `https://grafana.local.dev`; Infisical and its operator supply `observability/grafana-admin`. The existing Grafana, Loki, Tempo, and Infisical PVCs are reused. Loki's chart values retain its PVC when the StatefulSet scales down or is removed.

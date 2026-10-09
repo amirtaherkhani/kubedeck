@@ -1,6 +1,6 @@
 # KubeDeck agents, observability, and k6
 
-This repository contains two Go agents, the Grafana observability stack, and k6 Operator. The Kubernetes agent discovers cluster resources and exposes an internal API; the macOS host agent reconciles this Mac's `*.local.dev` DNS records through an existing Technitium installation. The KubeDeck dashboard is not included.
+This repository contains two Go agents, the Grafana observability stack, and k6 Operator. The Kubernetes agent discovers cluster resources and exposes an internal API; the macOS host agent reconciles a configured DNS wildcard through an existing Technitium installation. The KubeDeck dashboard is not included.
 
 | Component | Purpose |
 | --- | --- |
@@ -9,13 +9,17 @@ This repository contains two Go agents, the Grafana observability stack, and k6 
 | [`host-agent/`](host-agent/README.md) | macOS local DNS reconciler |
 | [`lab/`](lab/README.md) | Grafana, image renderer, Prometheus Stack, Loki, Tempo, Alloy, k6 Operator, and their HTTPS/secret dependencies |
 
-The cluster agent's service is internal and has no dashboard or public hostname. Its catalog parser fixtures live with its Go tests. The host agent depends on a separately managed Technitium service. The observability deployment is documented in [`lab/README.md`](lab/README.md); unrelated home-lab services are not managed here.
+The cluster agent's service is internal and has no dashboard or public hostname. Its catalog parser fixtures live with its Go tests. The host agent depends on a separately managed Technitium service. The files under [`lab/`](lab/README.md) are a local deployment profile; the agent binaries and chart do not depend on those hostnames or that cluster context. Unrelated home-lab services are not managed here.
+
+## Portability
+
+The Kubernetes agent runs in any compatible Kubernetes cluster when given a unique cluster identity and an available image. The host agent is intentionally macOS-only because it uses `launchd` and the macOS default route; its DNS zone, Kubernetes context, Technitium resources, and optional target IP are configuration. The `lab/` manifests are a separate profile for this local Docker Desktop cluster, not universal agent defaults.
 
 ## Verify
 
 ```bash
 (cd kubedeck-agent && go test ./... && go vet ./...)
 (cd host-agent && go test ./...)
-helm lint kubedeck-agent/chart --set image.repository=example.invalid/kubedeck-agent --set image.tag=0.2.0
-helm template kubedeck-agent kubedeck-agent/chart --set image.repository=example.invalid/kubedeck-agent --set image.tag=0.2.0
+helm lint kubedeck-agent/chart --set cluster.id=example --set cluster.name='Example cluster' --set image.repository=example.invalid/kubedeck-agent --set image.tag=0.2.0
+helm template kubedeck-agent kubedeck-agent/chart --set cluster.id=example --set cluster.name='Example cluster' --set image.repository=example.invalid/kubedeck-agent --set image.tag=0.2.0
 ```

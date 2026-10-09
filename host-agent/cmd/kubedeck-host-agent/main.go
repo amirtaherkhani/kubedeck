@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -16,17 +15,12 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
 
-const (
-	zone        = "local.dev"
-	name        = "*.local.dev"
-	contextName = "docker-desktop"
-)
-
-var portPattern = regexp.MustCompile(`Forwarding from 127\.0\.0\.1:(\d+) -> 5380`)
+var portPattern = regexp.MustCompile(`Forwarding from 127\.0\.0\.1:(\d+) -> (\d+)`)
 
 type secret struct {
 	Data map[string]string `json:"data"`
@@ -46,32 +40,41 @@ type apiClient struct {
 }
 
 func main() {
-	iface := flag.String("interface", "", "LAN interface override; default is the macOS default route interface")
-	flag.Parse()
+	cfg, err := parseConfig(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "host-agent configuration failed:", err)
+		os.Exit(2)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := reconcile(ctx, *iface); err != nil {
+	if err := reconcile(ctx, cfg); err != nil {
 		fmt.Fprintln(os.Stderr, "host-agent DNS reconciliation failed:", err)
 		os.Exit(1)
 	}
 }
 
-func reconcile(ctx context.Context, ifaceOverride string) error {
-	ip, err := lanIP(ctx, ifaceOverride)
+func reconcile(ctx context.Context, cfg config) error {
+	var ip net.IP
+	if cfg.TargetIP != "" {
+		ip = net.ParseIP(cfg.TargetIP).To4()
+	} else {
+		var err error
+		ip, err = lanIP(ctx, cfg.InterfaceName)
+		if err != nil {
+			return err
+		}
+	}
+	password, err := adminPassword(ctx, cfg)
 	if err != nil {
 		return err
 	}
-	password, err := adminPassword(ctx)
-	if err != nil {
-		return err
-	}
-	port, stop, err := forwardAPI(ctx)
+	port, stop, err := forwardAPI(ctx, cfg)
 	if err != nil {
 		return err
 	}
 	defer stop()
 	client := apiClient{base: "http://127.0.0.1:" + port, http: &http.Client{Timeout: 8 * time.Second}}
-	login, err := client.call(ctx, "/api/user/login", url.Values{"user": {"admin"}, "pass": {password}})
+	login, err := client.call(ctx, "/api/user/login", url.Values{"user": {cfg.AdminUser}, "pass": {password}})
 	if err != nil {
 		return fmt.Errorf("Technitium login: %w", err)
 	}
@@ -80,7 +83,10 @@ func reconcile(ctx context.Context, ifaceOverride string) error {
 		return errors.New("Technitium login returned no token")
 	}
 	defer func() { _, _ = client.call(context.Background(), "/api/user/logout", url.Values{}) }()
+	return reconcileDNS(ctx, &client, cfg, ip)
+}
 
+func reconcileDNS(ctx context.Context, client *apiClient, cfg config, ip net.IP) error {
 	zones, err := client.call(ctx, "/api/zones/list", nil)
 	if err != nil {
 		return err
@@ -95,18 +101,18 @@ func reconcile(ctx context.Context, ifaceOverride string) error {
 	}
 	found := false
 	for _, z := range zoneList.Zones {
-		if z.Name == zone {
+		if strings.EqualFold(z.Name, cfg.Zone) {
 			found = true
 			break
 		}
 	}
 	if !found {
-		if _, err := client.call(ctx, "/api/zones/create", url.Values{"zone": {zone}, "type": {"Primary"}}); err != nil {
+		if _, err := client.call(ctx, "/api/zones/create", url.Values{"zone": {cfg.Zone}, "type": {"Primary"}}); err != nil {
 			return err
 		}
 	}
 
-	records, err := client.call(ctx, "/api/zones/records/get?"+url.Values{"domain": {name}, "zone": {zone}}.Encode(), nil)
+	records, err := client.call(ctx, "/api/zones/records/get?"+url.Values{"domain": {cfg.recordName()}, "zone": {cfg.Zone}}.Encode(), nil)
 	if err != nil {
 		return err
 	}
@@ -124,13 +130,13 @@ func reconcile(ctx context.Context, ifaceOverride string) error {
 		return err
 	}
 	for _, r := range recordList.Records {
-		if strings.EqualFold(r.Name, name) && r.Type == "A" && r.TTL == 30 && r.RData.IPAddress == ip.String() {
+		if strings.EqualFold(r.Name, cfg.recordName()) && r.Type == "A" && r.TTL == 30 && r.RData.IPAddress == ip.String() {
 			fmt.Println("Technitium wildcard current:", ip)
 			return nil
 		}
 	}
 	_, err = client.call(ctx, "/api/zones/records/add", url.Values{
-		"domain": {name}, "zone": {zone}, "type": {"A"}, "ttl": {"30"}, "overwrite": {"true"}, "ipAddress": {ip.String()},
+		"domain": {cfg.recordName()}, "zone": {cfg.Zone}, "type": {"A"}, "ttl": {"30"}, "overwrite": {"true"}, "ipAddress": {ip.String()},
 	})
 	if err != nil {
 		return err
@@ -177,8 +183,8 @@ func lanIP(ctx context.Context, override string) (net.IP, error) {
 	return nil, fmt.Errorf("interface %s has no private IPv4 address", device)
 }
 
-func adminPassword(ctx context.Context) (string, error) {
-	out, err := exec.CommandContext(ctx, "kubectl", "--context", contextName, "-n", "technitium", "get", "secret", "technitium-admin", "-o", "json").Output()
+func adminPassword(ctx context.Context, cfg config) (string, error) {
+	out, err := exec.CommandContext(ctx, "kubectl", cfg.kubectlArgs("get", "secret", cfg.AdminSecret, "-o", "json")...).Output()
 	if err != nil {
 		return "", fmt.Errorf("read Technitium Kubernetes credential: %w", err)
 	}
@@ -186,7 +192,7 @@ func adminPassword(ctx context.Context) (string, error) {
 	if err := json.Unmarshal(out, &s); err != nil {
 		return "", err
 	}
-	encoded := s.Data["DNS_SERVER_ADMIN_PASSWORD"]
+	encoded := s.Data[cfg.PasswordKey]
 	if encoded == "" {
 		return "", errors.New("Technitium credential key is missing")
 	}
@@ -197,9 +203,9 @@ func adminPassword(ctx context.Context) (string, error) {
 	return string(decoded), nil
 }
 
-func forwardAPI(parent context.Context) (string, func(), error) {
+func forwardAPI(parent context.Context, cfg config) (string, func(), error) {
 	ctx, cancel := context.WithCancel(parent)
-	cmd := exec.CommandContext(ctx, "kubectl", "--context", contextName, "-n", "technitium", "port-forward", "--address", "127.0.0.1", "svc/technitium", ":5380")
+	cmd := exec.CommandContext(ctx, "kubectl", cfg.kubectlArgs("port-forward", "--address", "127.0.0.1", "svc/"+cfg.Service, ":"+strconv.Itoa(cfg.APIPort))...)
 	reader, writer := io.Pipe()
 	cmd.Stdout, cmd.Stderr = writer, writer
 	if err := cmd.Start(); err != nil {
@@ -230,7 +236,7 @@ func forwardAPI(parent context.Context) (string, func(), error) {
 				stop()
 				return "", nil, errors.New("kubectl port-forward exited")
 			}
-			if matches := portPattern.FindStringSubmatch(line); len(matches) == 2 {
+			if matches := portPattern.FindStringSubmatch(line); len(matches) == 3 && matches[2] == strconv.Itoa(cfg.APIPort) {
 				return matches[1], stop, nil
 			}
 		case <-timer.C:

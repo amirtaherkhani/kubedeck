@@ -4,6 +4,25 @@ All notable KubeDeck changes are documented in this file.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-09
+
+### Added
+
+- Configure the macOS host agent's DNS zone, Kubernetes context, Technitium resource names, and optional private target IP without editing source. The installer pins the selected context and preserves a custom kubeconfig.
+
+### Changed
+
+- Remove the `homelab` cluster identity from Kubernetes agent chart defaults. Each installation now declares its own cluster ID and name; the chart version is 0.5.0.
+- Identify `lab/` as a local deployment profile rather than a requirement of either agent.
+
+### Breaking Changes
+
+- The host-agent CLI now requires `-zone` and `-kube-context`. The Kubernetes agent chart requires explicit `cluster.id` and `cluster.name` values.
+
+### Migration
+
+- Reinstall the macOS LaunchAgent with `host-agent/install-macos.sh` when ready to adopt the new binary and pinned context. Keep the existing DNS zone and context values. For an existing chart installation, pass its previous cluster ID and name during the next upgrade to preserve identity.
+
 ## [0.7.0] - 2026-10-08
 
 ### Added
@@ -153,3 +172,4 @@ All notable KubeDeck changes are documented in this file.
 [0.5.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.4.0...v0.5.0
 [0.6.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.5.0...v0.6.0
 [0.7.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.6.0...v0.7.0
+[0.8.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.7.0...v0.8.0
