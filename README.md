@@ -9,6 +9,8 @@ This repository contains two Go agents, the Grafana observability stack, and k6 
 | [`host-agent/`](host-agent/README.md) | Host DNS reconciler CLI and macOS installer |
 | [`lab/`](lab/README.md) | Grafana, image renderer, Prometheus Stack, Loki, Tempo, Alloy, k6 Operator, and their HTTPS/secret dependencies |
 
+The [agent capability inventory](docs/agent-capabilities.md) separates required features from implemented, enabled, and live-tested behavior for both agents.
+
 The cluster agent's service is internal and has no dashboard or public hostname. Its catalog parser fixtures live with its Go tests. The host agent depends on a separately managed Technitium service. The files under [`lab/`](lab/README.md) are a local deployment profile; the agent binaries and chart do not depend on those hostnames or that cluster context. Unrelated home-lab services are not managed here.
 
 ## Portability

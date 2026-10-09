@@ -1,0 +1,238 @@
+package infisical
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync"
+	"time"
+)
+
+var (
+	ErrNotConfigured = errors.New("Infisical client credentials are not configured")
+	ErrInvalidScope  = errors.New("project, environment, and absolute secret path are required")
+	ErrAuthRejected  = errors.New("Infisical rejected the client credentials")
+)
+
+// APIError deliberately excludes the response body, which may contain secrets.
+type APIError struct{ StatusCode int }
+
+func (e *APIError) Error() string { return fmt.Sprintf("Infisical API returned HTTP %d", e.StatusCode) }
+
+type SecretName struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+// Client holds only a short-lived access token in memory. The bootstrap pair
+// comes from the host process environment and is never returned to callers.
+type Client struct {
+	baseURL      *url.URL
+	httpClient   *http.Client
+	clientID     string
+	clientSecret string
+	now          func() time.Time
+
+	mu          sync.Mutex
+	token       string
+	refreshAt   time.Time
+	expiresAt   time.Time
+	retryAt     time.Time
+	authRevoked bool
+}
+
+func NewClient(rawURL, clientID, clientSecret string, httpClient *http.Client) (*Client, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || (parsed.Path != "" && parsed.Path != "/") {
+		return nil, errors.New("Infisical URL must be an absolute origin without credentials, path, query, or fragment")
+	}
+	if parsed.Scheme != "https" {
+		host := parsed.Hostname()
+		ip := net.ParseIP(host)
+		if parsed.Scheme != "http" || (host != "localhost" && (ip == nil || !ip.IsLoopback())) {
+			return nil, errors.New("Infisical URL must use HTTPS except on loopback")
+		}
+	}
+	if (clientID == "") != (clientSecret == "") {
+		return nil, errors.New("INFISICAL_CLIENT_ID and INFISICAL_CLIENT_SECRET must be set together")
+	}
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 10 * time.Second}
+	}
+	clientCopy := *httpClient
+	if clientCopy.Timeout == 0 {
+		clientCopy.Timeout = 10 * time.Second
+	}
+	// Never forward the bootstrap pair or a bearer token to a redirect target.
+	clientCopy.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	return &Client{baseURL: parsed, httpClient: &clientCopy, clientID: clientID, clientSecret: clientSecret, now: time.Now}, nil
+}
+
+func (c *Client) Configured() bool { return c.clientID != "" && c.clientSecret != "" }
+
+// ListSecretNames exposes names and paths only. Infisical's response may carry
+// values even when viewSecretValue=false; the response type intentionally drops
+// every other field before the caller or MCP layer sees it.
+func (c *Client) ListSecretNames(ctx context.Context, projectID, environment, secretPath string) ([]SecretName, error) {
+	if strings.TrimSpace(projectID) == "" || strings.TrimSpace(environment) == "" || !strings.HasPrefix(secretPath, "/") || strings.Contains(secretPath, "..") {
+		return nil, ErrInvalidScope
+	}
+	query := url.Values{
+		"projectId":       {projectID},
+		"environment":     {environment},
+		"secretPath":      {secretPath},
+		"viewSecretValue": {"false"},
+		"recursive":       {"false"},
+		"include_imports": {"false"},
+	}
+	body, err := c.get(ctx, "/api/v4/secrets", query)
+	if err != nil {
+		return nil, err
+	}
+	var response struct {
+		Secrets []struct {
+			Key  string `json:"secretKey"`
+			Path string `json:"secretPath"`
+		} `json:"secrets"`
+	}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, errors.New("Infisical returned an invalid secret list")
+	}
+	if len(response.Secrets) > 1000 {
+		return nil, errors.New("Infisical secret list exceeds the 1000-name limit")
+	}
+	names := make([]SecretName, 0, len(response.Secrets))
+	for _, item := range response.Secrets {
+		if item.Key == "" {
+			return nil, errors.New("Infisical secret list contains an empty name")
+		}
+		names = append(names, SecretName{Name: item.Key, Path: item.Path})
+	}
+	return names, nil
+}
+
+func (c *Client) get(ctx context.Context, path string, query url.Values) ([]byte, error) {
+	for attempt := 0; attempt < 2; attempt++ {
+		token, err := c.accessToken(ctx)
+		if err != nil {
+			return nil, err
+		}
+		endpoint := c.baseURL.ResolveReference(&url.URL{Path: path, RawQuery: query.Encode()})
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
+		if err != nil {
+			return nil, errors.New("build Infisical request")
+		}
+		request.Header.Set("Authorization", "Bearer "+token)
+		response, err := c.httpClient.Do(request)
+		if err != nil {
+			return nil, errors.New("Infisical request failed")
+		}
+		body, readErr := io.ReadAll(io.LimitReader(response.Body, 1<<20+1))
+		response.Body.Close()
+		if response.StatusCode == http.StatusUnauthorized && attempt == 0 {
+			c.invalidateToken(token)
+			continue
+		}
+		if response.StatusCode == http.StatusUnauthorized {
+			c.mu.Lock()
+			if c.token == token {
+				c.token = ""
+				c.refreshAt = time.Time{}
+				c.expiresAt = time.Time{}
+				c.retryAt = c.now().Add(30 * time.Second)
+			}
+			c.mu.Unlock()
+		}
+		if response.StatusCode < 200 || response.StatusCode >= 300 {
+			return nil, &APIError{StatusCode: response.StatusCode}
+		}
+		if readErr != nil || len(body) > 1<<20 {
+			return nil, errors.New("Infisical response exceeds the 1 MiB limit")
+		}
+		return body, nil
+	}
+	return nil, &APIError{StatusCode: http.StatusUnauthorized}
+}
+
+func (c *Client) invalidateToken(observed string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.token == observed {
+		c.token = ""
+		c.refreshAt = time.Time{}
+		c.expiresAt = time.Time{}
+	}
+}
+
+func (c *Client) accessToken(ctx context.Context) (string, error) {
+	if !c.Configured() {
+		return "", ErrNotConfigured
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	now := c.now()
+	if c.token != "" && now.Before(c.refreshAt) {
+		return c.token, nil
+	}
+	if c.authRevoked {
+		return "", ErrAuthRejected
+	}
+	if now.Before(c.retryAt) {
+		if c.token != "" && now.Before(c.expiresAt) {
+			return c.token, nil
+		}
+		return "", errors.New("Infisical login is temporarily unavailable")
+	}
+	body, _ := json.Marshal(struct {
+		ID     string `json:"clientId"`
+		Secret string `json:"clientSecret"`
+	}{c.clientID, c.clientSecret})
+	endpoint := c.baseURL.ResolveReference(&url.URL{Path: "/api/v1/auth/universal-auth/login"})
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint.String(), bytes.NewReader(body))
+	if err != nil {
+		return "", errors.New("build Infisical login request")
+	}
+	request.Header.Set("Content-Type", "application/json")
+	response, err := c.httpClient.Do(request)
+	if err != nil {
+		c.retryAt = now.Add(5 * time.Second)
+		if c.token != "" && now.Before(c.expiresAt) {
+			return c.token, nil
+		}
+		return "", errors.New("Infisical login failed")
+	}
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden {
+		c.authRevoked = true
+		return "", ErrAuthRejected
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		c.retryAt = now.Add(5 * time.Second)
+		if c.token != "" && now.Before(c.expiresAt) {
+			return c.token, nil
+		}
+		return "", &APIError{StatusCode: response.StatusCode}
+	}
+	var login struct {
+		Token     string  `json:"accessToken"`
+		ExpiresIn float64 `json:"expiresIn"`
+		TokenType string  `json:"tokenType"`
+	}
+	maxTTLSeconds := float64((time.Duration(1<<63-1) / time.Second))
+	if err := json.NewDecoder(io.LimitReader(response.Body, 64<<10)).Decode(&login); err != nil || login.Token == "" || !(login.ExpiresIn > 0 && login.ExpiresIn <= maxTTLSeconds) || login.TokenType != "Bearer" {
+		return "", errors.New("Infisical returned an invalid login response")
+	}
+	c.token = login.Token
+	validFor := time.Duration(login.ExpiresIn * float64(time.Second))
+	c.refreshAt = now.Add(validFor * 8 / 10)
+	c.expiresAt = now.Add(validFor)
+	c.retryAt = time.Time{}
+	return c.token, nil
+}

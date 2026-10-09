@@ -2,7 +2,11 @@
 
 ## Scope and current state
 
-Build a reusable Infisical interface for KuchDesk on this Mac and its Docker Desktop KIND cluster. This document is a plan; it does not authorize a new identity, credentials, access grants, service deployment, or data migration. Keep the existing Infisical Secrets Operator path for Grafana while evaluating the new interface.
+Build a reusable Infisical interface for KuchDesk on this Mac and its Docker Desktop KIND cluster. The first local MCP/authentication slice exists in source; it has not been deployed or tested with a real identity. No new identity, credentials, access grants, or data migration have been performed. Keep the existing Infisical Secrets Operator path for Grafana.
+
+| Implemented in source | Still required |
+| --- | --- |
+| Stdio MCP discovery; name-only secret listing; two-variable Universal Auth bootstrap; in-memory access-token renewal, restart re-login, and bounded read retry. | Verify credential lifetime and live permissions; implement scoped secret writes, administration, host API and cluster-agent bridge, operator-backed chart delivery, Helm execution, and live MCP acceptance tests. |
 
 | Area | Verified state | Limit or next check |
 | --- | --- | --- |
