@@ -59,12 +59,21 @@ are passed to it.
 
 `cmd/kuchdesk-infisical-mcp` is a separate, long-running stdio MCP server. It does not change the periodic DNS LaunchAgent or run as a network listener. It uses the official MCP Go SDK v1.6.0 and Infisical's documented REST API from the deployed v0.151.0 OpenAPI; the host-agent Go module now requires Go 1.25. The local client implements Universal Auth login, in-memory token renewal from `expiresIn`, restart re-login, one bounded retry of a read after HTTP 401, and a pause after a repeated 401. It does not assume a year-long access token.
 
-Only `INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` carry the bootstrap credential. Supply them in the trusted host process environment, never in command arguments, Git, MCP configuration text, or prompts. Pass the HTTPS origin separately:
+Only `INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` carry the bootstrap credential. For one-time local setup, run the no-echo command below yourself in a terminal. It creates `~/.config/kuchdesk/infisical/host.env` with directory mode `0700` and file mode `0600`, owned by your user. It never prints the values and refuses to overwrite an existing file. This is a persistent plaintext file readable by your user and system administrators; keep it outside Git and backups you do not trust.
+
+```sh
+cd /Users/mac/Documents/GitHub/kuchdesk/host-agent
+go run ./cmd/kuchdesk-infisical-setup
+```
+
+The CLI and MCP stdio process each load this file at startup through a strict two-key parser. The file must contain only `INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET`; it is never sourced as shell code. A complete process environment pair takes precedence, and `KUCHDESK_INFISICAL_ENV_FILE` can select another absolute private file. Do not put values in command arguments, Git, MCP configuration text, prompts, or chat. Pass the HTTPS origin separately:
 
 ```sh
 cd host-agent
 go run ./cmd/kuchdesk-infisical-mcp -url https://YOUR-INFISICAL-HOST
 ```
+
+Restart the MCP stdio process after setup or rotation so it loads the new file. Test locally with `kuchdesk-infisical ... capabilities` (`configured:true` proves only that the pair loaded), then use `list-secret-names` with the intended project ID, environment, and narrow path to verify Universal Auth and read permission. The existing Grafana Operator Secret is a separate identity and must not be copied into this host file.
 
 The Infisical MCP tools are `infisical_capabilities`, `infisical_list_secret_names`, `infisical_start_list_secret_names`, `infisical_job_status`, and `infisical_cancel_job`. Name listing requires an explicit project ID, environment slug, and absolute secret path. It requests `viewSecretValue=false` and returns only names and paths, discarding any value fields from the API response. Discovery works without credentials; a secret-list call then returns `credentials_not_configured`.
 

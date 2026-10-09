@@ -84,6 +84,22 @@ func TestMCPDiscoveryAndRedactedErrors(t *testing.T) {
 	}
 }
 
+func TestMCPHostClientReadsPrivateFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "infisical", "host.env")
+	if err := infisical.SaveHostCredentials(path, "id", "sensitive-value"); err != nil {
+		t.Fatal(err)
+	}
+	client, err := hostClient("https://infisical.example", func(key string) string {
+		if key == "KUCHDESK_INFISICAL_ENV_FILE" {
+			return path
+		}
+		return ""
+	})
+	if err != nil || !client.Configured() {
+		t.Fatalf("MCP host client did not load private file: %v", err)
+	}
+}
+
 func TestMCPDeployProfileBoundary(t *testing.T) {
 	root := t.TempDir()
 	source := filepath.Join(root, "source")

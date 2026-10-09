@@ -1,5 +1,6 @@
 # Local configuration and generated artifacts
 .env*
+**/host.env
 .DS_Store
 *.pem
 *.tsbuildinfo
