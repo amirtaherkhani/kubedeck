@@ -7,6 +7,8 @@ All notable KuchDesk changes are documented in this file.
 ### Added
 
 - Add a local stdio Infisical MCP server with typed capability discovery and name-only secret listing. Its Universal Auth client uses two host environment variables and renews short-lived access tokens in memory; no identity or live service is provisioned.
+- Share Infisical name-listing logic between a noninteractive CLI and MCP; add bounded in-process start/status/cancel tools for concurrent MCP requests without a separate task service.
+- Add bounded asynchronous scale/restart operations to the management-enabled Kubernetes agent, with per-workload serialization, status, deadlines, and cancellation.
 - Document required MCP access to the proposed host-side Infisical service, unattended Universal Auth, Helm/Kubernetes Secret delivery, capability boundaries, and phased acceptance criteria. This is a plan; no new service or identity is deployed.
 - Render site-specific HTTPS certificates, Traefik fallback TLS, and Grafana/Infisical domain overlays from one validated Go-powered profile. Support a different DNS zone and an existing external ClusterIssuer without editing application manifests.
 - Scrape the existing macOS node_exporter and probe Technitium's site and recursive DNS plus Docker Desktop's host DNS path from Prometheus, with a Grafana Host and DNS dashboard.
