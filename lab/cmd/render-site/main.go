@@ -12,23 +12,23 @@ import (
 )
 
 type siteProfile struct {
-	Domain string
+	Domain string `json:"domain"`
 	Hosts  struct {
-		Grafana   string
-		Infisical string
-	}
+		Grafana   string `json:"grafana"`
+		Infisical string `json:"infisical"`
+	} `json:"hosts"`
 	TLS struct {
 		Issuer struct {
-			Type           string
-			Name           string
-			SelfSignedName string
-			CASecretName   string
-			CANamespace    string
-			CACommonName   string
-		}
-		CertificateNamespaces    []string
-		DefaultTLSStoreNamespace string
-	}
+			Type           string `json:"type"`
+			Name           string `json:"name"`
+			SelfSignedName string `json:"selfSignedName"`
+			CASecretName   string `json:"caSecretName"`
+			CANamespace    string `json:"caNamespace"`
+			CACommonName   string `json:"caCommonName"`
+		} `json:"issuer"`
+		CertificateNamespaces    []string `json:"certificateNamespaces"`
+		DefaultTLSStoreNamespace string   `json:"defaultTlsStoreNamespace"`
+	} `json:"tls"`
 }
 
 type output struct {
@@ -279,6 +279,9 @@ func summaryField(dir, key string) (string, error) {
 }
 
 func run(args []string) error {
+	if len(args) > 0 && args[0] == "config" {
+		return runConfig(args[1:], os.Stdout)
+	}
 	flags := flag.NewFlagSet("render-site", flag.ContinueOnError)
 	profilePath := flags.String("profile", "site.json", "site profile")
 	domain := flags.String("domain", "", "override the profile's DNS domain")
