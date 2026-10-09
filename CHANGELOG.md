@@ -1,6 +1,6 @@
 # Changelog
 
-All notable KubeDeck changes are documented in this file.
+All notable KuchDesk changes are documented in this file.
 
 ## [Unreleased]
 
@@ -16,7 +16,18 @@ All notable KubeDeck changes are documented in this file.
 
 ### Changed
 
+- Rename the repository, both agents, Helm chart, API identity, and macOS integration to KuchDesk. The agent chart is now 0.7.0 and its app version is 0.4.0.
 - Remove embedded `local.dev` hostnames from deployment values and static TLS manifests. Document certificate-first domain migration and application configuration rollouts.
+
+### Breaking Changes
+
+- The Kubernetes agent Go module, chart/release name, resource names, `KUCHDESK_*` environment variables, `kuchdesk.io/v1alpha1` snapshot identity, and `X-KuchDesk-Confirm` request header replace their former KubeDeck equivalents. Client integrations and existing agent installations must update together.
+- The macOS LaunchAgent label and binary name change to `dev.kuchdesk.host-agent` and `kuchdesk-host-agent`. The installer does not remove an existing KubeDeck job.
+
+### Migration
+
+- Update imports, Helm paths, image references, bearer Secret names, and agent environment variables. Recreate or explicitly migrate the old chart release and Secret; Helm treats the renamed chart as a separate release. Preserve the existing CoreDNS override until the new agent and aliases are verified.
+- Stop the old macOS LaunchAgent before installing the new one with the same DNS zone, context, and interface. Verify DNS resolution, then remove the old job and binary. Preserve retained PVCs when renaming local Kubernetes resources.
 
 ## [0.9.0] - 2026-10-09
 
@@ -197,14 +208,14 @@ All notable KubeDeck changes are documented in this file.
   Rancher Desktop release workflow.
 - Document the verified immutable build and agent-first Helm deployment flow.
 
-[0.1.1]: https://github.com/amirtaherkhani/kubedeck/releases/tag/v0.1.1
-[0.1.2]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.1...v0.1.2
-[0.1.3]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.2...v0.1.3
-[0.1.4]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.3...v0.1.4
-[0.2.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.1.4...v0.2.0
-[0.4.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.3.4...v0.4.0
-[0.5.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.4.0...v0.5.0
-[0.6.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.5.0...v0.6.0
-[0.7.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.6.0...v0.7.0
-[0.8.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.7.0...v0.8.0
-[0.9.0]: https://github.com/amirtaherkhani/kubedeck/compare/v0.8.0...v0.9.0
+[0.1.1]: https://github.com/amirtaherkhani/kuchdesk/releases/tag/v0.1.1
+[0.1.2]: https://github.com/amirtaherkhani/kuchdesk/compare/v0.1.1...v0.1.2
+[0.1.3]: https://github.com/amirtaherkhani/kuchdesk/compare/v0.1.2...v0.1.3
+[0.1.4]: https://github.com/amirtaherkhani/kuchdesk/compare/v0.1.3...v0.1.4
+[0.2.0]: https://github.com/amirtaherkhani/kuchdesk/compare/v0.1.4...v0.2.0
+[0.4.0]: https://github.com/amirtaherkhani/kuchdesk/compare/v0.3.4...v0.4.0
+[0.5.0]: https://github.com/amirtaherkhani/kuchdesk/compare/v0.4.0...v0.5.0
+[0.6.0]: https://github.com/amirtaherkhani/kuchdesk/compare/v0.5.0...v0.6.0
+[0.7.0]: https://github.com/amirtaherkhani/kuchdesk/compare/v0.6.0...v0.7.0
+[0.8.0]: https://github.com/amirtaherkhani/kuchdesk/compare/v0.7.0...v0.8.0
+[0.9.0]: https://github.com/amirtaherkhani/kuchdesk/compare/v0.8.0...v0.9.0

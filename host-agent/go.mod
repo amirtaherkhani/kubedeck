@@ -1,3 +1,3 @@
-module github.com/amirtaherkhani/kubedeck/host-agent
+module github.com/amirtaherkhani/kuchdesk/host-agent
 
 go 1.23

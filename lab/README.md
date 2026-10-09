@@ -4,7 +4,7 @@ This is the checked-in deployment profile. [`site.json`](site.json) contains thi
 
 For another cluster, select its Kubernetes context, DNS zone, issuer, ingress class, storage classes, Secret names, and Infisical scope. The site renderer handles domain and TLS references only; the other Helm values and PostgreSQL manifest remain site-specific overlays. The observability components use Kubernetes search-domain Service names rather than assuming `cluster.local`. Grafana's Infisical endpoint, credential Secret, and path are configurable in `values.homelab.yaml`. Existing PVC storage classes are immutable; changing storage class requires a separate data migration, never just a site render.
 
-This directory keeps the Grafana observability stack, k6 Operator, and the platform configuration required for local HTTPS and Infisical-backed Grafana credentials. It does not manage the KubeDeck dashboard, shared application databases, or unrelated home-lab services.
+This directory keeps the Grafana observability stack, k6 Operator, and the platform configuration required for local HTTPS and Infisical-backed Grafana credentials. It does not manage the KuchDesk dashboard, shared application databases, or unrelated home-lab services.
 
 The runtime on Docker Desktop Kubernetes consists of Grafana and its image renderer, Prometheus Stack, Loki, Tempo, Alloy, and k6 Operator. cert-manager and Traefik provide HTTPS for the selected site domain; Infisical and its operator supply `observability/grafana-admin`. The existing Grafana, Loki, Tempo, and Infisical PVCs are reused. Loki's chart values retain its PVC when the StatefulSet scales down or is removed.
 
@@ -66,12 +66,12 @@ After installation, confirm `observability/grafana-admin` reports `ReadyToSyncSe
 
 The Host and DNS dashboard covers the Docker Desktop Kubernetes node, the macOS host, and Technitium DNS. macOS node_exporter must be reachable from the cluster at `host.docker.internal:9101`; this installation already runs it as a LaunchAgent. `host-dns-monitoring/` scrapes that endpoint and probes the generated site hostname through Technitium and Docker Desktop's host DNS endpoint, plus public recursive DNS through Technitium, every 30 seconds. The DNS probe uses a rendered ConfigMap and automatically reloads it, so a site-domain change only needs the generated ConfigMap reapplied. The Technitium HTTP health endpoint can return HTTP 200 with an `invalid-token` payload and does not prove DNS works.
 
-The DNS reconciler is a one-shot macOS LaunchAgent that repeats every 30 seconds. Install it from the repository root with the intended site zone and cluster context. When a VPN owns the default route, set `KUBEDECK_HOST_AGENT_INTERFACE` to the physical LAN interface (currently `en0` on this Mac); select the appropriate interface on another host.
+The DNS reconciler is a one-shot macOS LaunchAgent that repeats every 30 seconds. Install it from the repository root with the intended site zone and cluster context. When a VPN owns the default route, set `KUCHDESK_HOST_AGENT_INTERFACE` to the physical LAN interface (currently `en0` on this Mac); select the appropriate interface on another host.
 
 ```bash
-KUBEDECK_HOST_AGENT_ZONE=$(cd lab && go run ./cmd/render-site --get domain) \
-KUBEDECK_HOST_AGENT_KUBE_CONTEXT=docker-desktop \
-KUBEDECK_HOST_AGENT_INTERFACE=en0 \
+KUCHDESK_HOST_AGENT_ZONE=$(cd lab && go run ./cmd/render-site --get domain) \
+KUCHDESK_HOST_AGENT_KUBE_CONTEXT=docker-desktop \
+KUCHDESK_HOST_AGENT_INTERFACE=en0 \
 ./host-agent/install-macos.sh
 ```
 
@@ -98,6 +98,6 @@ dig @127.0.0.1 "${SITE_HOST#https://}" A
 
 1. Change `domain` in `site.json`, or render a separate profile with `go run ./cmd/render-site --profile path/to/site.json --output path/to/generated`. For a public domain, select an already configured `ClusterIssuer` with `tls.issuer.type: existing` and its name. A wildcard certificate needs a suitable DNS-01 issuer. For a private CA, its Secret namespace must match cert-manager's configured cluster-resource namespace. The renderer does not create DNS records or ACME credentials.
 2. Inspect generated manifests and Helm overlays. Apply the new Certificate resources and wait for each certificate to be `Ready` **before** switching Ingress or the default TLSStore. The domain-derived Secret name lets old and new certificates coexist. For an external issuer, skip the private-CA issuer/CA steps. Apply the TLSStore only after its namespace's Secret exists.
-3. Update the Technitium DNS zone and the host agent's `KUBEDECK_HOST_AGENT_ZONE` setting to the new domain, then confirm resolution. Update the existing `platform-secrets/infisical-secrets` `SITE_URL` through the established secret workflow to match generated `infisicalUrl`; never put its other secret values in Git. Upgrade Infisical and Grafana with the generated overlays, then verify HTTPS, redirects, and login. Keep old DNS and certificates during a planned transition; remove them separately after verification.
+3. Update the Technitium DNS zone and the host agent's `KUCHDESK_HOST_AGENT_ZONE` setting to the new domain, then confirm resolution. Update the existing `platform-secrets/infisical-secrets` `SITE_URL` through the established secret workflow to match generated `infisicalUrl`; never put its other secret values in Git. Upgrade Infisical and Grafana with the generated overlays, then verify HTTPS, redirects, and login. Keep old DNS and certificates during a planned transition; remove them separately after verification.
 
 cert-manager renews issued certificates and updates their Secrets automatically. Traefik can reload updated TLS Secrets without a process restart. A domain change to Grafana's `root_url` and Infisical's `SITE_URL` still requires their application pods to reload configuration; with the current single Grafana replica and `ReadWriteOnce` PVC, expect a brief interruption. DNS changes also depend on resolver caches. This is deploy-time reconfiguration and automatic certificate renewal, not hot reload of every application setting.

@@ -1,5 +1,5 @@
 # Docker Desktop's Traefik release is managed directly by Helm. Watch all
-# namespaces so newly enabled KubeDeck modules do not need controller edits.
+# namespaces so newly enabled KuchDesk modules do not need controller edits.
 deployment:
   kind: Deployment
   replicas: 1

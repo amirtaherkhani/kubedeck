@@ -12,33 +12,33 @@ if [[ -z "${kubectl_bin}" || ! -x "${kubectl_bin}" ]]; then
   echo "kubectl must be installed before the host agent." >&2
   exit 1
 fi
-kube_context="${KUBEDECK_HOST_AGENT_KUBE_CONTEXT:-}"
+kube_context="${KUCHDESK_HOST_AGENT_KUBE_CONTEXT:-}"
 if [[ -z "${kube_context}" ]]; then
   kube_context="$(kubectl config current-context)"
 fi
 if [[ -z "${kube_context}" ]]; then
-  echo "Select a Kubernetes context or set KUBEDECK_HOST_AGENT_KUBE_CONTEXT." >&2
+  echo "Select a Kubernetes context or set KUCHDESK_HOST_AGENT_KUBE_CONTEXT." >&2
   exit 1
 fi
-zone="${KUBEDECK_HOST_AGENT_ZONE:-}"
+zone="${KUCHDESK_HOST_AGENT_ZONE:-}"
 if [[ -z "${zone}" ]]; then
-  echo "Set KUBEDECK_HOST_AGENT_ZONE to the DNS zone this agent may change." >&2
+  echo "Set KUCHDESK_HOST_AGENT_ZONE to the DNS zone this agent may change." >&2
   exit 1
 fi
 bin_dir="${HOME}/.local/bin"
 agent_dir="${HOME}/Library/LaunchAgents"
-log_dir="${HOME}/Library/Logs/KubeDeck"
-label="dev.kubedeck.host-agent"
+log_dir="${HOME}/Library/Logs/KuchDesk"
+label="dev.kuchdesk.host-agent"
 plist="${agent_dir}/${label}.plist"
-bin="${bin_dir}/kubedeck-host-agent"
+bin="${bin_dir}/kuchdesk-host-agent"
 
 mkdir -p "${bin_dir}" "${agent_dir}" "${log_dir}"
-if [[ -e "${plist}" ]] && ! /usr/libexec/PlistBuddy -c 'Print :KubeDeckManaged' "${plist}" 2>/dev/null | grep -qx true; then
+if [[ -e "${plist}" ]] && ! /usr/libexec/PlistBuddy -c 'Print :KuchDeskManaged' "${plist}" 2>/dev/null | grep -qx true; then
   echo "Refusing to replace an existing unmanaged LaunchAgent: ${plist}" >&2
   exit 1
 fi
 
-(cd "${script_dir}" && go build -o "${bin}.new" ./cmd/kubedeck-host-agent)
+(cd "${script_dir}" && go build -o "${bin}.new" ./cmd/kuchdesk-host-agent)
 chmod 0700 "${bin}.new"
 
 python3 - "${plist}.new" "${label}" "${bin}" "${log_dir}" "${HOME}" "${kube_context}" "${zone}" "$(dirname "${kubectl_bin}")" <<'PY'
@@ -53,14 +53,14 @@ arguments = [
     '-zone', zone,
 ]
 for variable, option in (
-    ('KUBEDECK_HOST_AGENT_INTERFACE', '-interface'),
-    ('KUBEDECK_HOST_AGENT_TARGET_IP', '-target-ip'),
-    ('KUBEDECK_HOST_AGENT_NAMESPACE', '-namespace'),
-    ('KUBEDECK_HOST_AGENT_SERVICE', '-service'),
-    ('KUBEDECK_HOST_AGENT_ADMIN_SECRET', '-admin-secret'),
-    ('KUBEDECK_HOST_AGENT_PASSWORD_KEY', '-password-key'),
-    ('KUBEDECK_HOST_AGENT_ADMIN_USER', '-admin-user'),
-    ('KUBEDECK_HOST_AGENT_API_PORT', '-api-port'),
+    ('KUCHDESK_HOST_AGENT_INTERFACE', '-interface'),
+    ('KUCHDESK_HOST_AGENT_TARGET_IP', '-target-ip'),
+    ('KUCHDESK_HOST_AGENT_NAMESPACE', '-namespace'),
+    ('KUCHDESK_HOST_AGENT_SERVICE', '-service'),
+    ('KUCHDESK_HOST_AGENT_ADMIN_SECRET', '-admin-secret'),
+    ('KUCHDESK_HOST_AGENT_PASSWORD_KEY', '-password-key'),
+    ('KUCHDESK_HOST_AGENT_ADMIN_USER', '-admin-user'),
+    ('KUCHDESK_HOST_AGENT_API_PORT', '-api-port'),
 ):
     if value := os.environ.get(variable):
         arguments.extend((option, value))
@@ -75,7 +75,7 @@ if kubeconfig := os.environ.get('KUBECONFIG'):
 with open(path, 'wb') as file:
     plistlib.dump({
         'Label': label,
-        'KubeDeckManaged': True,
+        'KuchDeskManaged': True,
         'ProgramArguments': arguments,
         'RunAtLoad': True,
         'StartInterval': 30,

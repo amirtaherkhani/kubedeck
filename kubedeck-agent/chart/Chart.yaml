@@ -1,9 +1,0 @@
-apiVersion: v2
-name: kubedeck-agent
-description: Kubernetes discovery, metrics, SSE, and opt-in CoreDNS alias agent.
-home: https://github.com/amirtaherkhani/kubedeck
-sources:
-  - https://github.com/amirtaherkhani/kubedeck/tree/main/kubedeck-agent
-type: application
-version: 0.6.0
-appVersion: "0.3.0"
