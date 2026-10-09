@@ -9,6 +9,10 @@ image:
 infisical:
   projectSlug: home-lab
   envSlug: local
+  hostAPI: http://infisical-backend.platform-secrets.svc:8080/api
+  credentialsSecretName: infisical-universal-auth
+  credentialsSecretNamespace: platform-secrets
+  secretsPath: /apps/observability/grafana
 
 envFromSecret: grafana-admin
 
@@ -158,7 +162,7 @@ datasources:
         uid: prometheus
         type: prometheus
         access: proxy
-        url: http://monitoring-kube-prometheus-prometheus.observability.svc.cluster.local:9090
+        url: http://monitoring-kube-prometheus-prometheus:9090
         isDefault: true
         editable: false
         jsonData:
@@ -174,7 +178,7 @@ datasources:
         uid: loki
         type: loki
         access: proxy
-        url: http://loki.observability.svc.cluster.local:3100
+        url: http://loki:3100
         editable: false
         jsonData:
           derivedFields:
@@ -187,7 +191,7 @@ datasources:
         uid: tempo
         type: tempo
         access: proxy
-        url: http://tempo.observability.svc.cluster.local:3200
+        url: http://tempo:3200
         editable: false
         jsonData:
           nodeGraph:

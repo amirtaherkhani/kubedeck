@@ -170,8 +170,8 @@ through `external-dns`.
 | Environment variable | Default |
 | --- | --- |
 | `KUBEDECK_AGENT_LISTEN_ADDRESS` | `:8080` |
-| `KUBEDECK_CLUSTER_ID` | `default` |
-| `KUBEDECK_CLUSTER_NAME` | `Kubernetes` |
+| `KUBEDECK_CLUSTER_ID` | required; unique, stable cluster identity |
+| `KUBEDECK_CLUSTER_NAME` | required; human-readable display name |
 | `KUBEDECK_CLUSTER_DOMAIN` | `cluster.local` |
 | `KUBEDECK_AGENT_TOKEN` | empty, internal endpoint unauthenticated |
 | `KUBEDECK_DNS_MANAGEMENT_ENABLED` | `false` |
@@ -197,6 +197,7 @@ For local development:
 ```bash
 KUBECONFIG="$HOME/.kube/config" \
 KUBEDECK_CLUSTER_ID=local \
+KUBEDECK_CLUSTER_NAME='Local cluster' \
 go run ./cmd/kubedeck-agent
 ```
 

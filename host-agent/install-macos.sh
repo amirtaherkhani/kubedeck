@@ -20,6 +20,11 @@ if [[ -z "${kube_context}" ]]; then
   echo "Select a Kubernetes context or set KUBEDECK_HOST_AGENT_KUBE_CONTEXT." >&2
   exit 1
 fi
+zone="${KUBEDECK_HOST_AGENT_ZONE:-}"
+if [[ -z "${zone}" ]]; then
+  echo "Set KUBEDECK_HOST_AGENT_ZONE to the DNS zone this agent may change." >&2
+  exit 1
+fi
 bin_dir="${HOME}/.local/bin"
 agent_dir="${HOME}/Library/LaunchAgents"
 log_dir="${HOME}/Library/Logs/KubeDeck"
@@ -36,16 +41,16 @@ fi
 (cd "${script_dir}" && go build -o "${bin}.new" ./cmd/kubedeck-host-agent)
 chmod 0700 "${bin}.new"
 
-python3 - "${plist}.new" "${label}" "${bin}" "${log_dir}" "${HOME}" "${kube_context}" "$(dirname "${kubectl_bin}")" <<'PY'
+python3 - "${plist}.new" "${label}" "${bin}" "${log_dir}" "${HOME}" "${kube_context}" "${zone}" "$(dirname "${kubectl_bin}")" <<'PY'
 import os
 import plistlib
 import sys
 
-path, label, binary, log_dir, home, kube_context, kubectl_dir = sys.argv[1:]
+path, label, binary, log_dir, home, kube_context, zone, kubectl_dir = sys.argv[1:]
 arguments = [
     binary,
     '-kube-context', kube_context,
-    '-zone', os.environ.get('KUBEDECK_HOST_AGENT_ZONE', 'local.dev'),
+    '-zone', zone,
 ]
 for variable, option in (
     ('KUBEDECK_HOST_AGENT_INTERFACE', '-interface'),
@@ -61,10 +66,12 @@ for variable, option in (
         arguments.extend((option, value))
 environment = {
     'HOME': home,
-    'PATH': ':'.join((kubectl_dir, '/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin', '/usr/sbin', '/sbin')),
+    'PATH': ':'.join((kubectl_dir, '/usr/bin', '/bin', '/usr/sbin', '/sbin')),
 }
 if kubeconfig := os.environ.get('KUBECONFIG'):
-    environment['KUBECONFIG'] = kubeconfig
+    environment['KUBECONFIG'] = os.pathsep.join(
+        os.path.abspath(os.path.expanduser(entry)) for entry in kubeconfig.split(os.pathsep) if entry
+    )
 with open(path, 'wb') as file:
     plistlib.dump({
         'Label': label,

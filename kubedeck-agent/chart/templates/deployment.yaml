@@ -1,6 +1,12 @@
 {{- if not .Values.image.repository }}
 {{- fail "image.repository is required." }}
 {{- end }}
+{{- if hasKey .Values.agent "listenAddress" }}
+{{- fail "agent.listenAddress is no longer supported; set agent.listenHost and service.targetPort instead." }}
+{{- end }}
+{{- if or (lt (int .Values.service.targetPort) 1) (gt (int .Values.service.targetPort) 65535) }}
+{{- fail "service.targetPort must be a TCP port between 1 and 65535." }}
+{{- end }}
 {{- if not .Values.image.tag }}
 {{- fail "image.tag is required and must be an immutable deployment tag." }}
 {{- end }}
@@ -69,7 +75,7 @@ spec:
               protocol: TCP
           env:
             - name: KUBEDECK_AGENT_LISTEN_ADDRESS
-              value: {{ .Values.agent.listenAddress | quote }}
+              value: {{ printf "%s:%v" .Values.agent.listenHost .Values.service.targetPort | quote }}
             - name: KUBEDECK_CLUSTER_ID
               value: {{ required "cluster.id is required" .Values.cluster.id | quote }}
             - name: KUBEDECK_CLUSTER_NAME

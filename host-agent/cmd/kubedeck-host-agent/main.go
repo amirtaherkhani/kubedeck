@@ -145,44 +145,6 @@ func reconcileDNS(ctx context.Context, client *apiClient, cfg config, ip net.IP)
 	return nil
 }
 
-func lanIP(ctx context.Context, override string) (net.IP, error) {
-	device := override
-	if device == "" {
-		out, err := exec.CommandContext(ctx, "route", "-n", "get", "default").Output()
-		if err != nil {
-			return nil, fmt.Errorf("find default route: %w", err)
-		}
-		for _, line := range strings.Split(string(out), "\n") {
-			fields := strings.Fields(line)
-			if len(fields) == 2 && fields[0] == "interface:" {
-				device = fields[1]
-				break
-			}
-		}
-	}
-	if device == "" || strings.HasPrefix(device, "utun") {
-		return nil, fmt.Errorf("no physical LAN interface from default route (%s); use -interface", device)
-	}
-	ifc, err := net.InterfaceByName(device)
-	if err != nil {
-		return nil, err
-	}
-	if ifc.Flags&net.FlagUp == 0 || ifc.Flags&net.FlagLoopback != 0 {
-		return nil, fmt.Errorf("interface %s is not an active LAN interface", device)
-	}
-	addrs, err := ifc.Addrs()
-	if err != nil {
-		return nil, err
-	}
-	for _, a := range addrs {
-		ip, _, err := net.ParseCIDR(a.String())
-		if err == nil && ip.To4() != nil && ip.IsPrivate() && !ip.IsLinkLocalUnicast() {
-			return ip.To4(), nil
-		}
-	}
-	return nil, fmt.Errorf("interface %s has no private IPv4 address", device)
-}
-
 func adminPassword(ctx context.Context, cfg config) (string, error) {
 	out, err := exec.CommandContext(ctx, "kubectl", cfg.kubectlArgs("get", "secret", cfg.AdminSecret, "-o", "json")...).Output()
 	if err != nil {

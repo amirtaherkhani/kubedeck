@@ -15,7 +15,8 @@ cluster:
   domain: cluster.local
 
 agent:
-  listenAddress: ":8080"
+  # The HTTP port follows service.targetPort; leave empty to listen on all interfaces.
+  listenHost: ""
   managementEnabled: false
   metricsInterval: 10s
   refreshDebounce: 250ms
