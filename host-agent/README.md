@@ -38,7 +38,7 @@ cd host-agent
 go run ./cmd/kuchdesk-infisical-mcp -url https://YOUR-INFISICAL-HOST
 ```
 
-The MCP tools are `infisical_capabilities`, `infisical_list_secret_names`, `infisical_start_list_secret_names`, `infisical_job_status`, and `infisical_cancel_job`. Name listing requires an explicit project ID, environment slug, and absolute secret path. It requests `viewSecretValue=false` and returns only names and paths, discarding any value fields from the API response. Discovery works without credentials; a secret-list call then returns `credentials_not_configured`.
+The Infisical MCP tools are `infisical_capabilities`, `infisical_list_secret_names`, `infisical_start_list_secret_names`, `infisical_job_status`, and `infisical_cancel_job`. Name listing requires an explicit project ID, environment slug, and absolute secret path. It requests `viewSecretValue=false` and returns only names and paths, discarding any value fields from the API response. Discovery works without credentials; a secret-list call then returns `credentials_not_configured`.
 
 The persistent MCP process executes up to four independent operations in parallel, retains at most 64 in-memory records, and gives each operation a 30-second deadline. Operations targeting the same nonempty resource key serialize in the runner; the current name-only reads use no key. Status distinguishes queued, running, succeeded, failed, canceled, and timed out. A cancellation request is cooperative through Go context; process exit discards job history and cancels in-flight work. This is lightweight agent execution, not a durable task service.
 
@@ -52,7 +52,7 @@ go run ./cmd/kuchdesk-infisical -url https://YOUR-INFISICAL-HOST list-secret-nam
 
 No real identity, credential, role, or live MCP service is provisioned by this source change. Permissions and bootstrap credential lifetime remain unverified against this installation.
 
-Secret writes, project/identity administration, value delivery, a host HTTP API, Kubernetes-agent bridging, and Helm execution through Infisical MCP are not implemented. Existing Grafana Operator sync remains independent.
+Secret writes, project/identity administration, value delivery, a host HTTP API, and Kubernetes-agent bridging are not implemented. Existing Grafana Operator sync remains independent. The same host MCP process now exposes a separate opt-in KuchDesk deployment workflow described below; this does not use Infisical credentials.
 
 ## Local build and deployment workflow
 
@@ -87,8 +87,36 @@ progress and reports failures without printing child output, rendered Secret
 data, or Infisical credentials. A successful rollout is readiness evidence,
 not an application smoke test. Helm's `--atomic` covers upgrade failures; if the subsequent
 `kubectl rollout status` check fails, inspect the release before retrying
-because the successful Helm upgrade remains installed. This source feature has
-only fake-runner and chart-render tests; the current local registry pull/push
-route is not yet healthy, and no live deployment was attempted through this
-CLI. It is synchronous and is not yet
-exposed as a host API or MCP operation.
+because the successful Helm upgrade remains installed. The workflow has
+fake-runner and chart-render tests. A host-side `crane` push and node-side
+`ctr` pull have succeeded against the live registry, but kubelet pulling and
+the complete Helm rollout remain unverified.
+
+When a registry is available only through a macOS localhost port-forward,
+Docker Desktop's image daemon cannot use that host-local endpoint. Set
+`pushMode` to `host-crane`, `hostPushRepository` to
+`127.0.0.1:5001/kuchdesk-agent`, and `imageRepository` to
+`localhost:5001/kuchdesk-agent`. Install `crane` v0.20.6 from
+`github.com/google/go-containerregistry/cmd/crane` on the host PATH. The
+workflow saves the built Docker image to a temporary archive, pushes it from
+the host with `crane`, and resolves its registry digest. `kindPrepull: true`
+discovers the nodes from the explicit Kubernetes context, pre-pulls the exact
+tag and digest on each node through `ctr`, and sets Helm's
+`image.pullPolicy=Never` only after every pre-pull succeeds. This is a
+Docker Desktop KIND profile, not a generic Kubernetes registry solution.
+The registry Service and persistent data are retained. Existing cloud-hosted
+images in other charts are unaffected.
+
+The host MCP process offers `kuchdesk_deploy_plan`, `kuchdesk_deploy_start`,
+`kuchdesk_job_status`, and `kuchdesk_cancel_job`. Set an absolute
+`KUCHDESK_DEPLOY_PROFILE_DIR` to permit plan reads of named `.json` files in
+that directory. Start stays disabled unless `KUCHDESK_DEPLOY_ENABLED=true`
+is set in the trusted host process environment; it also requires the exact
+`release/namespace` value from the profile. A start runs in the existing
+bounded in-process runner with a 20-minute deadline and serializes operations
+for the same context, namespace, and release. Profile names cannot escape the
+configured directory through path traversal or symlinks. Status and cancel
+are per-process only. The MCP process requires local Docker, `crane`, Helm,
+kubectl, and access to the selected Kubernetes context. This deployment path
+has source tests but has not performed a live agent rollout; enabling
+cluster-admin RBAC and CoreDNS edits remain separate operator decisions.

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -25,25 +24,9 @@ func run(args []string, stdout, stderr io.Writer, runner deploy.Runner) int {
 		fmt.Fprintln(stderr, "usage: kuchdesk-deploy -profile /absolute/profile.json [-apply -confirm release/namespace] [-timeout 20m]")
 		return 2
 	}
-	file, err := os.Open(*profile)
+	spec, err := deploy.LoadSpec(*profile)
 	if err != nil {
-		fmt.Fprintln(stderr, "deployment profile unavailable")
-		return 2
-	}
-	defer file.Close()
-	if info, err := file.Stat(); err != nil || info.Size() > 64<<10 {
-		fmt.Fprintln(stderr, "deployment profile exceeds 64 KiB")
-		return 2
-	}
-	var spec deploy.Spec
-	decoder := json.NewDecoder(io.LimitReader(file, 64<<10))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&spec); err != nil {
-		fmt.Fprintln(stderr, "invalid deployment profile")
-		return 2
-	}
-	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		fmt.Fprintln(stderr, "deployment profile must contain one JSON object")
+		fmt.Fprintln(stderr, err)
 		return 2
 	}
 	steps, err := spec.Plan()
@@ -52,7 +35,7 @@ func run(args []string, stdout, stderr io.Writer, runner deploy.Runner) int {
 		return 2
 	}
 	if !*apply {
-		if err := json.NewEncoder(stdout).Encode(map[string]any{"release": spec.Release, "namespace": spec.Namespace, "kubeContext": spec.KubeContext, "sourceDir": spec.SourceDir, "chartDir": spec.ChartDir, "valuesFiles": spec.ValuesFiles, "deployment": spec.Deployment, "image": spec.ImageRepository + ":" + spec.ImageTag, "steps": steps}); err != nil {
+		if err := json.NewEncoder(stdout).Encode(map[string]any{"release": spec.Release, "namespace": spec.Namespace, "kubeContext": spec.KubeContext, "sourceDir": spec.SourceDir, "chartDir": spec.ChartDir, "valuesFiles": spec.ValuesFiles, "deployment": spec.Deployment, "image": spec.ImageRepository + ":" + spec.ImageTag, "pushMode": spec.PushMode, "hostPushRepository": spec.HostPushRepo, "kindPrepull": spec.KindPrepull, "steps": steps}); err != nil {
 			fmt.Fprintln(stderr, "write plan failed")
 			return 1
 		}

@@ -10,12 +10,14 @@ All notable KuchDesk changes are documented in this file.
 - Share Infisical name-listing logic between a noninteractive CLI and MCP; add bounded in-process start/status/cancel tools for concurrent MCP requests without a separate task service.
 - Add bounded asynchronous scale/restart operations to the management-enabled Kubernetes agent, with per-workload serialization, status, deadlines, and cancellation.
 - Add a host-side build/push/Helm/rollout CLI with an explicit profile, plan mode, revision check, image digest pin, and fail-fast behavior. It is not installed or run against the live cluster.
+- Add an opt-in MCP deployment operation backed by the same local profile workflow and bounded in-process runner, with plan, start, status, and cancel tools.
 - Document required MCP access to the proposed host-side Infisical service, unattended Universal Auth, Helm/Kubernetes Secret delivery, capability boundaries, and phased acceptance criteria. This is a plan; no new service or identity is deployed.
 - Render site-specific HTTPS certificates, Traefik fallback TLS, and Grafana/Infisical domain overlays from one validated Go-powered profile. Support a different DNS zone and an existing external ClusterIssuer without editing application manifests.
 - Scrape the existing macOS node_exporter and probe Technitium's site and recursive DNS plus Docker Desktop's host DNS path from Prometheus, with a Grafana Host and DNS dashboard.
 
 ### Fixed
 
+- Push locally built images through the macOS host's port-forwarded registry using `crane`, with optional digest pre-pull on dynamically discovered KIND nodes before Helm runs.
 - Manage opt-in CoreDNS service aliases on Docker Desktop KIND through a bounded block in the existing Corefile, preserving unrelated directives and rejecting stale or unsafe updates.
 - Let new Infisical PostgreSQL installations use the cluster's default StorageClass instead of assuming K3s `local-path`; preserve the existing StatefulSet and PVC during upgrades.
 - Let the Kubernetes agent use a developer's kubeconfig when no in-cluster credentials exist, with an explicit context override and multi-file `KUBECONFIG` support.

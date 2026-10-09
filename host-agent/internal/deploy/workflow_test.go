@@ -19,6 +19,7 @@ type fakeRunner struct {
 	calls   []call
 	failAt  string
 	digests string
+	nodes   string
 }
 
 func (f *fakeRunner) Run(_ context.Context, _ string, name string, args ...string) error {
@@ -38,8 +39,66 @@ func (f *fakeRunner) Output(_ context.Context, _ string, name string, args ...st
 		return []byte{}, nil
 	case "docker image":
 		return []byte(f.digests), nil
+	case "crane digest":
+		return []byte(f.digests), nil
+	case "kubectl --context":
+		return []byte(f.nodes), nil
 	default:
 		return nil, errors.New("unexpected output call")
+	}
+}
+
+func TestHostRegistryPushAndKindPrepull(t *testing.T) {
+	spec := fixture(t)
+	spec.PushMode = "host-crane"
+	spec.HostPushRepo = "127.0.0.1:5001/kuchdesk-agent"
+	spec.KindPrepull = true
+	digest := "sha256:" + strings.Repeat("b", 64)
+	runner := &fakeRunner{digests: digest + "\n", nodes: `{"items":[{"metadata":{"name":"desktop-control-plane"}}]}`}
+	result, err := (Workflow{Runner: runner}).Apply(context.Background(), spec)
+	if err != nil || result.Digest != digest {
+		t.Fatalf("host push failed: %+v %v", result, err)
+	}
+	var save, push, prepull, upgrade bool
+	for _, call := range runner.calls {
+		joined := call.name + " " + strings.Join(call.args, " ")
+		if strings.HasPrefix(joined, "docker save ") {
+			save = true
+		}
+		if strings.HasPrefix(joined, "crane push ") {
+			push = true
+		}
+		if strings.Contains(joined, "docker push ") {
+			t.Fatal("used Docker daemon to push through host-only port-forward")
+		}
+		if strings.HasPrefix(joined, "docker exec desktop-control-plane ctr ") && strings.Contains(joined, spec.ImageRepository+":"+spec.ImageTag+"@"+digest) {
+			prepull = true
+		}
+		if strings.HasPrefix(joined, "helm upgrade ") {
+			upgrade = true
+			if !strings.Contains(joined, "image.pullPolicy=Never") {
+				t.Fatal("pre-pulled image may be fetched again by kubelet")
+			}
+		}
+	}
+	if !save || !push || !prepull || !upgrade {
+		t.Fatalf("missing workflow phase: save=%t push=%t prepull=%t upgrade=%t", save, push, prepull, upgrade)
+	}
+}
+
+func TestPrepullFailureStopsBeforeHelm(t *testing.T) {
+	spec := fixture(t)
+	spec.PushMode = "host-crane"
+	spec.HostPushRepo = "127.0.0.1:5001/kuchdesk-agent"
+	spec.KindPrepull = true
+	runner := &fakeRunner{digests: "sha256:" + strings.Repeat("b", 64), nodes: `{"items":[{"metadata":{"name":"desktop-control-plane"}}]}`, failAt: "docker exec"}
+	if _, err := (Workflow{Runner: runner}).Apply(context.Background(), spec); err == nil {
+		t.Fatal("accepted failed node pre-pull")
+	}
+	for _, call := range runner.calls {
+		if call.name == "helm" && call.args[0] == "upgrade" {
+			t.Fatal("deployed without node image")
+		}
 	}
 }
 
