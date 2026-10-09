@@ -100,7 +100,29 @@ type doctorInput struct {
 	DiskPath     string          `json:"diskPath" jsonschema:"required,absolute build-volume path"`
 	MinFreeBytes uint64          `json:"minFreeBytes,omitempty"`
 	Services     []doctor.Target `json:"services,omitempty"`
-	AI           bool            `json:"ai,omitempty"`
+}
+
+func (input doctorInput) config() doctor.Config {
+	return doctor.Config{Domain: input.Domain, KubeContext: input.KubeContext, RegistryURL: input.RegistryURL, DiskPath: input.DiskPath, MinFreeBytes: input.MinFreeBytes, Services: input.Services}
+}
+
+type doctorVerifyInput struct {
+	Domain      string          `json:"domain" jsonschema:"required,DNS name to resolve"`
+	KubeContext string          `json:"kubeContext" jsonschema:"required,explicit Kubernetes context"`
+	RegistryURL string          `json:"registryUrl" jsonschema:"required,loopback registry origin"`
+	DiskPath    string          `json:"diskPath" jsonschema:"required,absolute volume path"`
+	Services    []doctor.Target `json:"services,omitempty"`
+	CheckIDs    []string        `json:"checkIds" jsonschema:"required,check IDs to verify again"`
+}
+
+type doctorPlanOutput struct {
+	Valid       bool `json:"valid"`
+	MaxAttempts int  `json:"maxAttempts"`
+	Steps       int  `json:"steps"`
+}
+
+type doctorRunner interface {
+	Run(context.Context, doctor.Config) (doctor.Report, error)
 }
 
 var profileNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,62}\.json$`)
@@ -131,7 +153,7 @@ func newServerWithDeploy(service *infisical.Service, runner *async.Runner, cfg d
 	return newServerWithServices(service, runner, cfg, doctor.Service{})
 }
 
-func newServerWithServices(service *infisical.Service, runner *async.Runner, cfg deployConfig, diagnostics doctor.Service) *mcp.Server {
+func newServerWithServices(service *infisical.Service, runner *async.Runner, cfg deployConfig, diagnostics doctorRunner) *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{Name: "kuchdesk-infisical", Version: "0.1.0"}, nil)
 	mcp.AddTool(server, &mcp.Tool{Name: "infisical_capabilities", Description: "Show implemented Infisical tools and local credential configuration without accessing secrets.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(context.Context, *mcp.CallToolRequest, capabilityInput) (*mcp.CallToolResult, capabilityOutput, error) {
@@ -251,16 +273,90 @@ func newServerWithServices(service *infisical.Service, runner *async.Runner, cfg
 			}
 			return nil, outputFor(status), nil
 		})
-	mcp.AddTool(server, &mcp.Tool{Name: "kuchdesk_doctor", Description: "Run bounded read-only Mac, DNS, Docker, KIND, registry, resource, and Deployment checks. Optional AI is unavailable until a provider is explicitly configured.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
+	mcp.AddTool(server, &mcp.Tool{Name: "kuchdesk_doctor", Description: "Run bounded read-only Mac, DNS, Docker, KIND, registry, resource, and Deployment checks; use the MCP Doctor prompt for AI-assisted diagnosis.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(ctx context.Context, _ *mcp.CallToolRequest, input doctorInput) (*mcp.CallToolResult, doctor.Report, error) {
-			config := doctor.Config{Domain: input.Domain, KubeContext: input.KubeContext, RegistryURL: input.RegistryURL, DiskPath: input.DiskPath, MinFreeBytes: input.MinFreeBytes, Services: input.Services}
-			report, err := diagnostics.Run(ctx, config, input.AI)
+			report, err := diagnostics.Run(ctx, input.config())
 			if err != nil {
 				return nil, doctor.Report{}, err
 			}
 			return nil, report, nil
 		})
+	mcp.AddTool(server, &mcp.Tool{Name: "kuchdesk_doctor_validate_plan", Description: "Validate a bounded typed repair plan without executing it. Validation does not grant permission.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
+		func(_ context.Context, _ *mcp.CallToolRequest, input doctor.RepairPlan) (*mcp.CallToolResult, doctorPlanOutput, error) {
+			if err := doctor.ValidatePlan(input); err != nil {
+				return nil, doctorPlanOutput{}, err
+			}
+			for _, step := range input.Steps {
+				if step.Tool != "kuchdesk_deploy_start" {
+					continue
+				}
+				if !cfg.Enabled {
+					return nil, doctorPlanOutput{}, errors.New("deployment_not_enabled")
+				}
+				spec, err := cfg.load(step.Profile)
+				if err != nil {
+					return nil, doctorPlanOutput{}, err
+				}
+				if step.Confirm != spec.Release+"/"+spec.Namespace {
+					return nil, doctorPlanOutput{}, errors.New("exact_release_namespace_confirmation_required")
+				}
+			}
+			return nil, doctorPlanOutput{Valid: true, MaxAttempts: 2, Steps: len(input.Steps)}, nil
+		})
+	mcp.AddTool(server, &mcp.Tool{Name: "kuchdesk_doctor_verify", Description: "Rerun read-only Doctor checks and verify affected check IDs after an action.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
+		func(ctx context.Context, _ *mcp.CallToolRequest, input doctorVerifyInput) (*mcp.CallToolResult, doctor.Verification, error) {
+			config := doctor.Config{Domain: input.Domain, KubeContext: input.KubeContext, RegistryURL: input.RegistryURL, DiskPath: input.DiskPath, Services: input.Services}
+			report, err := diagnostics.Run(ctx, config)
+			if err != nil {
+				return nil, doctor.Verification{}, err
+			}
+			result, err := doctor.Verify(report, input.CheckIDs)
+			return nil, result, err
+		})
+	server.AddPrompt(&mcp.Prompt{Name: "kuchdesk_doctor_repair", Title: "Diagnose and verify KuchDesk", Description: "Fresh Doctor report and bounded MCP-only repair workflow", Arguments: []*mcp.PromptArgument{
+		{Name: "domain", Required: true}, {Name: "kubeContext", Required: true}, {Name: "registryUrl", Required: true}, {Name: "diskPath", Required: true}, {Name: "services", Required: false, Description: "Comma-separated namespace/deployment targets"},
+	}}, func(ctx context.Context, request *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		if request == nil || request.Params == nil {
+			return nil, errors.New("Doctor prompt arguments required")
+		}
+		config, err := doctorPromptConfig(request.Params.Arguments)
+		if err != nil {
+			return nil, err
+		}
+		report, err := diagnostics.Run(ctx, config)
+		if err != nil {
+			return nil, err
+		}
+		body, err := doctor.RenderPrompt(config, report)
+		if err != nil {
+			return nil, err
+		}
+		return &mcp.GetPromptResult{Description: "Current evidence and supported typed workflow", Messages: []*mcp.PromptMessage{{Role: mcp.Role("user"), Content: &mcp.TextContent{Text: body}}}}, nil
+	})
+	server.AddResource(&mcp.Resource{Name: "KuchDesk Doctor report schema", URI: "kuchdesk://doctor/report/v2", MIMEType: "application/schema+json"}, func(context.Context, *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		return &mcp.ReadResourceResult{Contents: []*mcp.ResourceContents{{URI: "kuchdesk://doctor/report/v2", MIMEType: "application/schema+json", Text: doctor.ReportSchema()}}}, nil
+	})
+	server.AddResource(&mcp.Resource{Name: "KuchDesk Doctor prompt template", URI: "kuchdesk://doctor/prompt/v2", MIMEType: "text/markdown"}, func(context.Context, *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		return &mcp.ReadResourceResult{Contents: []*mcp.ResourceContents{{URI: "kuchdesk://doctor/prompt/v2", MIMEType: "text/markdown", Text: doctor.PromptTemplate()}}}, nil
+	})
 	return server
+}
+
+func doctorPromptConfig(arguments map[string]string) (doctor.Config, error) {
+	config := doctor.Config{Domain: arguments["domain"], KubeContext: arguments["kubeContext"], RegistryURL: arguments["registryUrl"], DiskPath: arguments["diskPath"]}
+	if raw := strings.TrimSpace(arguments["services"]); raw != "" {
+		for _, part := range strings.Split(raw, ",") {
+			pieces := strings.Split(strings.TrimSpace(part), "/")
+			if len(pieces) != 2 {
+				return doctor.Config{}, errors.New("invalid Doctor deployment target")
+			}
+			config.Services = append(config.Services, doctor.Target{Namespace: pieces[0], Deployment: pieces[1]})
+		}
+	}
+	if err := config.Validate(); err != nil {
+		return doctor.Config{}, err
+	}
+	return config, nil
 }
 
 func outputFor(status async.Snapshot) jobOutput {

@@ -47,13 +47,26 @@ go run ./cmd/kuchdesk-doctor \
   -service platform-system/kuchdesk-local-registry
 ```
 
-The `kuchdesk_doctor` MCP tool uses the same collector. `-ai` or `ai=true`
-requests optional interpretation, but no external AI provider or credential
-is configured by this project. In that state, deterministic checks still run
-and the AI section says `provider_not_configured`. A future provider must
-receive only the same sanitized checks and return bounded explanations tied
-to existing check IDs; no raw command output, addresses, tokens, or Secrets
-are passed to it.
+The `kuchdesk_doctor` MCP tool uses the same collector and returns report schema
+`kuchdesk.doctor/v2`: ordered check/component/source/context/timing/status,
+typed findings, dependencies, limitations, and short redacted command excerpts.
+For AI-assisted diagnosis, use the existing MCP client's
+`kuchdesk_doctor_repair` prompt. It creates a fresh report and supplies the
+catalog of implemented typed tools. The report schema and English prompt
+template are available as MCP resources at `kuchdesk://doctor/report/v2` and
+`kuchdesk://doctor/prompt/v2`, and as
+[`internal/doctor/doctor-report.schema.json`](internal/doctor/doctor-report.schema.json)
+and [`internal/doctor/prompt.md`](internal/doctor/prompt.md) in source.
+No separate model, provider, API key, or CLI `-ai` mode is used.
+
+The prompt requires a bounded typed plan through `kuchdesk_doctor_validate_plan`,
+uses `kuchdesk_deploy_plan` and `kuchdesk_deploy_preflight` before an authorized
+`kuchdesk_deploy_start`, waits for job status, and reruns affected checks with
+`kuchdesk_doctor_verify`. Only the deployment start is a supported repair
+action in the current MCP catalog. It cannot repair DNS, firewall, RBAC, or
+credentials by inventing commands. Plan validation is not authorization;
+the existing deployment opt-in and exact confirmation still apply. Failed
+post-checks remain unresolved.
 
 ## Infisical MCP: first implementation slice
 

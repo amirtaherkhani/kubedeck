@@ -15,7 +15,7 @@ import (
 
 type healthyPreflight struct{}
 
-func (healthyPreflight) Run(context.Context, doctor.Config, bool) (doctor.Report, error) {
+func (healthyPreflight) Run(context.Context, doctor.Config) (doctor.Report, error) {
 	checks := make([]doctor.Check, 7)
 	for i := range checks {
 		checks[i].Status = "ok"

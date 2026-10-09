@@ -8,7 +8,7 @@ All notable KuchDesk changes are documented in this file.
 
 - Add a no-echo, one-time host Infisical credential setup command and a private two-key env-file loader shared by CLI and MCP, without Keychain or shell evaluation.
 - Gate local build and Helm apply on read-only Doctor checks for DNS, Docker/KIND, registry, disk, and node resource use; deployment profiles now require an explicit preflight domain and registry URL.
-- Add a read-only Doctor CLI and MCP tool for sanitized Mac, DNS, Docker, KIND, registry, disk, metrics and Deployment checks, with an optional AI interpretation interface that stays offline until a provider is explicitly configured.
+- Add a Doctor CLI and MCP diagnostic tool with structured, redacted checks; expose an MCP prompt, JSON schema, typed repair-plan validation, and fresh post-action verification through the existing AI harness.
 - Add a local stdio Infisical MCP server with typed capability discovery and name-only secret listing. Its Universal Auth client uses two host environment variables and renews short-lived access tokens in memory; no identity or live service is provisioned.
 - Share Infisical name-listing logic between a noninteractive CLI and MCP; add bounded in-process start/status/cancel tools for concurrent MCP requests without a separate task service.
 - Add bounded asynchronous scale/restart operations to the management-enabled Kubernetes agent, with per-workload serialization, status, deadlines, and cancellation.

@@ -40,13 +40,13 @@ func (fakeResolver) LookupIPAddr(context.Context, string) ([]net.IPAddr, error) 
 	return []net.IPAddr{{IP: net.ParseIP("192.0.2.1")}}, nil
 }
 
-func TestCLIReportAndOfflineAI(t *testing.T) {
+func TestCLIReportAndMCPOnlyAI(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
 	defer server.Close()
 	service := doctor.Service{Commands: fakeCommands{}, Resolver: fakeResolver{}, HTTP: server.Client(), DiskFree: func(string) (uint64, error) { return 5 << 30, nil }}
-	args := []string{"-domain", "infisical.local.dev", "-kube-context", "docker-desktop", "-registry-url", server.URL, "-disk-path", t.TempDir(), "-service", "development-tools/kuchdesk-agent", "-ai"}
+	args := []string{"-domain", "infisical.local.dev", "-kube-context", "docker-desktop", "-registry-url", server.URL, "-disk-path", t.TempDir(), "-service", "development-tools/kuchdesk-agent"}
 	var out, errOut bytes.Buffer
-	if code := run(args, &out, &errOut, service); code != 0 || !strings.Contains(out.String(), `"healthy":true`) || !strings.Contains(out.String(), `"provider_not_configured"`) {
+	if code := run(args, &out, &errOut, service); code != 0 || !strings.Contains(out.String(), `"healthy":true`) || !strings.Contains(out.String(), `"kuchdesk.doctor/v2"`) {
 		t.Fatalf("doctor CLI failed: code=%d out=%s err=%s", code, out.String(), errOut.String())
 	}
 	out.Reset()
@@ -54,5 +54,9 @@ func TestCLIReportAndOfflineAI(t *testing.T) {
 	bad := append(append([]string(nil), args...), "-service", "../other")
 	if code := run(bad, &out, &errOut, service); code != 2 || out.Len() != 0 {
 		t.Fatalf("unsafe CLI profile accepted: code=%d out=%s", code, out.String())
+	}
+	out.Reset()
+	if code := run(append(args, "-ai"), &out, &errOut, service); code != 2 {
+		t.Fatal("CLI unexpectedly accepted a separate AI mode")
 	}
 }
