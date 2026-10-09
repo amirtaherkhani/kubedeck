@@ -97,6 +97,11 @@ func (r *Runner) Submit(key string, timeout time.Duration, task func(context.Con
 func (r *Runner) run(ctx context.Context, cancel context.CancelFunc, id, key string, task func(context.Context) (any, error)) {
 	defer r.wg.Done()
 	defer cancel()
+	defer func() {
+		if recover() != nil {
+			r.finish(id, nil, errors.New("operation_failed"))
+		}
+	}()
 	select {
 	case r.active <- struct{}{}:
 		defer func() { <-r.active }()

@@ -158,3 +158,18 @@ func TestDeadlineStopsOperation(t *testing.T) {
 	}
 	waitState(t, r, id, TimedOut)
 }
+
+func TestPanickingOperationIsContained(t *testing.T) {
+	r := NewRunner(context.Background(), 1, 2)
+	defer r.Close()
+	id, err := r.Submit("", time.Second, func(context.Context) (any, error) {
+		panic("sensitive internal value")
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := waitState(t, r, id, Failed)
+	if job.Error != "operation_failed" {
+		t.Fatalf("panic detail leaked: %q", job.Error)
+	}
+}
