@@ -26,8 +26,8 @@ func TestDNSManagementLoadsCoreDNSTarget(t *testing.T) {
 	t.Setenv("KUCHDESK_DNS_MANAGEMENT_ENABLED", "true")
 	t.Setenv("KUCHDESK_AGENT_TOKEN", "test-token")
 	t.Setenv("KUCHDESK_COREDNS_NAMESPACE", "dns-system")
-	t.Setenv("KUCHDESK_COREDNS_CUSTOM_CONFIGMAP", "custom-dns")
-	t.Setenv("KUCHDESK_COREDNS_OVERRIDE_KEY", "services.override")
+	t.Setenv("KUCHDESK_COREDNS_CONFIGMAP", "custom-dns")
+	t.Setenv("KUCHDESK_COREDNS_COREFILE_KEY", "CustomCorefile")
 
 	cfg, err := Load()
 	if err != nil {
@@ -35,9 +35,21 @@ func TestDNSManagementLoadsCoreDNSTarget(t *testing.T) {
 	}
 	if !cfg.DNSManagementEnabled ||
 		cfg.CoreDNSNamespace != "dns-system" ||
-		cfg.CoreDNSCustomConfigMap != "custom-dns" ||
-		cfg.CoreDNSOverrideKey != "services.override" {
+		cfg.CoreDNSConfigMap != "custom-dns" ||
+		cfg.CoreDNSCorefileKey != "CustomCorefile" {
 		t.Fatalf("unexpected DNS configuration: %#v", cfg)
+	}
+}
+
+func TestRejectsLegacyCoreDNSSettings(t *testing.T) {
+	setClusterIdentity(t)
+	for _, legacy := range []string{"KUCHDESK_COREDNS_CUSTOM_CONFIGMAP", "KUCHDESK_COREDNS_OVERRIDE_KEY"} {
+		t.Run(legacy, func(t *testing.T) {
+			t.Setenv(legacy, "old")
+			if _, err := Load(); err == nil || !strings.Contains(err.Error(), legacy) {
+				t.Fatalf("legacy setting error = %v", err)
+			}
+		})
 	}
 }
 

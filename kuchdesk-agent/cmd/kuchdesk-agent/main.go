@@ -57,8 +57,8 @@ func run(logger *slog.Logger) error {
 	dnsManager := dnsconfig.New(kube, dnsconfig.Options{
 		Enabled:       cfg.DNSManagementEnabled,
 		Namespace:     cfg.CoreDNSNamespace,
-		ConfigMapName: cfg.CoreDNSCustomConfigMap,
-		OverrideKey:   cfg.CoreDNSOverrideKey,
+		ConfigMapName: cfg.CoreDNSConfigMap,
+		CorefileKey:   cfg.CoreDNSCorefileKey,
 		ClusterDomain: cfg.ClusterDomain,
 	})
 	api := httpapi.New(

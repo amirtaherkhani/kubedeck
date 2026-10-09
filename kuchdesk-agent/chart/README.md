@@ -20,7 +20,7 @@ Do not put the token in Helm values or Git. If the image is loaded directly into
 
 Clients send `Authorization: Bearer <token>` to the internal Service. Limit which clients can reach it. `networkPolicy.enabled` is off by default; when enabling it, set `networkPolicy.ingressPodSelector` to select authorized client Pods.
 
-The default ClusterRole allows discovery and metrics reads. CoreDNS alias writes and management are disabled by default. Management requires an explicit bearer Secret and `rbac.clusterAdmin=true`, granting the agent ServiceAccount full cluster access. Review the [agent API](../README.md) before enabling it. On Docker Desktop KIND, leave CoreDNS management disabled because the K3s `coredns-custom` import is unavailable.
+The default ClusterRole allows discovery and metrics reads. CoreDNS alias writes and general resource management are disabled by default. General management requires an explicit bearer Secret and `rbac.clusterAdmin=true`, granting the agent ServiceAccount full cluster access. DNS alias management needs the bearer Secret but uses a narrow Role for `get` and `update` on the existing CoreDNS ConfigMap. Review the [agent API](../README.md) before enabling it. On Docker Desktop KIND, set `dnsManagement.enabled=true` only after backing up `kube-system/coredns` and verifying its `Corefile` contains a `.:53` block with `kubernetes` and `reload`. The agent owns only its marked block and the chart never creates the system ConfigMap.
 
 The agent can start without `metrics.k8s.io`; CPU and memory usage remain unavailable until a compatible metrics-server is installed.
 
@@ -33,11 +33,11 @@ helm lint ./kuchdesk-agent/chart \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kuchdesk-agent \
-  --set image.tag=0.4.0
+  --set image.tag=0.5.0
 helm template kuchdesk-agent ./kuchdesk-agent/chart \
   --namespace development-tools \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kuchdesk-agent \
-  --set image.tag=0.4.0
+  --set image.tag=0.5.0
 ```

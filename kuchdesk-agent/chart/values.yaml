@@ -31,9 +31,8 @@ auth:
 dnsManagement:
   enabled: false
   namespace: kube-system
-  configMapName: coredns-custom
-  overrideKey: kuchdesk.override
-  createConfigMap: true
+  configMapName: coredns
+  corefileKey: Corefile
 
 serviceAccount:
   create: true

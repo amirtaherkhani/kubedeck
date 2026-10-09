@@ -1,14 +1,12 @@
 package dnsconfig
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/coredns/caddy/caddyfile"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,14 +18,14 @@ const (
 	managedByAnnotation = "kuchdesk.io/dns-managed-by"
 	updatedAtAnnotation = "kuchdesk.io/dns-updated-at"
 	maxAliases          = 200
-	maxOverrideBytes    = 64 * 1024
+	maxManagedBytes     = 64 * 1024
 )
 
 var (
 	ErrDisabled    = errors.New("CoreDNS management is disabled")
-	ErrUnavailable = errors.New("CoreDNS custom ConfigMap is unavailable")
-	ErrConflict    = errors.New("CoreDNS custom ConfigMap changed; refresh and try again")
-	ErrUnmanaged   = errors.New("CoreDNS override key contains configuration not managed by KuchDesk")
+	ErrUnavailable = errors.New("CoreDNS Corefile is unavailable or unsupported")
+	ErrConflict    = errors.New("CoreDNS ConfigMap changed; refresh and try again")
+	ErrUnmanaged   = errors.New("CoreDNS managed block contains unrecognized configuration")
 	ErrInvalid     = errors.New("invalid DNS alias configuration")
 )
 
@@ -35,7 +33,7 @@ type Options struct {
 	Enabled       bool
 	Namespace     string
 	ConfigMapName string
-	OverrideKey   string
+	CorefileKey   string
 	ClusterDomain string
 }
 
@@ -50,7 +48,7 @@ type State struct {
 	Available       bool       `json:"available"`
 	Namespace       string     `json:"namespace"`
 	ConfigMapName   string     `json:"configMapName"`
-	OverrideKey     string     `json:"overrideKey"`
+	CorefileKey     string     `json:"corefileKey"`
 	ResourceVersion string     `json:"resourceVersion,omitempty"`
 	Aliases         []Alias    `json:"aliases"`
 	Rendered        string     `json:"rendered,omitempty"`
@@ -88,7 +86,7 @@ func (m *Manager) Read(ctx context.Context) (State, error) {
 		return state, nil
 	}
 	if err != nil {
-		return State{}, fmt.Errorf("read CoreDNS custom ConfigMap: %w", err)
+		return State{}, fmt.Errorf("read CoreDNS ConfigMap: %w", err)
 	}
 	return m.stateFromConfigMap(configMap, false)
 }
@@ -103,8 +101,8 @@ func (m *Manager) Replace(ctx context.Context, request ReplaceRequest) (State, e
 		return State{}, err
 	}
 	rendered := render(aliases, m.options.ClusterDomain)
-	if err := validateCorefile(rendered); err != nil {
-		return State{}, fmt.Errorf("validate generated CoreDNS override: %w", err)
+	if err := validateAliasDirectives(rendered); err != nil {
+		return State{}, fmt.Errorf("validate generated CoreDNS aliases: %w", err)
 	}
 
 	configMap, err := m.kube.CoreV1().ConfigMaps(m.options.Namespace).Get(
@@ -116,27 +114,20 @@ func (m *Manager) Replace(ctx context.Context, request ReplaceRequest) (State, e
 		return State{}, fmt.Errorf("%w: %s/%s does not exist", ErrUnavailable, m.options.Namespace, m.options.ConfigMapName)
 	}
 	if err != nil {
-		return State{}, fmt.Errorf("read CoreDNS custom ConfigMap: %w", err)
+		return State{}, fmt.Errorf("read CoreDNS ConfigMap: %w", err)
 	}
 	if strings.TrimSpace(request.ResourceVersion) == "" ||
 		request.ResourceVersion != configMap.ResourceVersion {
 		return State{}, ErrConflict
 	}
-	if existing := configMap.Data[m.options.OverrideKey]; strings.TrimSpace(existing) != "" {
-		if _, err := parseManaged(existing); err != nil {
-			return State{}, err
-		}
+	corefile := configMap.Data[m.options.CorefileKey]
+	updatedCorefile, err := updateManagedCorefile(corefile, rendered, m.options.ClusterDomain)
+	if err != nil {
+		return State{}, err
 	}
 
 	candidate := configMap.DeepCopy()
-	if candidate.Data == nil {
-		candidate.Data = make(map[string]string)
-	}
-	if rendered == "" {
-		delete(candidate.Data, m.options.OverrideKey)
-	} else {
-		candidate.Data[m.options.OverrideKey] = rendered
-	}
+	candidate.Data[m.options.CorefileKey] = updatedCorefile
 	if candidate.Annotations == nil {
 		candidate.Annotations = make(map[string]string)
 	}
@@ -162,7 +153,7 @@ func (m *Manager) Replace(ctx context.Context, request ReplaceRequest) (State, e
 		return State{}, ErrConflict
 	}
 	if err != nil {
-		return State{}, fmt.Errorf("update CoreDNS custom ConfigMap: %w", err)
+		return State{}, fmt.Errorf("update CoreDNS ConfigMap: %w", err)
 	}
 	return m.stateFromConfigMap(updated, false)
 }
@@ -173,7 +164,7 @@ func (m *Manager) baseState() State {
 		Available:     false,
 		Namespace:     m.options.Namespace,
 		ConfigMapName: m.options.ConfigMapName,
-		OverrideKey:   m.options.OverrideKey,
+		CorefileKey:   m.options.CorefileKey,
 		Aliases:       []Alias{},
 	}
 }
@@ -182,14 +173,13 @@ func (m *Manager) stateFromConfigMap(configMap *corev1.ConfigMap, dryRun bool) (
 	state := m.baseState()
 	state.Available = true
 	state.ResourceVersion = configMap.ResourceVersion
-	state.Rendered = configMap.Data[m.options.OverrideKey]
-	state.DryRun = dryRun
-
-	aliases, err := parseManaged(state.Rendered)
+	layout, err := inspectCorefile(configMap.Data[m.options.CorefileKey], m.options.ClusterDomain)
 	if err != nil {
 		return State{}, err
 	}
-	state.Aliases = aliases
+	state.Rendered = layout.rendered
+	state.DryRun = dryRun
+	state.Aliases = layout.aliases
 	if value := configMap.Annotations[updatedAtAnnotation]; value != "" {
 		if parsed, parseErr := time.Parse(time.RFC3339, value); parseErr == nil {
 			state.UpdatedAt = &parsed
@@ -247,7 +237,6 @@ func render(aliases []Alias, clusterDomain string) string {
 		return ""
 	}
 	var output strings.Builder
-	output.WriteString("# Managed by KuchDesk. Changes to this key are replaced by the agent.\n")
 	for _, alias := range aliases {
 		fmt.Fprintf(
 			&output,
@@ -259,58 +248,6 @@ func render(aliases []Alias, clusterDomain string) string {
 		)
 	}
 	return output.String()
-}
-
-func parseManaged(input string) ([]Alias, error) {
-	if len(input) > maxOverrideBytes {
-		return nil, fmt.Errorf("%w: override is larger than %d bytes", ErrUnmanaged, maxOverrideBytes)
-	}
-	if strings.TrimSpace(input) == "" {
-		return []Alias{}, nil
-	}
-
-	aliases := make([]Alias, 0)
-	scanner := bufio.NewScanner(strings.NewReader(input))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) != 6 ||
-			fields[0] != "rewrite" ||
-			fields[1] != "stop" ||
-			fields[2] != "name" ||
-			fields[3] != "exact" {
-			return nil, fmt.Errorf("%w: unexpected directive %q", ErrUnmanaged, line)
-		}
-		targetParts := strings.Split(fields[5], ".")
-		if len(targetParts) < 5 || targetParts[2] != "svc" {
-			return nil, fmt.Errorf("%w: unexpected target %q", ErrUnmanaged, fields[5])
-		}
-		aliases = append(aliases, Alias{
-			Hostname:  normalizeDomain(fields[4]),
-			Service:   targetParts[0],
-			Namespace: targetParts[1],
-		})
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("read CoreDNS override: %w", err)
-	}
-	return aliases, nil
-}
-
-func validateCorefile(override string) error {
-	if override == "" {
-		return nil
-	}
-	wrapped := ".:53 {\n" + override + "}\n"
-	_, err := caddyfile.Parse(
-		"kuchdesk.override",
-		strings.NewReader(wrapped),
-		[]string{"rewrite"},
-	)
-	return err
 }
 
 func normalizeDomain(value string) string {

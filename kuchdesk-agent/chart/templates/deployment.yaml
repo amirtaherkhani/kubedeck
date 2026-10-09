@@ -4,6 +4,9 @@
 {{- if hasKey .Values.agent "listenAddress" }}
 {{- fail "agent.listenAddress is no longer supported; set agent.listenHost and service.targetPort instead." }}
 {{- end }}
+{{- if or (hasKey .Values.dnsManagement "overrideKey") (hasKey .Values.dnsManagement "createConfigMap") }}
+{{- fail "dnsManagement.overrideKey and createConfigMap are no longer supported; configure the existing CoreDNS ConfigMap with dnsManagement.corefileKey." }}
+{{- end }}
 {{- if or (lt (int .Values.service.targetPort) 1) (gt (int .Values.service.targetPort) 65535) }}
 {{- fail "service.targetPort must be a TCP port between 1 and 65535." }}
 {{- end }}
@@ -98,10 +101,10 @@ spec:
               value: {{ .Values.agent.managementEnabled | quote }}
             - name: KUCHDESK_COREDNS_NAMESPACE
               value: {{ required "dnsManagement.namespace is required" .Values.dnsManagement.namespace | quote }}
-            - name: KUCHDESK_COREDNS_CUSTOM_CONFIGMAP
+            - name: KUCHDESK_COREDNS_CONFIGMAP
               value: {{ required "dnsManagement.configMapName is required" .Values.dnsManagement.configMapName | quote }}
-            - name: KUCHDESK_COREDNS_OVERRIDE_KEY
-              value: {{ required "dnsManagement.overrideKey is required" .Values.dnsManagement.overrideKey | quote }}
+            - name: KUCHDESK_COREDNS_COREFILE_KEY
+              value: {{ required "dnsManagement.corefileKey is required" .Values.dnsManagement.corefileKey | quote }}
             {{- with .Values.auth.existingSecret }}
             - name: KUCHDESK_AGENT_TOKEN
               valueFrom:

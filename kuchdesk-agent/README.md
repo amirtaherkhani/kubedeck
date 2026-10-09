@@ -21,7 +21,7 @@ each kubelet.
   `metrics.k8s.io/v1beta1` client used for node and pod CPU/memory snapshots.
 - [`github.com/coredns/caddy/caddyfile`](https://github.com/coredns/caddy)
   provides CoreDNS's maintained Corefile lexer and parser. It validates the
-  generated override before the Kubernetes API is updated.
+  generated rewrite directives and Corefile syntax before the Kubernetes API is updated.
 - Go's [`net/http`](https://pkg.go.dev/net/http) provides the SSE server,
   streaming flush support, connection cancellation, and production HTTP
   timeouts without another runtime dependency.
@@ -121,15 +121,12 @@ native browser `EventSource` cannot set an Authorization header.
 
 ## CoreDNS service aliases
 
-CoreDNS does not expose a remote configuration CRUD API. The agent therefore
-uses the official Kubernetes client to update one dedicated key in the
-CoreDNS custom ConfigMap, and the CoreDNS Caddyfile package to validate the
-generated override. It never edits the K3s-owned main `Corefile`.
-
-For K3s, the main Corefile imports `/etc/coredns/custom/*.override`. The Helm
-chart can create `kube-system/coredns-custom`, and the agent owns only the
-`kuchdesk.override` key. Each alias is an exact CoreDNS rewrite to an existing
-Service:
+On Docker Desktop KIND, CoreDNS reads `kube-system/coredns`'s `Corefile` key.
+When explicitly enabled, the agent inserts a marked block into the existing
+`.:53` server block. It preserves all other Corefile content and refuses an
+unsupported layout, incomplete markers, or a rewrite outside its managed
+block. The chart does not create or own the system ConfigMap. Each alias is an
+exact rewrite to an existing Service:
 
 ```text
 rewrite stop name exact grafana.home.arpa grafana.monitoring.svc.cluster.local
@@ -154,12 +151,19 @@ Example request:
 First `GET /v1/dns/config`, then pass its opaque `resourceVersion` to `PUT`.
 This provides optimistic concurrency, so two administrators cannot silently
 overwrite each other's changes. Set `dryRun: true` to validate and preview the
-rendered override without updating Kubernetes.
+managed directives without updating Kubernetes.
 
 The agent validates DNS names, confirms every target Service exists, rejects
 duplicate aliases and aliases that shadow native `*.svc.<cluster-domain>`
-records, refuses to replace unrecognized content in its key, and publishes a
+records, refuses to replace unrecognized content in its block, and publishes a
 `dns.config.changed` SSE event after a successful write.
+
+Before enabling writes, save the current `Corefile` and verify the CoreDNS
+Deployment is healthy. Start with `dryRun: true`. To roll back an alias change,
+GET the current resource version and PUT an empty `aliases` array; this removes
+only the managed block. If CoreDNS does not recover, restore the saved Corefile
+through a reviewed Kubernetes change. CoreDNS's `reload` directive applies a
+valid update without restarting its Pods.
 
 This feature configures internal cluster DNS only. Public DNS and Ingress host
 records should be managed with an authoritative DNS provider, typically
@@ -177,8 +181,8 @@ through `external-dns`.
 | `KUCHDESK_KUBE_CONTEXT` | empty; optional context override for local kubeconfig use |
 | `KUCHDESK_DNS_MANAGEMENT_ENABLED` | `false` |
 | `KUCHDESK_COREDNS_NAMESPACE` | `kube-system` |
-| `KUCHDESK_COREDNS_CUSTOM_CONFIGMAP` | `coredns-custom` |
-| `KUCHDESK_COREDNS_OVERRIDE_KEY` | `kuchdesk.override` |
+| `KUCHDESK_COREDNS_CONFIGMAP` | `coredns` |
+| `KUCHDESK_COREDNS_COREFILE_KEY` | `Corefile` |
 | `KUCHDESK_METRICS_INTERVAL` | `10s` |
 | `KUCHDESK_REFRESH_DEBOUNCE` | `250ms` |
 | `KUCHDESK_SSE_HEARTBEAT` | `15s` |
@@ -196,10 +200,10 @@ local overrides unset and continues to use the in-cluster ServiceAccount.
 
 DNS management requires a non-empty `KUCHDESK_AGENT_TOKEN`; the agent refuses
 to start with unauthenticated DNS writes. The Helm chart adds a namespaced Role
-that can `get` and `update` only the configured custom ConfigMap. It does not
-grant ConfigMap creation, Secret access, or node proxy access. If
-`dnsManagement.createConfigMap=false`, create the ConfigMap separately before
-using the write endpoint.
+that can `get` and `update` only the configured existing CoreDNS ConfigMap. It
+does not grant ConfigMap creation, Secret access, or node proxy access. Older
+`KUCHDESK_COREDNS_CUSTOM_CONFIGMAP` and `KUCHDESK_COREDNS_OVERRIDE_KEY` settings
+must be replaced when upgrading.
 
 For local development:
 

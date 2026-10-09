@@ -284,10 +284,11 @@ func TestDNSConfigurationEndpointAppliesAliasesAndPublishesEvent(t *testing.T) {
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "grafana", Namespace: "monitoring"}},
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            "coredns-custom",
+				Name:            "coredns",
 				Namespace:       "kube-system",
 				ResourceVersion: "8",
 			},
+			Data: map[string]string{"Corefile": ".:53 {\n    kubernetes cluster.local\n    reload\n}\n"},
 		},
 	)
 	broker := stream.NewBroker("homelab", 8)
@@ -299,8 +300,8 @@ func TestDNSConfigurationEndpointAppliesAliasesAndPublishesEvent(t *testing.T) {
 		dnsconfig.New(kube, dnsconfig.Options{
 			Enabled:       true,
 			Namespace:     "kube-system",
-			ConfigMapName: "coredns-custom",
-			OverrideKey:   "kuchdesk.override",
+			ConfigMapName: "coredns",
+			CorefileKey:   "Corefile",
 			ClusterDomain: "cluster.local",
 		}),
 		"test-token",
@@ -351,8 +352,8 @@ func TestDNSConfigurationEndpointIsReadOnlyWhenDisabled(t *testing.T) {
 		stream.NewBroker("homelab", 8),
 		dnsconfig.New(kubernetesfake.NewSimpleClientset(), dnsconfig.Options{
 			Namespace:     "kube-system",
-			ConfigMapName: "coredns-custom",
-			OverrideKey:   "kuchdesk.override",
+			ConfigMapName: "coredns",
+			CorefileKey:   "Corefile",
 			ClusterDomain: "cluster.local",
 		}),
 		"",

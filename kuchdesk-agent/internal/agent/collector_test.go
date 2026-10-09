@@ -236,7 +236,7 @@ func TestCollectorBuildsDashboardSnapshotFromInformerCaches(t *testing.T) {
 			Spec: corev1.PersistentVolumeSpec{
 				Capacity:         corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("10Gi")},
 				AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-				StorageClassName: "local-path",
+				StorageClassName: "standard",
 			},
 			Status: corev1.PersistentVolumeStatus{Phase: corev1.VolumeBound},
 		},
@@ -252,7 +252,7 @@ func TestCollectorBuildsDashboardSnapshotFromInformerCaches(t *testing.T) {
 				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("10Gi")},
 				},
-				StorageClassName: stringPtr("local-path"),
+				StorageClassName: stringPtr("standard"),
 				VolumeName:       "data-volume",
 			},
 			Status: corev1.PersistentVolumeClaimStatus{Phase: corev1.ClaimBound},
