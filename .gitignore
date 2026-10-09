@@ -1,5 +1,6 @@
 # Local configuration and generated artifacts
 .env*
+!.env.example
 **/host.env
 .DS_Store
 *.pem

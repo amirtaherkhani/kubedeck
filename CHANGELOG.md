@@ -4,12 +4,16 @@ All notable KuchDesk changes are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Select the Infisical host credential backend explicitly: project-local `.env` by default or an existing macOS Keychain item. Remove the global `host.env` setup command and automatic environment/file fallback; no credentials are provisioned or migrated.
+
 ### Added
 
-- Add a no-echo, one-time host Infisical credential setup command and a private two-key env-file loader shared by CLI and MCP, without Keychain or shell evaluation.
+- Add a project-local, Git-ignored `.env` credential reader shared by the Infisical CLI and MCP, with an explicit macOS Keychain backend and no automatic fallback.
 - Gate local build and Helm apply on read-only Doctor checks for DNS, Docker/KIND, registry, disk, and node resource use; deployment profiles now require an explicit preflight domain and registry URL.
 - Add a Doctor CLI and MCP diagnostic tool with structured, redacted checks; expose an MCP prompt, JSON schema, typed repair-plan validation, and fresh post-action verification through the existing AI harness.
-- Add a local stdio Infisical MCP server with typed capability discovery and name-only secret listing. Its Universal Auth client uses two host environment variables and renews short-lived access tokens in memory; no identity or live service is provisioned.
+- Add a local stdio Infisical MCP server with typed capability discovery and name-only secret listing. Its Universal Auth client renews short-lived access tokens in memory; no identity or live service is provisioned.
 - Share Infisical name-listing logic between a noninteractive CLI and MCP; add bounded in-process start/status/cancel tools for concurrent MCP requests without a separate task service.
 - Add bounded asynchronous scale/restart operations to the management-enabled Kubernetes agent, with per-workload serialization, status, deadlines, and cancellation.
 - Add a host-side build/push/Helm/rollout CLI with an explicit profile, plan mode, revision check, image digest pin, and fail-fast behavior. It is not installed or run against the live cluster.
