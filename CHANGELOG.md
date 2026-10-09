@@ -19,6 +19,7 @@ All notable KuchDesk changes are documented in this file.
 
 ### Fixed
 
+- Resolve the informational Kubernetes capability catalog from one complete rules review, with exact access-review fallback when rules are incomplete or unavailable.
 - Pre-pull digest-pinned KIND images through kubelet's CRI so `image.pullPolicy=Never` recognizes them during Helm rollouts.
 - Bound parallel authorization reviews for the Kubernetes management capability catalog and make Helm installation notes describe the actual RBAC and CoreDNS values.
 - Push locally built images through the macOS host's port-forwarded registry using `crane`, with optional digest pre-pull on dynamically discovered KIND nodes before Helm runs. A temporary Pod verified kubelet image pull and container creation with cached layers.

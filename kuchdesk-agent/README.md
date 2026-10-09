@@ -90,8 +90,9 @@ requires `fieldManager`. Write operations require exact
 persisting a write. Scale accepts JSON `replicas` (0–100) and
 `resourceVersion`; restart requires `If-Match` and patches only the workload's
 pod-template restart annotation. The API server still enforces its own RBAC.
-Capabilities include `allowedVerbs` from SelfSubjectAccessReviews for the
-agent ServiceAccount. Pass a concrete `namespace` to evaluate namespaced
+Capabilities include `allowedVerbs` from a complete SelfSubjectRulesReview
+for the agent ServiceAccount. Incomplete or unavailable rules fall back to
+bounded per-verb SelfSubjectAccessReviews. Pass a concrete `namespace` to evaluate namespaced
 resources; without one, their `allowedVerbs` are empty. Authorization results
 are informational snapshots, not grants, and Kubernetes checks every actual
 operation again. `GET` workload status returns the typed workload object;

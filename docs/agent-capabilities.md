@@ -43,7 +43,7 @@ The Infisical MCP server and management-enabled Kubernetes agent accept independ
 | --- | --- | --- |
 | Kubernetes snapshot, metrics and bearer auth | Collector and HTTP tests, including unauthorized requests | Snapshot 200 with metrics; unauthenticated snapshot 401; extended SSE and long-running metrics behavior untested |
 | Management resource and workload operations | Fake API tests for confirmation, resource versions, dry runs, error paths and async job bounds | Self-ServiceAccount `cluster-admin` verified; scale dry run and unchanged replica/version verified; real writes intentionally untested |
-| Capabilities catalog | Discovery, Secret exclusion, authorization and bounded parallel review tests | Live catalog returned 218 resources but took about 40 seconds before parallel review change; remeasure after redeploy |
+| Capabilities catalog | Discovery, Secret exclusion, complete rules-review and fallback access-review tests | Live catalog returned 218 resources in 39.78 seconds after bounded parallel reviews; remeasure after the rules-review build is deployed |
 | CoreDNS aliases | Parser, idempotency, conflict, dry-run and preservation tests | GET and empty-alias dry run 200; Corefile version unchanged; no live alias write |
 | Host DNS and Technitium | Interface and reconciliation tests | LaunchAgent last exit 0, existing zone and interface retained; no extended failure-injection run |
 | Infisical MCP and Universal Auth | Mock transport tests for renewal, 401 retry, redaction, typed tools and bounded jobs | No approved live host identity; credential revocation and real admin/value permissions untested |
