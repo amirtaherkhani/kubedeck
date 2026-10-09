@@ -544,7 +544,7 @@ func buildIngresses(ingresses []*networkingv1.Ingress) (
 				tlsHosts,
 			)
 			routes = append(routes, route)
-			if route.URL != "" {
+			if route.URL != "" && route.ServiceName != "" {
 				key := ingress.Namespace + "/" + route.ServiceName
 				serviceURLs[key] = append(serviceURLs[key], route.URL)
 			}
@@ -566,7 +566,7 @@ func buildIngresses(ingresses []*networkingv1.Ingress) (
 					tlsHosts,
 				)
 				routes = append(routes, route)
-				if route.URL != "" {
+				if route.URL != "" && route.ServiceName != "" {
 					key := ingress.Namespace + "/" + route.ServiceName
 					serviceURLs[key] = append(serviceURLs[key], route.URL)
 				}
@@ -1050,11 +1050,13 @@ func ingressRoute(
 	tlsHosts map[string]struct{},
 ) model.IngressRoute {
 	route := model.IngressRoute{
-		Host:        host,
-		Path:        path,
-		PathType:    pathType,
-		ServiceName: backend.Service.Name,
-		ServicePort: ingressServicePort(backend.Service.Port),
+		Host:     host,
+		Path:     path,
+		PathType: pathType,
+	}
+	if backend.Service != nil {
+		route.ServiceName = backend.Service.Name
+		route.ServicePort = ingressServicePort(backend.Service.Port)
 	}
 	if host != "" {
 		scheme := "http"

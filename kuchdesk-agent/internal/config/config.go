@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ type Config struct {
 	ClusterName            string
 	ClusterDomain          string
 	Kubeconfig             string
+	KubeContext            string
 	BearerToken            string
 	DNSManagementEnabled   bool
 	ManagementEnabled      bool
@@ -37,7 +39,8 @@ func Load() (Config, error) {
 		ClusterID:              strings.TrimSpace(os.Getenv("KUCHDESK_CLUSTER_ID")),
 		ClusterName:            strings.TrimSpace(os.Getenv("KUCHDESK_CLUSTER_NAME")),
 		ClusterDomain:          strings.Trim(envOrDefault("KUCHDESK_CLUSTER_DOMAIN", "cluster.local"), "."),
-		Kubeconfig:             strings.TrimSpace(os.Getenv("KUBECONFIG")),
+		Kubeconfig:             os.Getenv("KUBECONFIG"),
+		KubeContext:            strings.TrimSpace(os.Getenv("KUCHDESK_KUBE_CONTEXT")),
 		BearerToken:            strings.TrimSpace(os.Getenv("KUCHDESK_AGENT_TOKEN")),
 		CoreDNSNamespace:       envOrDefault("KUCHDESK_COREDNS_NAMESPACE", "kube-system"),
 		CoreDNSCustomConfigMap: envOrDefault("KUCHDESK_COREDNS_CUSTOM_CONFIGMAP", "coredns-custom"),
@@ -103,10 +106,21 @@ func RESTConfig(cfg Config) (*rest.Config, error) {
 		restConfig *rest.Config
 		err        error
 	)
-	if cfg.Kubeconfig != "" {
-		restConfig, err = clientcmd.BuildConfigFromFlags("", cfg.Kubeconfig)
-	} else {
+	if cfg.Kubeconfig == "" && cfg.KubeContext == "" {
 		restConfig, err = rest.InClusterConfig()
+		if err != nil && !errors.Is(err, rest.ErrNotInCluster) {
+			return nil, fmt.Errorf("load in-cluster Kubernetes client configuration: %w", err)
+		}
+	}
+	if restConfig == nil {
+		rules := clientcmd.NewDefaultClientConfigLoadingRules()
+		if cfg.Kubeconfig != "" {
+			rules.Precedence = filepath.SplitList(cfg.Kubeconfig)
+		}
+		restConfig, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			rules,
+			&clientcmd.ConfigOverrides{CurrentContext: cfg.KubeContext},
+		).ClientConfig()
 	}
 	if err != nil {
 		return nil, fmt.Errorf("load Kubernetes client configuration: %w", err)

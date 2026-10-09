@@ -45,7 +45,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "host-agent configuration failed:", err)
 		os.Exit(2)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeout)
 	defer cancel()
 	if err := reconcile(ctx, cfg); err != nil {
 		fmt.Fprintln(os.Stderr, "host-agent DNS reconciliation failed:", err)
@@ -130,13 +130,13 @@ func reconcileDNS(ctx context.Context, client *apiClient, cfg config, ip net.IP)
 		return err
 	}
 	for _, r := range recordList.Records {
-		if strings.EqualFold(r.Name, cfg.recordName()) && r.Type == "A" && r.TTL == 30 && r.RData.IPAddress == ip.String() {
+		if strings.EqualFold(r.Name, cfg.recordName()) && r.Type == "A" && r.TTL == cfg.TTL && r.RData.IPAddress == ip.String() {
 			fmt.Println("Technitium wildcard current:", ip)
 			return nil
 		}
 	}
 	_, err = client.call(ctx, "/api/zones/records/add", url.Values{
-		"domain": {cfg.recordName()}, "zone": {cfg.Zone}, "type": {"A"}, "ttl": {"30"}, "overwrite": {"true"}, "ipAddress": {ip.String()},
+		"domain": {cfg.recordName()}, "zone": {cfg.Zone}, "type": {"A"}, "ttl": {strconv.Itoa(cfg.TTL)}, "overwrite": {"true"}, "ipAddress": {ip.String()},
 	})
 	if err != nil {
 		return err
@@ -146,7 +146,7 @@ func reconcileDNS(ctx context.Context, client *apiClient, cfg config, ip net.IP)
 }
 
 func adminPassword(ctx context.Context, cfg config) (string, error) {
-	out, err := exec.CommandContext(ctx, "kubectl", cfg.kubectlArgs("get", "secret", cfg.AdminSecret, "-o", "json")...).Output()
+	out, err := exec.CommandContext(ctx, cfg.Kubectl, cfg.kubectlArgs("get", "secret", cfg.AdminSecret, "-o", "json")...).Output()
 	if err != nil {
 		return "", fmt.Errorf("read Technitium Kubernetes credential: %w", err)
 	}
@@ -167,7 +167,7 @@ func adminPassword(ctx context.Context, cfg config) (string, error) {
 
 func forwardAPI(parent context.Context, cfg config) (string, func(), error) {
 	ctx, cancel := context.WithCancel(parent)
-	cmd := exec.CommandContext(ctx, "kubectl", cfg.kubectlArgs("port-forward", "--address", "127.0.0.1", "svc/"+cfg.Service, ":"+strconv.Itoa(cfg.APIPort))...)
+	cmd := exec.CommandContext(ctx, cfg.Kubectl, cfg.kubectlArgs("port-forward", "--address", "127.0.0.1", "svc/"+cfg.Service, ":"+strconv.Itoa(cfg.APIPort))...)
 	reader, writer := io.Pipe()
 	cmd.Stdout, cmd.Stderr = writer, writer
 	if err := cmd.Start(); err != nil {

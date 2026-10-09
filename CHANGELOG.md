@@ -11,11 +11,15 @@ All notable KuchDesk changes are documented in this file.
 
 ### Fixed
 
+- Let the Kubernetes agent use a developer's kubeconfig when no in-cluster credentials exist, with an explicit context override and multi-file `KUBECONFIG` support.
+- Handle Ingress resource backends without crashing the cluster snapshot or assigning their URLs to unnamed Services.
+- Reject ambiguous private IPv4 addresses on the selected Mac interface instead of publishing an arbitrary DNS answer.
 - Include a cert-manager Certificate in the default TLSStore namespace so Traefik's fallback certificate references a Secret that cert-manager can issue.
 - Restore the macOS DNS reconciler with its explicit site zone, Kubernetes context, and physical LAN interface when a VPN owns the default route.
 
 ### Changed
 
+- Let operators configure the host DNS record TTL, run timeout, and macOS polling interval; pin the installed `kubectl` executable for launchd runs.
 - Rename the repository, both agents, Helm chart, API identity, and macOS integration to KuchDesk. The agent chart is now 0.7.0 and its app version is 0.4.0.
 - Remove embedded `local.dev` hostnames from deployment values and static TLS manifests. Document certificate-first domain migration and application configuration rollouts.
 

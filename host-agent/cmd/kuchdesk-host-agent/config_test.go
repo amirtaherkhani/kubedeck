@@ -11,7 +11,7 @@ func TestParseConfigUsesExplicitClusterAndZone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Zone != "dev.example" || cfg.recordName() != "*.dev.example" || cfg.TargetIP != "10.2.3.4" {
+	if cfg.Zone != "dev.example" || cfg.recordName() != "*.dev.example" || cfg.TargetIP != "10.2.3.4" || cfg.TTL != 30 || cfg.Timeout.Seconds() != 30 {
 		t.Fatalf("unexpected config: %+v", cfg)
 	}
 	wantArgs := []string{"--context", "kind-team", "-n", "dns-system", "get", "secret", "admin.credentials", "-o", "json"}
@@ -42,6 +42,9 @@ func TestParseConfigRejectsUnsafeOrAmbiguousInputs(t *testing.T) {
 		{name: "ambiguous target", args: []string{"-kube-context", "kind-team", "-zone", "dev.example", "-target-ip", "10.2.3.4", "-interface", "en0"}, want: "cannot be used together"},
 		{name: "invalid namespace", args: []string{"-kube-context", "kind-team", "-zone", "dev.example", "-namespace", "dns.system"}, want: "namespace"},
 		{name: "invalid port", args: []string{"-kube-context", "kind-team", "-zone", "dev.example", "-api-port", "0"}, want: "-api-port"},
+		{name: "invalid TTL", args: []string{"-kube-context", "kind-team", "-zone", "dev.example", "-ttl", "0"}, want: "-ttl"},
+		{name: "invalid timeout", args: []string{"-kube-context", "kind-team", "-zone", "dev.example", "-timeout", "0s"}, want: "-timeout"},
+		{name: "empty kubectl", args: []string{"-kube-context", "kind-team", "-zone", "dev.example", "-kubectl", " "}, want: "-kubectl"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
