@@ -124,3 +124,45 @@ func TestCLINameOnlySuccess(t *testing.T) {
 		t.Fatalf("unexpected CLI result: code=%d out=%q err=%q", code, out.String(), errOut.String())
 	}
 }
+
+func TestCLIProjectAccessDoesNotEquateEmptyListWithMissingProject(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("INFISICAL_CLIENT_ID=id\nINFISICAL_CLIENT_SECRET=test-secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/auth/universal-auth/login":
+			fmt.Fprint(w, `{"accessToken":"token","expiresIn":60,"tokenType":"Bearer"}`)
+		case "/api/v1/projects":
+			fmt.Fprint(w, `{"projects":[]}`)
+		case "/api/v1/projects/slug/home-lab":
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, `{"secret":"never-print-me"}`)
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	var out, errOut bytes.Buffer
+	code := run(context.Background(), []string{"-url", server.URL, "check-project-access", "-slug", "home-lab"}, &out, &errOut, func(key string) string {
+		if key == "KUCHDESK_PROJECT_ROOT" {
+			return root
+		}
+		return ""
+	})
+	if code != 0 || errOut.Len() != 0 || !strings.Contains(out.String(), `"listed":false`) || !strings.Contains(out.String(), `"detailStatus":"forbidden"`) || strings.Contains(out.String(), "never-print-me") {
+		t.Fatalf("unexpected project access result: code=%d out=%q err=%q", code, out.String(), errOut.String())
+	}
+	out.Reset()
+	errOut.Reset()
+	code = run(context.Background(), []string{"-url", server.URL, "check-project-access", "-slug", "../home-lab"}, &out, &errOut, func(key string) string {
+		if key == "KUCHDESK_PROJECT_ROOT" {
+			return root
+		}
+		return ""
+	})
+	if code != 2 || out.Len() != 0 || strings.TrimSpace(errOut.String()) != "invalid_project_slug" {
+		t.Fatalf("unsafe slug should be rejected locally: code=%d out=%q err=%q", code, out.String(), errOut.String())
+	}
+}

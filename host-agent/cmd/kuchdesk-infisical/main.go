@@ -18,7 +18,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, getenv fu
 	baseURL := flags.String("url", "", "Infisical HTTPS origin")
 	timeout := flags.Duration("timeout", 10*time.Second, "request timeout")
 	if err := flags.Parse(args); err != nil || *baseURL == "" || *timeout <= 0 {
-		fmt.Fprintln(stderr, "usage: kuchdesk-infisical -url HTTPS_ORIGIN [-timeout 10s] capabilities|list-secret-names")
+		fmt.Fprintln(stderr, "usage: kuchdesk-infisical -url HTTPS_ORIGIN [-timeout 10s] capabilities|check-project-access|list-secret-names")
 		return 2
 	}
 	clientID, clientSecret, err := infisical.HostCredentials(getenv)
@@ -34,7 +34,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, getenv fu
 	service := infisical.NewService(client)
 	remaining := flags.Args()
 	if len(remaining) == 0 {
-		fmt.Fprintln(stderr, "provide capabilities or list-secret-names")
+		fmt.Fprintln(stderr, "provide capabilities, check-project-access, or list-secret-names")
 		return 2
 	}
 	encoder := json.NewEncoder(stdout)
@@ -44,7 +44,30 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, getenv fu
 			fmt.Fprintln(stderr, "capabilities accepts no arguments")
 			return 2
 		}
-		if err := encoder.Encode(map[string]any{"configured": service.Configured(), "commands": []string{"capabilities", "list-secret-names"}}); err != nil {
+		if err := encoder.Encode(map[string]any{"configured": service.Configured(), "commands": []string{"capabilities", "check-project-access", "list-secret-names"}}); err != nil {
+			fmt.Fprintln(stderr, "write output failed")
+			return 1
+		}
+		return 0
+	case "check-project-access":
+		command := flag.NewFlagSet("check-project-access", flag.ContinueOnError)
+		command.SetOutput(stderr)
+		slug := command.String("slug", "", "Infisical project slug")
+		if err := command.Parse(remaining[1:]); err != nil || command.NArg() != 0 || *slug == "" {
+			fmt.Fprintln(stderr, "usage: check-project-access -slug PROJECT_SLUG")
+			return 2
+		}
+		requestCtx, cancel := context.WithTimeout(ctx, *timeout)
+		defer cancel()
+		access, err := client.InspectProjectAccess(requestCtx, *slug)
+		if err != nil {
+			fmt.Fprintln(stderr, infisical.PublicError(err))
+			if err == infisical.ErrInvalidProjectSlug {
+				return 2
+			}
+			return 1
+		}
+		if err := encoder.Encode(access); err != nil {
 			fmt.Fprintln(stderr, "write output failed")
 			return 1
 		}

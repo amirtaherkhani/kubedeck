@@ -98,10 +98,14 @@ go run ./cmd/kuchdesk-infisical-mcp -url https://YOUR-INFISICAL-HOST
 
 Restart the MCP stdio process after changing backend configuration or rotating
 an existing credential. Test locally with `kuchdesk-infisical ... capabilities`
-(`configured:true` proves only that the selected pair loaded), then use
-`list-secret-names` with the intended project ID, environment, and narrow path
-to verify Universal Auth and read permission. The existing Grafana Operator
-Secret is a separate identity and must not be copied into the host backend.
+(`configured:true` proves only that the selected pair loaded). Use
+`check-project-access -slug PROJECT_SLUG` to inspect metadata visibility before
+trying `list-secret-names` with the intended project ID, environment, and narrow
+path. An empty project list is scoped to the current machine identity: it does
+not prove that no projects exist. The detail result distinguishes `forbidden`
+from `not_found` without printing an API response body. The existing Grafana
+Operator Secret uses a separate identity and must not be copied into the host
+backend.
 
 The Infisical MCP tools are `infisical_capabilities`, `infisical_list_secret_names`, `infisical_start_list_secret_names`, `infisical_job_status`, and `infisical_cancel_job`. Name listing requires an explicit project ID, environment slug, and absolute secret path. It requests `viewSecretValue=false` and returns only names and paths, discarding any value fields from the API response. Discovery works without credentials; a secret-list call then returns `credentials_not_configured`.
 
@@ -112,10 +116,14 @@ The command-line client shares the same typed Infisical service and runs synchro
 ```sh
 cd host-agent
 go run ./cmd/kuchdesk-infisical -url https://YOUR-INFISICAL-HOST capabilities
+go run ./cmd/kuchdesk-infisical -url https://YOUR-INFISICAL-HOST check-project-access -slug PROJECT_SLUG
 go run ./cmd/kuchdesk-infisical -url https://YOUR-INFISICAL-HOST list-secret-names -project PROJECT_ID -environment dev -path /app
 ```
 
-No real identity, credential, role, or live MCP service is provisioned by this source change. Permissions and bootstrap credential lifetime remain unverified against this installation.
+The CLI check does not create identities, change roles or project memberships,
+or provision a live MCP service. It verifies metadata visibility only; secret
+access, bootstrap credential lifetime, and other permissions require separate
+checks.
 
 Secret writes, project/identity administration, value delivery, a host HTTP API, and Kubernetes-agent bridging are not implemented. Existing Grafana Operator sync remains independent. The same host MCP process now exposes a separate opt-in KuchDesk deployment workflow described below; this does not use Infisical credentials.
 

@@ -10,6 +10,7 @@ All notable KuchDesk changes are documented in this file.
 
 ### Added
 
+- Add a read-only Infisical CLI project-access check that separates identity-scoped listing from project-detail authorization and never returns API error bodies.
 - Add a scoped site-profile configuration CLI with snapshot, strict validation, field diff, dry-run, revision-confirmed apply, private rollback, and concurrent-write protection; live infrastructure still uses explicit deployment workflows.
 - Add a project-local, Git-ignored `.env` credential reader shared by the Infisical CLI and MCP, with an explicit macOS Keychain backend and no automatic fallback.
 - Gate local build and Helm apply on read-only Doctor checks for DNS, Docker/KIND, registry, disk, and node resource use; deployment profiles now require an explicit preflight domain and registry URL.
