@@ -36,6 +36,15 @@ trusted administrators because commands may read application data. Enabling
 this switch requires a Helm upgrade and Pod restart; do not place commands or
 tokens in chart values.
 
+`agent.portForwardEnabled` is a separate opt-in switch, also default `false`.
+It requires the same management bearer Secret and RBAC. The agent accepts only
+authenticated WebSocket clients without a browser `Origin`, then opens a
+short-lived loopback tunnel inside its own Pod to one running Pod port. The
+session has a five-minute lifetime, a 30-second idle timeout, four concurrent
+session slots, and a 64 MiB limit in each direction. It adds no public Service
+port or new RBAC grant. Keep this disabled unless the clients are trusted
+administrators; a tunnel can carry sensitive application traffic.
+
 The agent can start without `metrics.k8s.io`; CPU and memory usage remain unavailable until a compatible metrics-server is installed.
 
 `service.targetPort` sets both the container port and the agent's HTTP listener. Use `agent.listenHost` only to change the bind host; the default listens on all interfaces. Remove any old `agent.listenAddress` override when upgrading from chart 0.5.x. Direct binary invocations also require `KUCHDESK_CLUSTER_ID` and `KUCHDESK_CLUSTER_NAME`; they no longer silently identify an unknown cluster as `default`.
@@ -47,11 +56,11 @@ helm lint ./kuchdesk-agent/chart \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kuchdesk-agent \
-  --set image.tag=0.7.0
+  --set image.tag=0.8.0
 helm template kuchdesk-agent ./kuchdesk-agent/chart \
   --namespace development-tools \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kuchdesk-agent \
-  --set image.tag=0.7.0
+  --set image.tag=0.8.0
 ```

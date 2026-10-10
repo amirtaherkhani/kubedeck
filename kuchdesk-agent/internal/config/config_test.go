@@ -82,6 +82,21 @@ func TestExecRequiresExplicitManagement(t *testing.T) {
 	}
 }
 
+func TestPortForwardRequiresExplicitManagement(t *testing.T) {
+	setClusterIdentity(t)
+	t.Setenv("KUCHDESK_PORT_FORWARD_ENABLED", "true")
+	t.Setenv("KUCHDESK_MANAGEMENT_ENABLED", "false")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "KUCHDESK_MANAGEMENT_ENABLED") {
+		t.Fatalf("port-forward gate error = %v", err)
+	}
+	t.Setenv("KUCHDESK_MANAGEMENT_ENABLED", "true")
+	t.Setenv("KUCHDESK_AGENT_TOKEN", "test-token")
+	cfg, err := Load()
+	if err != nil || !cfg.PortForwardEnabled {
+		t.Fatalf("explicit port-forward config = %#v, %v", cfg, err)
+	}
+}
+
 func TestClusterIdentityRequired(t *testing.T) {
 	for _, missing := range []string{"KUCHDESK_CLUSTER_ID", "KUCHDESK_CLUSTER_NAME"} {
 		t.Run(missing, func(t *testing.T) {

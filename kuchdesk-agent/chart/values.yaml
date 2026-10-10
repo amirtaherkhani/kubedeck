@@ -20,6 +20,7 @@ agent:
   listenHost: ""
   managementEnabled: false
   execEnabled: false
+  portForwardEnabled: false
   metricsInterval: 10s
   refreshDebounce: 250ms
   sseHeartbeat: 15s

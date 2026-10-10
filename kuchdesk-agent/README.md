@@ -66,6 +66,7 @@ permission to scrape kubelet Summary APIs.
 | `GET/POST/PUT/PATCH/DELETE /v1/manage/resources/{group}/{version}/{resource}` | Bounded Kubernetes resource operations; use `core` for the core API group |
 | `GET /v1/manage/pods/{namespace}/{name}/logs` | Up to 1 MiB and 1,000 tail lines of pod logs |
 | `POST /v1/manage/pods/{namespace}/{name}/exec` | Opt-in, noninteractive Pod command with bounded output |
+| `GET /v1/manage/pods/{namespace}/{name}/port-forward?port=PORT` | Opt-in WebSocket binary tunnel to one Pod TCP port |
 | `GET /v1/manage/events/{namespace}` | Up to 100 namespace events |
 | `GET /v1/manage/workloads/{kind}/{namespace}/{name}/{action}` | Deployment/StatefulSet status or scale; DaemonSet status |
 | `POST /v1/manage/workloads/{kind}/{namespace}/{name}/{action}` | Deployment/StatefulSet scale, restart, status; DaemonSet restart/status |
@@ -122,11 +123,25 @@ Do not use this endpoint for destructive commands against rapidly recreated
 Pods. Output may contain application secrets and is never written to audit
 logs; restrict API clients and handle returned output accordingly.
 
+Pod port-forward requires `KUCHDESK_PORT_FORWARD_ENABLED=true`, management
+mode, and bearer authentication. Use a WebSocket client without an `Origin`
+header. Supply exact `X-KuchDesk-Confirm:
+pods/NAMESPACE/NAME/port-forward/PORT`, `If-Match-UID`, and `If-Match`
+headers from a fresh Pod read. The Pod must be running. Only binary WebSocket
+frames are accepted; one connection forwards to one TCP port. The agent opens
+the Kubernetes tunnel on its own `127.0.0.1` and does not expose a new Service
+port. Sessions are limited to four, five minutes total, 30 seconds idle in
+either direction, 64 KiB per WebSocket frame, and 64 MiB per direction. A
+client disconnect closes the tunnel. Kubernetes addresses the Pod by name
+during tunnel setup, so a replacement after the identity check remains a
+small race; avoid rapidly recreated Pods. Tunnel bytes are not audit-logged,
+but may contain secrets and must be handled by trusted clients.
+
 Raw Secret resources are excluded from generic discovery and operations. Logs,
 events, ConfigMaps, and other resources can contain sensitive content; limit
 agent API client access and avoid saving these responses. Audit logs
 record action metadata and request IDs, not request or response bodies.
-Attach, port-forward, Helm operations, and generic subresource writes are not
+Attach, Helm operations, and generic subresource writes are not
 implemented; each needs separate streaming and authorization design.
 
 The stream sends an initial snapshot, debounced resource-change snapshots,

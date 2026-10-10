@@ -24,6 +24,7 @@ type Config struct {
 	DNSManagementEnabled bool
 	ManagementEnabled    bool
 	ExecEnabled          bool
+	PortForwardEnabled   bool
 	CoreDNSNamespace     string
 	CoreDNSConfigMap     string
 	CoreDNSCorefileKey   string
@@ -68,6 +69,9 @@ func Load() (Config, error) {
 	if cfg.ExecEnabled, err = boolEnv("KUCHDESK_EXEC_ENABLED", false); err != nil {
 		return Config{}, err
 	}
+	if cfg.PortForwardEnabled, err = boolEnv("KUCHDESK_PORT_FORWARD_ENABLED", false); err != nil {
+		return Config{}, err
+	}
 	if cfg.MetricsInterval, err = durationEnv("KUCHDESK_METRICS_INTERVAL", cfg.MetricsInterval); err != nil {
 		return Config{}, err
 	}
@@ -106,6 +110,9 @@ func Load() (Config, error) {
 	}
 	if cfg.ExecEnabled && !cfg.ManagementEnabled {
 		return Config{}, errors.New("KUCHDESK_MANAGEMENT_ENABLED is required when exec is enabled")
+	}
+	if cfg.PortForwardEnabled && !cfg.ManagementEnabled {
+		return Config{}, errors.New("KUCHDESK_MANAGEMENT_ENABLED is required when port-forward is enabled")
 	}
 	return cfg, nil
 }
