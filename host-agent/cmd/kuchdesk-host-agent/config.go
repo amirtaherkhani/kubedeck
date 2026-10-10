@@ -9,6 +9,7 @@ import (
 )
 
 type config struct {
+	CheckTarget   bool
 	InterfaceName string
 	TargetIP      string
 	Zone          string
@@ -27,6 +28,7 @@ type config struct {
 func parseConfig(args []string) (config, error) {
 	var cfg config
 	flags := flag.NewFlagSet("kuchdesk-host-agent", flag.ContinueOnError)
+	flags.BoolVar(&cfg.CheckTarget, "check-target", false, "resolve and print the DNS target without changing Technitium")
 	flags.StringVar(&cfg.InterfaceName, "interface", "", "LAN interface override; default is the operating system's default route interface")
 	flags.StringVar(&cfg.TargetIP, "target-ip", "", "explicit IPv4 address for the DNS wildcard; default is the selected interface's private address")
 	flags.StringVar(&cfg.Zone, "zone", "", "DNS zone to reconcile, for example local.dev")
