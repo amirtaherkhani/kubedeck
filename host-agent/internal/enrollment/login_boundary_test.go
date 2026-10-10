@@ -361,3 +361,41 @@ func TestOfficialManualBrowserFallbackValidatesAndPersists(t *testing.T) {
 		t.Fatal("invalid fallback replaced state")
 	}
 }
+
+func TestCombinedBrowserFallbackUsesFreshURLAndValidates(t *testing.T) {
+	h, s, p, token := loginFixture(t, false, false, false)
+	body, _ := json.Marshal(map[string]string{"JTWToken": token, "email": "test@example.invalid", "privateKey": ""})
+	announced := false
+	r, e := BrowserLoginWithFallback(context.Background(), h, p, s, func(u string) error {
+		address := callbackAddress(t, u)
+		conn, e := net.DialTimeout("tcp", strings.TrimPrefix(address, "http://")[:len(strings.TrimPrefix(address, "http://"))-1], time.Second)
+		if e != nil {
+			return e
+		}
+		conn.Close()
+		announced = true
+		return nil
+	}, func(context.Context) (string, error) {
+		if !announced {
+			t.Error("input started before fresh login URL")
+		}
+		return base64.StdEncoding.EncodeToString(body), nil
+	})
+	if e != nil || !r.AccessAllProjects || !r.RefreshAvailable {
+		t.Fatalf("combined login failed: %+v %v", r, e)
+	}
+}
+
+func TestCombinedAutomaticCallbackCancelsHiddenReader(t *testing.T) {
+	h, s, p, token := loginFixture(t, false, false, false)
+	stopped := make(chan struct{})
+	r, e := BrowserLoginWithFallback(context.Background(), h, p, s, func(u string) error { go callback(t, u, h.base.String(), token); return nil }, func(ctx context.Context) (string, error) { defer close(stopped); <-ctx.Done(); return "", ctx.Err() })
+	if e != nil || !r.AccessAllProjects {
+		t.Fatalf("callback failed: %+v %v", r, e)
+	}
+	select {
+	case <-stopped:
+	default:
+		t.Fatal("hidden reader survived automatic callback")
+	}
+}
