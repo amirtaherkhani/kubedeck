@@ -16,13 +16,15 @@ The operator watches `platform-secrets`, `observability`, and
 integration probe. The operator reads its existing Universal Auth Secret in
 `platform-secrets`; the credentials are not copied into an application chart.
 
-## Pending TokenRequest permission correction
+## TokenRequest permission policy
 
-The deployed chart gives the Operator unrestricted TokenRequest permission in
-all three watched namespaces. The [targeted narrowing plan](../../../../docs/infisical-tokenrequest-narrowing.md)
-requires separate approval; **it has not been applied**. No current configured
-consumer uses Kubernetes auth. Preserve the existing Universal Auth consumer
-while completing the permission gate.
+The approved [targeted narrowing](../../../../docs/infisical-tokenrequest-narrowing.md)
+is deployed at Helm revision 4. TokenRequest is limited to
+`development-tools/kubedesk-infisical-reader`; the other two watched namespaces
+have no manager-Role TokenRequest grant. See the
+[observability audit](../../../../docs/infisical-observability-audit-2026-10-10.md).
+No current configured consumer uses Kubernetes auth; preserve Universal Auth until
+the separately approved activation has its required human-session handoff.
 
 For offline preparation, download only the official pinned archive, then run
 from `lab/` (use a new output directory; the builder refuses to overwrite one):
@@ -53,7 +55,7 @@ python3 scripts/operator-token-scope/check_permissions.py
 ```
 
 The checker only submits authorization reviews; it never creates tokens. It
-currently exits 1 because existing broad grants are still present. Tests run via
+passed all four allow/deny checks after the approved revision-4 rollout. Tests run via
 `go test ./...`; include the pinned chart integration cases with:
 
 ```sh

@@ -1,10 +1,15 @@
+> Update 2026-10-10: the additional Operator RBAC narrowing was explicitly approved
+> and applied at revision 4. The [observability audit](infisical-observability-audit-2026-10-10.md)
+> records successful checks. Human-session handoff remains pending. Earlier
+> preflight findings below are retained as history.
+
 # Infisical activation approval bundle
 
 Prepared from read-only checks on 2026-10-10. **Activation remains paused.**
 The approved private state/template and five dedicated SA/RBAC resources have
 since been created; no human session, Infisical identity, consumer cutover or Host
-restart has occurred. The existing Operator Roles require a separate
-[targeted TokenRequest correction](infisical-tokenrequest-narrowing.md).
+restart has occurred. The separately approved
+[targeted TokenRequest correction](infisical-tokenrequest-narrowing.md) is now applied.
 This plan uses the
 installed Infisical v0.151.0 and Operator v0.11.11; no upgrade is included.
 
