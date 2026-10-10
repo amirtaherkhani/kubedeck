@@ -92,4 +92,16 @@ and the Host bridge restart remain outstanding. No slug or service upgrade occur
 - Host `admin-login` shares the existing tested CLI implementation. Focused race tests passed for Host command, enrollment CLI and enrollment core. Built command installed at the existing Host executable path and help verified outside the checkout. The optional root script now uses this binary, with no separate login helper dependency.
 - Rollback artifacts remain private under `.kuchdesk/activation-rollback` (original Grafana release values/manifest/CR and prior Host binaries/plist). No upgrade, project slug change, dependency deletion or unrelated identity/grant mutation was performed.
 
-Remaining live acceptance gate: creating and later deleting a disposable Infisical project is outside the enumerated two-project activation bundle. Approve that isolated project lifecycle before testing discovery/enrollment of a newly created project against the live organization. Future-project discovery and policy reload have fixture coverage; do not call the live new-project scenario verified yet. See [helper inventory](host-helper-inventory.md).
+## Live new-project discovery and cleanup — 2026-10-10
+
+The user subsequently approved one disposable fake-data project and permanent deletion of exactly that project after testing.
+
+- Created `kuchdesk-test-20261010t103302z`, ID `50ad8e08-e668-4896-ad68-b3b97e569733`, using existing human authority. The test issued no identity membership writes or manual enrollment requests.
+- Existing continuous controller discovered the project and assigned exact Host Admin and K8 Viewer memberships in **60.6 seconds** (five-second polling resolution). No service restart was performed; PID remained 80221. This is an observed test timing, not a latency guarantee.
+- Effective K8 read-only checks passed. Host created and updated one fake secret, K8 read it with values suppressed, and K8 PATCH returned **403**.
+- Guarded deletion checked the recorded project ID and exact name before deleting the project and its fake data. Subsequent full project inventory contained exactly the original two IDs. Their complete identity-membership structures were unchanged; enrollment policy was byte-identical, preserving exclusions and revocation settings.
+- Initial creation requests failed schema validation because the test slug exceeded the deployed API limit. A read-only inventory verified no orphan existed before retry with a shorter slug. No extra project was created.
+
+Final post-cleanup Doctor passed **8/8**, with enrollment evidence reporting exactly **2 projects**. A fresh organization inventory confirmed only the original two project IDs.
+
+The live new-project discovery gate is now complete. See [helper inventory](host-helper-inventory.md).
