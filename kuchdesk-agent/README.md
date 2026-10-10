@@ -67,6 +67,9 @@ permission to scrape kubelet Summary APIs.
 | `GET /v1/manage/pods/{namespace}/{name}/logs` | Up to 1 MiB and 1,000 tail lines of pod logs |
 | `POST /v1/manage/pods/{namespace}/{name}/exec` | Opt-in, noninteractive Pod command with bounded output |
 | `GET /v1/manage/pods/{namespace}/{name}/port-forward?port=PORT` | Opt-in WebSocket binary tunnel to one Pod TCP port |
+| `GET /v1/manage/batch/jobs/{namespace}/{name}` | Job identity, counts, conditions, and completion time without Pod template |
+| `POST /v1/manage/batch/cronjobs/{namespace}/{name}/run` | Create one Job from the confirmed CronJob template; supports `dryRun=true` |
+| `DELETE /v1/manage/batch/jobs/{namespace}/{name}` | Delete one confirmed Job and its Pods with Kubernetes preconditions; supports `dryRun=true` |
 | `GET /v1/manage/events/{namespace}` | Up to 100 namespace events |
 | `GET /v1/manage/workloads/{kind}/{namespace}/{name}/{action}` | Deployment/StatefulSet status or scale; DaemonSet status |
 | `POST /v1/manage/workloads/{kind}/{namespace}/{name}/{action}` | Deployment/StatefulSet scale, restart, status; DaemonSet restart/status |
@@ -141,6 +144,18 @@ Raw Secret resources are excluded from generic discovery and operations. Logs,
 events, ConfigMaps, and other resources can contain sensitive content; limit
 agent API client access and avoid saving these responses. Audit logs
 record action metadata and request IDs, not request or response bodies.
+Manual CronJob runs require `X-KuchDesk-Confirm:
+cronjobs/NAMESPACE/NAME/run`, `If-Match-UID`, and `If-Match` headers from a
+fresh CronJob read. The new Job copies the CronJob's Job template, uses a
+generated name, and returns metadata and status only. Deleting a Job requires
+`X-KuchDesk-Confirm: jobs/NAMESPACE/NAME/delete` and the Job's UID and
+resourceVersion in the same headers. Kubernetes checks those preconditions
+and uses foreground deletion, which also removes the Job's Pods. Both writes
+support `dryRun=true`; a Job create only confirms API acceptance, so inspect
+its status and Pods for eventual success. A CronJob changed after the agent's
+read but before Job creation is not atomically prevented by Kubernetes; the
+request uses the template fetched by the agent.
+
 Attach, Helm operations, and generic subresource writes are not
 implemented; each needs separate streaming and authorization design.
 

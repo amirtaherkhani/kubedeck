@@ -10,6 +10,7 @@ All notable KuchDesk changes are documented in this file.
 
 ### Added
 
+- Add typed Kubernetes Job status, manual CronJob run, and guarded Job deletion endpoints; responses exclude Pod templates and support dry-run writes.
 - Add opt-in WebSocket Pod port-forwarding to the Kubernetes agent with exact Pod confirmation, loopback-only tunnel setup, bounded sessions, and no new Service port or RBAC grant.
 - Add opt-in, noninteractive Kubernetes Pod exec with bearer authentication, Pod identity confirmation, bounded output, concurrency and timeout. It is disabled in chart defaults and adds no RBAC grant.
 - Add a read-only Infisical CLI project-access check that separates identity-scoped listing from project-detail authorization and never returns API error bodies.
