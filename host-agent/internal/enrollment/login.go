@@ -1,7 +1,9 @@
 package enrollment
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
@@ -323,3 +325,25 @@ func decodeBrowserCallback(body io.Reader) (string, error) {
 }
 
 func listenForBrowser() (net.Listener, error) { return net.Listen("tcp4", "127.0.0.1:0") }
+
+// LoginFromBrowserToken accepts only the official Copy-to-clipboard payload,
+// explicitly entered by the user in a hidden local terminal. It does not read
+// clipboard/browser storage and uses the same server checks as the callback.
+func LoginFromBrowserToken(ctx context.Context, h *Transport, p Policy, store *Store, encoded string) (HumanStatus, error) {
+	rejected := HumanStatus{Status: "invalid_browser_fallback", ObservedAt: time.Now()}
+	if p.Version != "v0.151.0" {
+		return rejected, ErrUnsupported
+	}
+	if len(encoded) > 64<<10 {
+		return rejected, errors.New("invalid_browser_fallback")
+	}
+	data, e := base64.StdEncoding.Strict().DecodeString(strings.TrimSpace(encoded))
+	if e != nil || len(data) > 32<<10 {
+		return rejected, errors.New("invalid_browser_fallback")
+	}
+	token, e := decodeBrowserCallback(bytes.NewReader(data))
+	if e != nil {
+		return rejected, errors.New("invalid_browser_fallback")
+	}
+	return completeBrowserLogin(ctx, h, p, store, token)
+}

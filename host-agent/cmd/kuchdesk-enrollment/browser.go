@@ -27,7 +27,7 @@ func openBrowserForOS(ctx context.Context, platform, url string, run commandRunn
 	return run(bounded, "/usr/bin/open", url)
 }
 func announceBrowserLogin(ctx context.Context, out io.Writer, url, org string, open browserOpener) error {
-	if _, e := fmt.Fprintf(out, "Official login URL: %s\nComplete login/MFA and select organization %s. Keep this terminal open.\nEnter credentials only on the official page. Do not paste browser fallback tokens into this terminal or chat.\n", url, org); e != nil {
+	if _, e := fmt.Fprintf(out, "Official login URL: %s\nComplete login/MFA and select organization %s. Keep this terminal open.\nEnter credentials only on the official page. For a Copy-to-clipboard fallback, stop this attempt and use -login-token in its hidden terminal prompt. Never paste tokens into chat.\n", url, org); e != nil {
 		return e
 	}
 	if e := open(ctx, url); e != nil {
