@@ -1,6 +1,6 @@
 # Namespace migration preparation
 
-Prepared from read-only live metadata on 2026-10-10. This is a reviewable plan, not an applied migration. The current profile remains operational. See the [namespace architecture](namespace-proposal.md).
+Prepared from read-only live metadata on 2026-10-10. The approved k6-only stage is now complete; all other mappings remain preparation. The current profile remains operational. See the [namespace architecture](namespace-proposal.md).
 
 ## Current state
 
@@ -9,7 +9,7 @@ Prepared from read-only live metadata on 2026-10-10. This is a reviewable plan, 
 - Doctor passes 8/8, enrollment reports two projects. The mapped agent, k6, Traefik, cert-manager, registry and Technitium workloads were ready at inspection.
 - Preserve all system namespaces, all ten bound `platform-storage` PVCs, and all other bound claims. No namespace rename, broker installation or data move is included.
 
-## Exact current-to-target mapping
+## Mapping recorded before the k6 stage
 
 Names below stay the same unless a separate reviewed plan says otherwise. Target namespace resources do not yet exist as a result of this work.
 
@@ -64,7 +64,7 @@ Do not switch the checked-in active profile piecemeal before these dependencies 
 5. **Health gates:** compare ready replicas and endpoints; Doctor 8/8 with two enrolled projects; authenticated agent API/metrics; k6 controller and metrics target; DNS wildcard and recursive resolution; ingress HTTPS and certificate readiness; Grafana auth sync; positive reader login/read plus denied write and denied unrelated-account login. Verify registry image pull without introducing test credentials or changing data.
 6. **Rollback:** record original release revisions, non-secret configuration, routing/Service references and RBAC subjects before cutover. Keep originals until checks pass. On failure, restore the approved original release/subjects/references and traffic endpoint; re-run the same health checks. A Helm rollback alone does not restore moved data or external Infisical auth configuration. Do not delete target or source data as an automatic rollback step.
 
-No live migration was performed. The next executable action is a reviewed per-service plan with exact security and data approvals, beginning with a stateless candidate only after its required gates are cleared.
+The approved k6-only stage completed in 11.8 seconds, Helm revision 2 retained in observability-tests. Workloads and metrics are ready in platform-tests; Doctor passed 8/8. CRDs, ClusterRole rules and all ten retained PVCs were preserved. No rollback was needed. See the [stage workflow](../lab/migrations/k6-platform-tests/README.md). All other migrations remain pending their individual gates.
 
 ## Repository Helm inventory
 
@@ -89,3 +89,5 @@ Read-only inventory on 2026-10-10 found three tracked `Chart.yaml` files and no 
 | metrics-server | No local chart/values file found in this bounded inventory | `kube-system/metrics-server`, chart 3.14.0, deployed |
 
 The upstream release commands and pinned versions are recorded in `lab/README.md`; the Operator's specialized rendering/upgrade instructions are in its own README. No new chart was fetched or installed for this inventory. Retained broker/database PVCs are not chart definitions or proof of current releases.
+
+Operational backup defaults are [native local exports without an added encrypted container](backup-defaults.md), outside Git with restrictive permissions and restoration checks. No backup was created for the k6 move. Infisical upgrade work is paused; see the [storage audit and checkpoint](platform-storage-audit-2026-10-10.md).
