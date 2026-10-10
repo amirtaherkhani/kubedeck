@@ -1,0 +1,91 @@
+# Namespace migration preparation
+
+Prepared from read-only live metadata on 2026-10-10. This is a reviewable plan, not an applied migration. The current profile remains operational. See the [namespace architecture](namespace-proposal.md).
+
+## Current state
+
+- No running NATS, RabbitMQ or Kafka Pods, Deployments, StatefulSets or Services were found; the current Helm inventory contains no matching releases. Do not infer running brokers from retained PVCs or monitoring links.
+- Infisical's `platform-secrets/redis-master` is 1/1 ready and stays internal. Its PostgreSQL and all other `platform-secrets` resources stay in place.
+- Doctor passes 8/8, enrollment reports two projects. The mapped agent, k6, Traefik, cert-manager, registry and Technitium workloads were ready at inspection.
+- Preserve all system namespaces, all ten bound `platform-storage` PVCs, and all other bound claims. No namespace rename, broker installation or data move is included.
+
+## Exact current-to-target mapping
+
+Names below stay the same unless a separate reviewed plan says otherwise. Target namespace resources do not yet exist as a result of this work.
+
+| Current objects / ownership | Intended namespace | Dependencies and gate |
+|---|---|---|
+| `development-tools`: Deployment, Service and ServiceAccount `kuchdesk-agent`; Helm release `kuchdesk-agent` | `platform-tools` | Secret references `kuchdesk-agent-auth`, `kuchdesk-host-bridge-token`; ConfigMap `kuchdesk-host-bridge-ca`; current ClusterRoleBinding `kuchdesk-agent-admin` binds this account to `cluster-admin`. Requires explicit security approval; do not copy/extend that binding automatically. |
+| `observability-tests`: Deployment `k6-operator-controller-manager`, Service `k6-operator-controller-manager-metrics-service`, ServiceAccount `k6-operator-controller`; Helm release `k6-operator` | `platform-tests` | Role/RoleBinding `k6-operator-leader-election-role` / `k6-operator-leader-election-rolebinding`; ClusterRoleBindings `k6-operator-manager-rolebinding`, `k6-operator-metrics-auth-rolebinding`; metrics discovery and test manifests. Requires approval of exact new subjects, with no broader rules. |
+| `platform-system`: Deployment/Service/ServiceAccount `traefik`; manually managed Service `traefik-lan`; Helm release `traefik` | `platform-networking` | ClusterRoleBinding `traefik-platform-system`, ingress class/provider scope, LAN ports, TLSStore and certificate Secret references. Preserve existing traffic until replacement routing passes checks. |
+| `platform-system`: Deployments/Services/ServiceAccounts `cert-manager`, `cert-manager-cainjector`, `cert-manager-webhook`; Helm release `cert-manager` | `platform-networking` | ClusterRoleBinding subjects, webhook Service namespace and CA trust, leader election, cluster-resource namespace and private CA. Move only in an explicitly approved PKI/security plan. |
+| `technitium`: StatefulSet `technitium`, Services `technitium` and `technitium-lan`, claim `data-technitium-0`; no Helm ownership annotation observed | `platform-networking` eventually | Bound data, DNS continuity, admin Secret and Host DNS job namespace/service references. No volume move/rebind/delete authorized. Keep current instance until backup/restore and cutover are separately approved. |
+| `platform-system`: Deployment `kuchdesk-local-registry`, mounted claim `kuchdesk-local-registry`; no Helm ownership annotation observed | `platform-tools` eventually | Bound registry data and local port-forward/LaunchAgent target. Preserve additional bound claim `kubedeck-local-registry`; its consumer/ownership requires review. No claim operation authorized. |
+| Certificates `development-tools/local-dev-tls`, `observability-tests/local-dev-tls` | Respective target namespaces only if still needed | Namespaced certificate Secret delivery and consumers must be reviewed. Existing certificates remain; provisioning/copying credentials is security-gated. |
+| `platform-system/Certificate local-dev-ca`; ClusterIssuers `local-dev-ca` and `local-dev-selfsigned` | Keep current placement during initial preparation | CA Secret `local-dev-ca` and cert-manager cluster-resource namespace are coupled. Never relocate/export the private key as routine namespace preparation. |
+| `development-tools/ServiceAccount kubedesk-infisical-reader`, its token-request roles/bindings | Keep in `development-tools` initially | Independent auth anchor; moving the agent does not require moving this account. Optional later move to `platform-tools` requires the coordinated security change below. |
+| `observability` resources, including Grafana and `InfisicalSecret/grafana-admin` | Unchanged | Grafana remains with observability. Dedicated future broker/database UIs follow their functional service; generic management UIs belong in `platform-tools`. |
+| `platform-secrets`, system namespaces, `platform-storage` and ten claims | Unchanged | Explicit preservation boundary. Shared database and messaging services are future designs, not migrations of these claims. |
+
+cert-manager has cluster-scoped bindings for cainjector; controller approve, certificates, certificate-signing requests, challenges, clusterissuers, ingress-shim, issuers and orders; and webhook subject-access reviews. Its MutatingWebhookConfiguration and ValidatingWebhookConfiguration both target `platform-system/cert-manager-webhook`. A release move must review their exact rendered ownership and subjects; do not install competing controllers or adopt cluster-scoped resources blindly.
+
+## Infisical namespace-bound authentication
+
+Fresh readback confirms Kubernetes Auth allows exactly namespace `development-tools` and account `kubedesk-infisical-reader`, with 900-second token TTL/max TTL and no persisted reviewer JWT.
+
+- `observability/InfisicalSecret grafana-admin` points to that account and the unchanged backend Service in `platform-secrets`.
+- ClusterRoleBinding `kubedesk-infisical-token-reviewer` targets that account.
+- Role/RoleBinding `kubedesk-infisical-token-request` grants the Operator account `platform-secrets/infisical-opera-controller-manager` TokenRequest only for that named reader.
+- The Helm-owned `development-tools/infisical-opera-manager-role` and `infisical-opera-manager-rolebinding` also target the Operator and include the narrowed TokenRequest rule. Review both rule sources together; retain the resource-name restriction.
+
+Leaving this anchor in place avoids an immediate auth migration. Any later move must explicitly approve the new account, exact RBAC subjects/rules, Infisical allowed namespace/name, Operator namespace scope and Grafana account reference as one bounded change. Do not temporarily allow all namespaces or unrelated accounts. Preserve the same Infisical Host Admin/K8 read-only model.
+
+## Configurable project mapping
+
+Kubedesk Platform owns shared infrastructure. Each managed project has its own Infisical project and configurable namespace/environment mapping keyed by the stable project ID. See the proposal's concrete project IDs and configurable `vero` namespace example for the `vero-finance` project. Neither the project name nor `vero` is a mandatory namespace name. There is no mandatory `app-` prefix, no substitution of `finance` for `vero-finance`, and no automatic namespace provisioning from Infisical discovery. Provisioning defaults disabled until explicit policy is approved.
+
+Preparation points identified in the repository:
+
+- `lab/site.json`: CA namespace and certificate namespace list; preserve current defaults until cutover.
+- `lab/apps/platform/infisical-operator/values.yaml`: Operator namespace scope.
+- `lab/apps/observability/k6/tests/smoke-test.yaml` and `lab/README.md`: k6 target namespace and commands.
+- `lab/core/exposure/docker-desktop/traefik-lan.yaml` and ingress values: LAN exposure and routing.
+- Host installation: `KUCHDESK_HOST_AGENT_NAMESPACE` maps to `-namespace`; update through configuration, not a source-code project-name substitution. Check registry port-forward targets separately.
+- Agent Helm release namespace, Service DNS, monitoring targets, certificate references and Secret sources must be rendered and compared together.
+
+Do not switch the checked-in active profile piecemeal before these dependencies are ready. Future alternate profiles should render offline and be reviewed before live use. Supported metadata/policy reload remains available; process settings, identity bindings and Kubernetes Pod settings may require a controlled restart or rollout.
+
+## Execution gates and rollback
+
+1. **Preparation:** render proposed release manifests offline with existing versions, compare object ownership and RBAC, and verify namespace/project mapping. No active profile or live resource changes are made by this document.
+2. **Security approval required before live changes:** exact RBAC subject/rule updates, especially the agent's cluster-admin binding; Secret/credential delivery; Kubernetes Auth account/namespace changes; webhook/PKI/CA changes; any network-policy or access expansion. Current authorization allows preparation, not silently granting these privileges.
+3. **Data/irreversible approval required:** migration or deletion/rebinding of any bound claim, deletion of source namespaces or persistent workloads, and destructive release cleanup. The ten retained platform-storage claims remain excluded. Backups must be restorable, not merely present.
+4. **One service at a time after approval:** preserve existing versions and permissions, use an approved handover rather than concurrent conflicting controllers, and keep the old endpoint until target validation. Namespace changes require replacement/redeployment, not renaming a namespace in place. Helm namespace moves require explicit release/cluster-resource ownership planning; a same-name install in another namespace is not a complete migration.
+5. **Health gates:** compare ready replicas and endpoints; Doctor 8/8 with two enrolled projects; authenticated agent API/metrics; k6 controller and metrics target; DNS wildcard and recursive resolution; ingress HTTPS and certificate readiness; Grafana auth sync; positive reader login/read plus denied write and denied unrelated-account login. Verify registry image pull without introducing test credentials or changing data.
+6. **Rollback:** record original release revisions, non-secret configuration, routing/Service references and RBAC subjects before cutover. Keep originals until checks pass. On failure, restore the approved original release/subjects/references and traffic endpoint; re-run the same health checks. A Helm rollback alone does not restore moved data or external Infisical auth configuration. Do not delete target or source data as an automatic rollback step.
+
+No live migration was performed. The next executable action is a reviewed per-service plan with exact security and data approvals, beginning with a stateless candidate only after its required gates are cleared.
+
+## Repository Helm inventory
+
+Read-only inventory on 2026-10-10 found three tracked `Chart.yaml` files and no tracked `Chart.lock` or Helmfile release definition. None of these three charts declares a `dependencies` list. Upstream dependencies are not thereby proven absent: their remote chart source is outside this local inventory. Release instructions live in the guides; generated overlays are separate from authored charts.
+
+| Repository file / path | Classification and purpose | Current installed release |
+|---|---|---|
+| `kuchdesk-agent/chart/Chart.yaml`, `values.yaml` | Locally authored cluster-agent chart 0.13.0 | `development-tools/kuchdesk-agent`, deployed |
+| `lab/apps/observability/grafana/Chart.yaml`, `values.yaml`, `values.homelab.yaml` | Vendored upstream Grafana chart 12.7.3 with local configuration/templates | `observability/grafana`, deployed |
+| `lab/tests/infisical-helm-probe/Chart.yaml`, `values.yaml` | Locally authored opt-in test chart 0.1.0 | No current installed release found |
+| `lab/apps/observability/alloy/values.yaml` | Upstream `grafana/alloy` configuration | `observability/alloy`, chart 1.10.1, deployed |
+| `lab/apps/observability/k6/values.yaml` | Upstream `grafana/k6-operator` configuration | `observability-tests/k6-operator`, chart 4.5.0, deployed |
+| `lab/apps/observability/kube-prometheus-stack/values.yaml` | Upstream `prometheus-community/kube-prometheus-stack` configuration | `observability/monitoring`, chart 87.15.1, deployed |
+| `lab/apps/observability/loki/values.yaml` | Upstream `grafana/loki` configuration | `observability/loki`, chart 7.0.0, deployed |
+| `lab/apps/observability/tempo/values.yaml` | Upstream `grafana/tempo` configuration | `observability/tempo`, chart 1.24.4, deployed |
+| `lab/apps/platform/cert-manager/values.yaml` | Upstream `cert-manager/cert-manager` configuration | `platform-system/cert-manager`, chart v1.21.0, deployed |
+| `lab/core/ingress/traefik-docker-desktop-values.yaml` | Upstream `traefik/traefik` configuration | `platform-system/traefik`, chart 39.0.7, deployed |
+| `lab/apps/platform/infisical/values.yaml` | Upstream `infisical-helm-charts/infisical` configuration; enables internal Redis, disables MongoDB | `platform-secrets/infisical`, chart 0.4.2, deployed |
+| `lab/apps/platform/infisical-operator/values.yaml` and `README.md` | Upstream Secrets Operator configuration plus documented rendering of a supplied chart archive with narrowed TokenRequest RBAC | `platform-secrets/infisical-operator`, chart v0.11.11, deployed |
+| `lab/apps/platform/infisical/manifests/postgresql.yaml` | Plain Kubernetes Service/StatefulSet manifest for Infisical PostgreSQL; not a Helm chart or shared database definition | StatefulSet exists in `platform-secrets`; no independent PostgreSQL Helm release found |
+| NATS, RabbitMQ, Kafka, shared PostgreSQL/Redis/MongoDB | No corresponding local chart, dependency declaration or values/release definition found | No current shared-service/broker release found |
+| metrics-server | No local chart/values file found in this bounded inventory | `kube-system/metrics-server`, chart 3.14.0, deployed |
+
+The upstream release commands and pinned versions are recorded in `lab/README.md`; the Operator's specialized rendering/upgrade instructions are in its own README. No new chart was fetched or installed for this inventory. Retained broker/database PVCs are not chart definitions or proof of current releases.
