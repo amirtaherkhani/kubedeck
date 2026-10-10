@@ -2,9 +2,9 @@
 
 Status: architecture/proposal only. Inventory observed on 2026-10-10; no namespace migration, shared database deployment or new credential provisioning is authorized by this document.
 
-The retained functional groups are `observability`, `platform-secrets`, `platform-tools`, `platform-networking` and `platform-tests`. Use **`platform-databases`** for proposed shared PostgreSQL, Redis and future database services. The seventh group is application workloads, using the proposed `app-<project>` namespace convention when needed. These are seven functional groups, not a requirement to rename system namespaces or create every namespace now.
+The retained functional groups are `observability`, `platform-secrets`, `platform-tools`, `platform-networking` and `platform-tests`. Use **`platform-databases`** for proposed shared PostgreSQL and future database services, and **`platform-messaging`** for NATS, RabbitMQ, Kafka and similar brokers. Redis belongs with the function it actually serves; its proposed shared-service placement is not yet a deployed fact. Application workloads use the proposed `app-<project>` namespace convention when needed. With messaging added, these are eight functional groups, not a requirement to rename system namespaces or create every namespace now.
 
-## Consolidated seven-group proposal
+## Consolidated eight-group proposal
 
 | Group / proposed namespace | Current location and observed workloads | Proposed responsibility |
 |---|---|---|
@@ -13,7 +13,8 @@ The retained functional groups are `observability`, `platform-secrets`, `platfor
 | `platform-tools` | `development-tools`: KuchDesk agent; `platform-system`: local registry | Agents and developer infrastructure. |
 | `platform-networking` | `technitium`: DNS; `platform-system`: Traefik and cert-manager | DNS, ingress and certificates. |
 | **`platform-tests`** | Current live namespace remains **`observability-tests`**, containing k6 Operator | k6 and future general testing tools. Selected proposed name; no migration performed. |
-| **`platform-databases`** | No running shared database workload verified in `platform-storage`; retained PVC inventory below | Shared PostgreSQL, Redis and future database services for managed projects, with engine-specific project isolation. This is a new service design, not permission to adopt old volumes. |
+| **`platform-databases`** | No running shared database workload verified in `platform-storage`; retained PVC inventory below | Shared PostgreSQL and future database services for managed projects, with engine-specific project isolation. Redis used as a data/cache service may belong here. This is a new service design, not permission to adopt old volumes. |
+| **`platform-messaging`** | No running NATS, RabbitMQ or Kafka workload or matching Service/current Helm release found in the fresh inventory | Shared broker infrastructure and engine-specific project accounts/ACLs for NATS, RabbitMQ, Kafka and similar systems; proposed only. |
 | Application workloads: `app-<project>` | Future project application workloads | Separate application lifecycles; consume scoped endpoints from shared database services instead of deploying an instance for every project by default. |
 
 `kube-system`, `kube-public`, `kube-node-lease`, `local-path-storage` and `default` remain unchanged. The existing `platform-storage` namespace and all **10 bound PVCs** remain untouched pending ownership and recovery review.
@@ -31,6 +32,22 @@ Shared infrastructure does not mean shared application credentials or unrestrict
 The PostgreSQL proposal follows its [privilege model](https://www.postgresql.org/docs/current/ddl-priv.html). Redis isolation uses [ACL users, command and key restrictions](https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/); [Redis's SELECT documentation](https://redis.io/docs/latest/commands/select/) cautions against using logical database numbers for unrelated applications. Logical access isolation does not provide separate resource capacity or failure domains.
 
 Infisical's existing internal PostgreSQL and Redis **remain in `platform-secrets`**. Do not reuse their credentials, move their data, or expose them as the shared application service. Any later consolidation would require its own explicit design, backup/restore verification and migration approval.
+
+## Messaging: current versus proposed
+
+A fresh read-only cluster-wide inventory on 2026-10-10 scanned **91 Pods, StatefulSets, Deployments and Services**, plus the current Helm release listing. Names and container images were checked for NATS, RabbitMQ, Kafka and common related broker names. This is a bounded cluster inventory, not a check of externally hosted services.
+
+| Service | Current namespace | Verified status | Proposed placement |
+|---|---|---|---|
+| NATS | None running found | No matching Pod, StatefulSet, Deployment, Service or current Helm release | `platform-messaging` if later deployed |
+| RabbitMQ | None running found | No matching Pod, StatefulSet, Deployment, Service or current Helm release | `platform-messaging` if later deployed |
+| Kafka | None running found | No matching Pod, StatefulSet, Deployment, Service or current Helm release | `platform-messaging` if later deployed |
+| Infisical Redis | `platform-secrets` | `redis-master-0` Running and container ready; StatefulSet `redis-master` **1/1 ready**; `redis-master` and `redis-headless` Services exist | Remains an Infisical-internal dependency in `platform-secrets` |
+| Future shared Redis | Not deployed/verified | No separate shared Redis workload found | Classify by actual role: data/cache under `platform-databases`; a dedicated messaging role may fit `platform-messaging` after design review |
+
+Retained NATS/RabbitMQ/Kafka PVCs are not proof of running brokers. Old monitoring links are not runtime evidence. Infisical Redis is not treated as shared broker capacity, and its actual internal usage is not inferred solely from the Redis image.
+
+The messaging design should specify per-project broker-native boundaries (accounts, vhosts, topics/subjects or equivalent), separate credentials and ACLs, and engine-specific cross-project denial tests. No broker, account, credential or permission is provisioned by this proposal.
 
 ## Existing ownership evidence
 
