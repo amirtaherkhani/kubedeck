@@ -32,6 +32,7 @@ func runWithBrowser(args []string, stdout, stderr io.Writer, opener browserOpene
 	policy := flags.String("policy", "", "private JSON policy file")
 	dir := flags.String("state-dir", "", "existing private state directory")
 	once := flags.Bool("once", false, "run one bounded cycle")
+	manual := flags.Bool("login-token", false, "user-only hidden terminal input of the official browser fallback; never reads clipboard")
 	login := flags.Bool("login", false, "user-run official browser login; save a validated private human session")
 	status := flags.Bool("status", false, "read-only server validation of saved human enrollment authority; never refresh")
 	source := flags.String("import-session", "", "explicit private session handoff file; import only")
@@ -42,7 +43,7 @@ func runWithBrowser(args []string, stdout, stderr io.Writer, opener browserOpene
 		return errors.New("url_policy_and_state_required")
 	}
 	modes := 0
-	for _, enabled := range []bool{*login, *status, *once, *source != ""} {
+	for _, enabled := range []bool{*login, *manual, *status, *once, *source != ""} {
 		if enabled {
 			modes++
 		}
@@ -54,7 +55,7 @@ func runWithBrowser(args []string, stdout, stderr io.Writer, opener browserOpene
 	if e != nil {
 		return e
 	}
-	if *login || *status {
+	if *login || *manual || *status {
 		p, e := enrollment.LoadPolicy(*policy)
 		if e != nil {
 			return e
@@ -81,6 +82,17 @@ func runWithBrowser(args []string, stdout, stderr io.Writer, opener browserOpene
 			return e
 		}
 		defer store.Close()
+		if *manual {
+			encoded, e := readHiddenBrowserToken(ctx, os.Stdin, stderr)
+			if e != nil {
+				return e
+			}
+			report, e := enrollment.LoginFromBrowserToken(ctx, h, p, store, encoded)
+			if err := json.NewEncoder(stdout).Encode(report); err != nil {
+				return errors.New("status_output_failed")
+			}
+			return e
+		}
 		report, e := enrollment.BrowserLogin(ctx, h, p, store, func(loginURL string) error {
 			return announceBrowserLogin(ctx, stderr, loginURL, p.OrganizationID, opener)
 		}, func(stage string) { _, _ = fmt.Fprintln(stderr, stage) })

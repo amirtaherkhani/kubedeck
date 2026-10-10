@@ -43,7 +43,7 @@ reports `humanAuthority:"not_checked"`; a planned identity is never Admin proof.
 The terminal prints only fixed callback stages:
 
 - `callback_waiting`: listener ready; no valid callback received yet.
-- `callback_preflight_received`: the browser reached the listener's preflight.
+- `callback_preflight_received`: a preflight reached the listener; this alone does not identify its sender.
 - `callback_rejected_origin`, `callback_rejected_host`, `callback_rejected_route`,
   `callback_rejected_payload` or `callback_rejected_scope`: specific validation
   failed; no credentials or incoming field values are printed.
@@ -53,22 +53,44 @@ The terminal prints only fixed callback stages:
 - `callback_session_saved`: validated private state was persisted.
 - `callback_timeout_or_cancel`: this attempt has ended; its old URL cannot work.
 
-If Infisical displays a fallback token while the terminal is waiting, do not
-paste it into chat or this terminal. This command deliberately uses the automatic
-callback only. The fallback page alone does not identify whether the POST was
-blocked by the browser, sent to an expired listener, or rejected. Report only the
-fixed callback stages, never the token. Browser request telemetry or those stages
-are needed to identify the actual cause; do not disable browser protections.
+If Infisical displays **Copy to clipboard**, its automatic callback failed.
+The exact browser transport cause may remain unknown. The official CLI also
+supports this fallback; use the following separate, user-only recovery:
 
-The listener expires after ten minutes; Ctrl-C cancels it. Once an attempt has
-ended, run the command yourself again and use its newly generated URL. Never
-reuse an old port or start a second command while the first remains active.
+1. Stop any waiting login command with Ctrl-C. Do not reopen its old URL.
+2. Run the command below yourself. It does not open a browser or start a callback listener.
+3. Use the official page's Copy button, then paste into the **hidden prompt** and
+   press Enter. Never paste the value into chat, a shell command, or a file.
+
+```sh
+/Users/mac/Documents/GitHub/kuchdesk/.kuchdesk/bin/kuchdesk-enrollment-fallback \
+  -login-token \
+  -url https://infisical.local.dev \
+  -policy /Users/mac/Documents/GitHub/kuchdesk/.kuchdesk/infisical-control/policy.json \
+  -state-dir /Users/mac/Documents/GitHub/kuchdesk/.kuchdesk/infisical-control
+```
+
+This build is installed separately so an older running command is undisturbed.
+The prompt requires a terminal, hides input, allows five minutes, bounds input
+size, restores terminal settings and discards queued paste bytes on exit. It
+never reads the clipboard or browser storage. The decoded official payload
+receives the same authentication, organization, enrollment-authority and refresh
+checks as the callback before private persistence. Failed validation preserves
+existing state. Check the sanitized result; the fallback page alone is not proof
+that this client has usable authority. If the value has expired, or the official
+page is no longer available, a fresh user-run login is required after recovery
+is ready. Do not repeat login merely because the automatic callback failed.
+
+The callback listener expires after ten minutes; Ctrl-C cancels it. Never reuse
+an old port or start a second command while the first remains active.
 Unsupported login/MFA flows remain in the official UI; incomplete MFA or policy
 denial fails closed.
 
 ## Supported protocol and boundaries
 
-This uses the official, version-pinned flow rather than a password grant:
+This uses the official, version-pinned flow rather than a password grant. The
+[official CLI fallback](https://github.com/Infisical/cli/blob/v0.43.140/packages/cmd/login.go)
+accepts a hidden base64 JSON payload; `-login-token` supports that same contract:
 
 1. [Login page](https://github.com/Infisical/infisical/blob/v0.151.0/frontend/src/pages/auth/LoginPage/LoginPage.tsx) accepts `callback_port`.
 2. [Organization selection](https://github.com/Infisical/infisical/blob/v0.151.0/frontend/src/pages/auth/SelectOrgPage/SelectOrgSection.tsx) handles SSO/MFA and posts `JTWToken`, email and an empty privateKey to `http://127.0.0.1:PORT/`.

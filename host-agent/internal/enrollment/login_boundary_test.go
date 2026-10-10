@@ -341,3 +341,23 @@ func TestBrowserLoginEmitsOnlySafeCallbackStages(t *testing.T) {
 		}
 	}
 }
+
+func TestOfficialManualBrowserFallbackValidatesAndPersists(t *testing.T) {
+	h, s, p, token := loginFixture(t, false, false, false)
+	body, _ := json.Marshal(map[string]string{"JTWToken": token, "email": "private@example.invalid", "privateKey": ""})
+	encoded := base64.StdEncoding.EncodeToString(body)
+	r, e := LoginFromBrowserToken(context.Background(), h, p, s, encoded)
+	if e != nil || !r.AccessAllProjects || !r.RefreshAvailable || !s.Exists("session.json") {
+		t.Fatalf("fallback failed %+v %v", r, e)
+	}
+	before, _ := os.ReadFile(filepath.Join(s.Dir, "session.json"))
+	for _, bad := range []string{"not-base64", strings.Repeat("x", 65537), base64.StdEncoding.EncodeToString([]byte(`{"JTWToken":"forged"}`))} {
+		if _, e := LoginFromBrowserToken(context.Background(), h, p, s, bad); e == nil {
+			t.Fatal("bad fallback accepted")
+		}
+	}
+	after, _ := os.ReadFile(filepath.Join(s.Dir, "session.json"))
+	if string(before) != string(after) {
+		t.Fatal("invalid fallback replaced state")
+	}
+}

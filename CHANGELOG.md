@@ -44,6 +44,8 @@ All notable KuchDesk changes are documented in this file.
 
 ### Fixed
 
+- Support the official Infisical browser Copy-to-clipboard fallback through a hidden user-run terminal prompt, with server authority validation before private session persistence.
+
 - Stage a digest-pinned local image through KIND's containerd before registering it with CRI, avoiding a direct CRI manifest short-read while preserving the kubelet visibility gate.
 - Resolve the informational Kubernetes capability catalog from one complete rules review, with exact access-review fallback when rules are incomplete or unavailable.
 - Pre-pull digest-pinned KIND images through kubelet's CRI so `image.pullPolicy=Never` recognizes them during Helm rollouts.
