@@ -56,7 +56,10 @@ The official Copy-to-clipboard fallback is implemented and installed as a
 separate recovery binary. Mock authority validation and terminal tests passed;
 main `248e408` is pushed. No new user login was started. Exact Safari callback
 transport failure is still unproven; browser evidence is needed to diagnose it.
-Live human enrollment authority remains unverified.
+Live human enrollment authority remains unverified. The importer alone is not an
+end-to-end login flow: no standalone token-generation URL was found in the
+pinned frontend; its fallback browser copy expires after 30 seconds. The closed-
+page case still needs a combined fresh browser/callback and hidden-input flow.
 
 The existing slug migration inventory remains a read-only plan. Its external
 CI/integration inventory gate is still open (`infisical-activation-plan.md`).

@@ -55,7 +55,18 @@ The terminal prints only fixed callback stages:
 
 If Infisical displays **Copy to clipboard**, its automatic callback failed.
 The exact browser transport cause may remain unknown. The official CLI also
-supports this fallback; use the following separate, user-only recovery:
+supports this fallback. This importer is usable only while you already have the
+official Copy-to-clipboard value. It cannot initiate login. If the original page
+was closed, do not start this importer expecting a browser to open.
+
+The v0.151.0 frontend creates this base64 JSON only after a CLI callback failure
+and gives its browser copy a 30-second expiry. `/cli-redirect` alone does not
+generate a new value. There is no verified standalone manual-token URL. A fresh
+CLI browser flow needs a newly allocated callback port; never invent a port or
+reuse an expired URL. A combined browser-plus-hidden-input flow remains needed
+for reliable recovery after the original page has closed.
+
+If the official value is already available:
 
 1. Stop any waiting login command with Ctrl-C. Do not reopen its old URL.
 2. Run the command below yourself. It does not open a browser or start a callback listener.
