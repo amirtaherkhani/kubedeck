@@ -2,9 +2,9 @@
 
 Status: architecture/proposal only. Inventory observed on 2026-10-10; no namespace migration, shared database deployment or new credential provisioning is authorized by this document.
 
-The retained functional groups are `observability`, `platform-secrets`, `platform-tools`, `platform-networking` and `platform-tests`. Use **`platform-databases`** for proposed shared PostgreSQL and future database services, and **`platform-messaging`** for NATS, RabbitMQ, Kafka and similar brokers. Redis belongs with the function it actually serves; its proposed shared-service placement is not yet a deployed fact. Application workloads use the proposed `app-<project>` namespace convention when needed. With messaging added, these are eight functional groups, not a requirement to rename system namespaces or create every namespace now.
+The retained functional groups are `observability`, `platform-secrets`, `platform-tools`, `platform-networking` and `platform-tests`. Use **`platform-databases`** for proposed shared PostgreSQL and future database services, and **`platform-messaging`** for NATS, RabbitMQ, Kafka and similar brokers. Redis belongs with the function it actually serves; its proposed shared-service placement is not yet a deployed fact. Kubedesk Platform owns these seven shared infrastructure groups. Each independent managed project has its own Infisical project and dedicated configurable Kubernetes namespace, separate from the platform groups. No namespace prefix is mandatory; no namespace is created automatically by Infisical discovery.
 
-## Consolidated eight-group proposal
+## Consolidated seven platform groups
 
 | Group / proposed namespace | Current location and observed workloads | Proposed responsibility |
 |---|---|---|
@@ -15,9 +15,39 @@ The retained functional groups are `observability`, `platform-secrets`, `platfor
 | **`platform-tests`** | Current live namespace remains **`observability-tests`**, containing k6 Operator | k6 and future general testing tools. Selected proposed name; no migration performed. |
 | **`platform-databases`** | No running shared database workload verified in `platform-storage`; retained PVC inventory below | Shared PostgreSQL and future database services for managed projects, with engine-specific project isolation. Redis used as a data/cache service may belong here. This is a new service design, not permission to adopt old volumes. |
 | **`platform-messaging`** | No running NATS, RabbitMQ or Kafka workload or matching Service/current Helm release found in the fresh inventory | Shared broker infrastructure and engine-specific project accounts/ACLs for NATS, RabbitMQ, Kafka and similar systems; proposed only. |
-| Application workloads: `app-<project>` | Future project application workloads | Separate application lifecycles; consume scoped endpoints from shared database services instead of deploying an instance for every project by default. |
 
 `kube-system`, `kube-public`, `kube-node-lease`, `local-path-storage` and `default` remain unchanged. The existing `platform-storage` namespace and all **10 bound PVCs** remain untouched pending ownership and recovery review.
+
+## Independent project namespace mapping
+
+Keep an explicit mapping keyed by stable Infisical **project ID**, with environment and Kubernetes namespace as configurable fields. Project names and slugs are display/routing metadata, not immutable identity. `finance` and `vero-finance` are distinct strings; do not substitute one for the other or rename resources.
+
+| Infisical project ID | Current display name | Environment | Namespace mapping status |
+|---|---|---|---|
+| `85cbdbe6-80dd-4e31-aa45-2f0ac2263588` | Kubedesk Platform | `dev` | Owns the shared platform groups and observability; current namespaces remain until an approved migration. |
+| `fd27d482-48bc-4b6c-b194-5901bdbc497b` | vero-finance | `dev` | `vero` is a user-supplied example namespace, not a required name. The final namespace is configurable; provisioning is not performed or implied. |
+
+Proposed configuration shape (documentation only, not an implemented provisioning API):
+
+```json
+{
+  "projects": [
+    {
+      "infisicalProjectId": "fd27d482-48bc-4b6c-b194-5901bdbc497b",
+      "environments": [{"infisicalEnvironment": "dev", "kubernetesNamespace": "vero"}],
+      "namespaceProvisioning": "disabled"
+    }
+  ]
+}
+```
+
+Validate mapping uniqueness and project/environment existence before use; reject ambiguous or conflicting namespace assignments. Applications run in their own namespace and consume shared database/broker endpoints with project-scoped data, credentials and access. Cross-namespace connectivity and secret delivery require an explicit policy; the existing read-only Infisical identity is not permission to broaden Kubernetes privileges.
+
+Existing automatic Infisical discovery reconciles approved project access only. Namespace creation, workload installation and database/broker provisioning are separate explicitly enabled actions, not side effects of discovery. Preserve current Host Admin/K8 read-only roles, exclusions and deliberate revocations.
+
+## Dashboard placement
+
+Place a dedicated broker UI with its broker in `platform-messaging`, a database UI with its service in `platform-databases`, and generic management web applications in `platform-tools`. Grafana remains in `observability`; its dashboards may visualize all groups without moving the underlying services. No new dashboard installation is implied. Keep Infisical's UI and internal dependencies in `platform-secrets`, and Technitium's service UI with DNS in the planned `platform-networking` group.
 
 ## Shared database boundaries
 
@@ -78,3 +108,5 @@ Review and approve a concrete migration plan covering PVC ownership, backups and
 Keep namespace names, service endpoints, database names and credential references configurable through Helm values and agent configuration. Apply supported reload behavior only where implemented; identity bindings and process settings may require restart. Do not hardcode proposed names into running services before migration approval.
 
 System namespaces and the 10 bound `platform-storage` PVCs remain untouched. This document changes neither cluster configuration, permissions nor credentials.
+
+See [migration preparation](namespace-migration-plan.md) for the resource mapping, approval gates, health checks and rollback sequence.
