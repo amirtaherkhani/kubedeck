@@ -136,7 +136,23 @@ or provision a live MCP service. It verifies metadata visibility only; secret
 access, bootstrap credential lifetime, and other permissions require separate
 checks.
 
-Secret writes, project/identity administration, value delivery, a host HTTP API, and Kubernetes-agent bridging are not implemented. Existing Grafana Operator sync remains independent. The same host MCP process now exposes a separate opt-in KuchDesk deployment workflow described below; this does not use Infisical credentials.
+The opt-in [host control plane](../docs/host-control-plane.md) now has typed
+project, environment, folder, secret, role, and machine-identity membership
+commands. `kuchdesk-host-bridge` is a separate HTTPS listener and is **off**
+unless `KUCHDESK_HOST_BRIDGE_ENABLED=true`. It requires `-url`, `-tls-cert`,
+`-tls-key`, and `-project-ids`; `-allow-project-create` is another explicit
+gate. `KUCHDESK_HOST_BRIDGE_TOKEN` is loaded from the same user-owned,
+mode-0600 project `.env` as the Infisical pair. Start it from the checkout or
+set `KUCHDESK_PROJECT_ROOT` to an absolute checkout path. An approved operator
+must choose the address, TLS identity, project allowlist, and token before
+running it. A loopback listener is the default and cannot be reached from the
+cluster. No live listener or credential has been provisioned.
+
+For an explicitly approved AI management client, the existing stdio MCP server
+can add `infisical_manage` with `-scope all -manage -project-ids PROJECT_ID`.
+This uses the same typed host command service, returns no secret values, and
+is not part of `doctor-repair`. The current MCP client configuration has not
+been changed. Existing Grafana Operator sync remains independent.
 
 ## Local build and deployment workflow
 

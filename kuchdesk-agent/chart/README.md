@@ -45,6 +45,17 @@ session slots, and a 64 MiB limit in each direction. It adds no public Service
 port or new RBAC grant. Keep this disabled unless the clients are trusted
 administrators; a tunnel can carry sensitive application traffic.
 
+`hostBridge.enabled` is another opt-in switch, default `false`. It requires
+`agent.managementEnabled=true`, the existing agent bearer Secret, an HTTPS
+`hostBridge.url`, and a separate `hostBridge.tokenSecretName`. Optional
+`hostBridge.caConfigMapName` supplies the host CA certificate as `ca.crt`.
+The chart references only Secret and ConfigMap names; do not put either the
+bridge token or Infisical Universal Auth pair in Helm values. Once the host
+HTTPS service and cluster route have been approved and verified, authorized
+clients can call `POST /v1/host/infisical/commands` and
+`POST /v1/host/doctor` through the agent. The host bridge remains absent from
+the agent API while disabled. See the [control-plane design](../../docs/host-control-plane.md).
+
 The agent can start without `metrics.k8s.io`; CPU and memory usage remain unavailable until a compatible metrics-server is installed.
 
 `service.targetPort` sets both the container port and the agent's HTTP listener. Use `agent.listenHost` only to change the bind host; the default listens on all interfaces. Remove any old `agent.listenAddress` override when upgrading from chart 0.5.x. Direct binary invocations also require `KUCHDESK_CLUSTER_ID` and `KUCHDESK_CLUSTER_NAME`; they no longer silently identify an unknown cluster as `default`.

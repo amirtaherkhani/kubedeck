@@ -7,18 +7,23 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/infisical"
 )
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer, getenv func(string) string) int {
+	return runWithInput(ctx, args, os.Stdin, stdout, stderr, getenv)
+}
+
+func runWithInput(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, getenv func(string) string) int {
 	flags := flag.NewFlagSet("kuchdesk-infisical", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	baseURL := flags.String("url", "", "Infisical HTTPS origin")
 	timeout := flags.Duration("timeout", 10*time.Second, "request timeout")
 	if err := flags.Parse(args); err != nil || *baseURL == "" || *timeout <= 0 {
-		fmt.Fprintln(stderr, "usage: kuchdesk-infisical -url HTTPS_ORIGIN [-timeout 10s] capabilities|check-project-access|list-secret-names")
+		fmt.Fprintln(stderr, "usage: kuchdesk-infisical -url HTTPS_ORIGIN [-timeout 10s] capabilities|check-project-access|list-secret-names|manage")
 		return 2
 	}
 	clientID, clientSecret, err := infisical.HostCredentials(getenv)
@@ -34,7 +39,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, getenv fu
 	service := infisical.NewService(client)
 	remaining := flags.Args()
 	if len(remaining) == 0 {
-		fmt.Fprintln(stderr, "provide capabilities, check-project-access, or list-secret-names")
+		fmt.Fprintln(stderr, "provide capabilities, check-project-access, list-secret-names, or manage")
 		return 2
 	}
 	encoder := json.NewEncoder(stdout)
@@ -44,7 +49,49 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, getenv fu
 			fmt.Fprintln(stderr, "capabilities accepts no arguments")
 			return 2
 		}
-		if err := encoder.Encode(map[string]any{"configured": service.Configured(), "commands": []string{"capabilities", "check-project-access", "list-secret-names"}}); err != nil {
+		if err := encoder.Encode(map[string]any{"configured": service.Configured(), "commands": []string{"capabilities", "check-project-access", "list-secret-names", "manage"}}); err != nil {
+			fmt.Fprintln(stderr, "write output failed")
+			return 1
+		}
+		return 0
+	case "manage":
+		commandFlags := flag.NewFlagSet("manage", flag.ContinueOnError)
+		commandFlags.SetOutput(stderr)
+		projectIDs := commandFlags.String("project-ids", "", "comma-separated project ID allowlist")
+		allowProjectCreate := commandFlags.Bool("allow-project-create", false, "allow organization-level project creation")
+		if err := commandFlags.Parse(remaining[1:]); err != nil || commandFlags.NArg() != 0 {
+			fmt.Fprintln(stderr, "usage: manage -project-ids ID[,ID] [-allow-project-create] < command.json")
+			return 2
+		}
+		allowed := make(map[string]bool)
+		for _, raw := range strings.Split(*projectIDs, ",") {
+			if id := strings.TrimSpace(raw); id != "" {
+				allowed[id] = true
+			}
+		}
+		if len(allowed) == 0 && !*allowProjectCreate {
+			fmt.Fprintln(stderr, "project allowlist required")
+			return 2
+		}
+		decoder := json.NewDecoder(io.LimitReader(stdin, 64<<10+1))
+		decoder.DisallowUnknownFields()
+		var input infisical.Command
+		if err := decoder.Decode(&input); err != nil {
+			fmt.Fprintln(stderr, "invalid command input")
+			return 2
+		}
+		if err := decoder.Decode(&struct{}{}); err != io.EOF {
+			fmt.Fprintln(stderr, "command input must contain one JSON object")
+			return 2
+		}
+		requestCtx, cancel := context.WithTimeout(ctx, *timeout)
+		defer cancel()
+		result, err := (infisical.CommandService{Client: client, AllowedProjects: allowed, AllowProjectCreate: *allowProjectCreate}).Execute(requestCtx, input)
+		if err != nil {
+			fmt.Fprintln(stderr, infisical.PublicError(err))
+			return 1
+		}
+		if err := encoder.Encode(result); err != nil {
 			fmt.Fprintln(stderr, "write output failed")
 			return 1
 		}

@@ -31,6 +31,14 @@ auth:
   existingSecret: kuchdesk-agent-auth
   tokenKey: KUCHDESK_AGENT_TOKEN
 
+hostBridge:
+  enabled: false
+  url: ""
+  tokenSecretName: ""
+  tokenKey: KUCHDESK_HOST_BRIDGE_TOKEN
+  caConfigMapName: ""
+  caKey: ca.crt
+
 dnsManagement:
   enabled: false
   namespace: kube-system

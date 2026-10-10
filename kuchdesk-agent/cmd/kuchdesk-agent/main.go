@@ -13,6 +13,7 @@ import (
 	"github.com/amirtaherkhani/kuchdesk/kuchdesk-agent/internal/agent"
 	"github.com/amirtaherkhani/kuchdesk/kuchdesk-agent/internal/config"
 	"github.com/amirtaherkhani/kuchdesk/kuchdesk-agent/internal/dnsconfig"
+	"github.com/amirtaherkhani/kuchdesk/kuchdesk-agent/internal/hostbridge"
 	"github.com/amirtaherkhani/kuchdesk/kuchdesk-agent/internal/httpapi"
 	"github.com/amirtaherkhani/kuchdesk/kuchdesk-agent/internal/management"
 	"github.com/amirtaherkhani/kuchdesk/kuchdesk-agent/internal/stream"
@@ -84,6 +85,13 @@ func run(logger *slog.Logger) error {
 		defer jobs.Close()
 		api.SetManagementHandler((&management.Manager{Dynamic: dynamicClient, Discovery: kube.Discovery(), Kube: kube, RESTConfig: restConfig, Logger: logger, Jobs: jobs, ExecEnabled: cfg.ExecEnabled, PortForwardEnabled: cfg.PortForwardEnabled}).Handler())
 	}
+	if cfg.HostBridgeEnabled {
+		bridge, err := hostbridge.New(cfg.HostBridgeURL, cfg.HostBridgeToken, cfg.HostBridgeCAFile)
+		if err != nil {
+			return err
+		}
+		api.SetHostBridgeHandler(bridge)
+	}
 	server := &http.Server{
 		Addr:              cfg.ListenAddress,
 		Handler:           api.Handler(),
@@ -111,6 +119,7 @@ func run(logger *slog.Logger) error {
 			"managementEnabled", cfg.ManagementEnabled,
 			"execEnabled", cfg.ExecEnabled,
 			"portForwardEnabled", cfg.PortForwardEnabled,
+			"hostBridgeEnabled", cfg.HostBridgeEnabled,
 		)
 		serverErrors <- server.ListenAndServe()
 	}()

@@ -25,6 +25,10 @@ type Config struct {
 	ManagementEnabled    bool
 	ExecEnabled          bool
 	PortForwardEnabled   bool
+	HostBridgeEnabled    bool
+	HostBridgeURL        string
+	HostBridgeToken      string
+	HostBridgeCAFile     string
 	CoreDNSNamespace     string
 	CoreDNSConfigMap     string
 	CoreDNSCorefileKey   string
@@ -49,6 +53,9 @@ func Load() (Config, error) {
 		Kubeconfig:         os.Getenv("KUBECONFIG"),
 		KubeContext:        strings.TrimSpace(os.Getenv("KUCHDESK_KUBE_CONTEXT")),
 		BearerToken:        strings.TrimSpace(os.Getenv("KUCHDESK_AGENT_TOKEN")),
+		HostBridgeURL:      strings.TrimSpace(os.Getenv("KUCHDESK_HOST_BRIDGE_URL")),
+		HostBridgeToken:    strings.TrimSpace(os.Getenv("KUCHDESK_HOST_BRIDGE_TOKEN")),
+		HostBridgeCAFile:   strings.TrimSpace(os.Getenv("KUCHDESK_HOST_BRIDGE_CA_FILE")),
 		CoreDNSNamespace:   envOrDefault("KUCHDESK_COREDNS_NAMESPACE", "kube-system"),
 		CoreDNSConfigMap:   envOrDefault("KUCHDESK_COREDNS_CONFIGMAP", "coredns"),
 		CoreDNSCorefileKey: envOrDefault("KUCHDESK_COREDNS_COREFILE_KEY", "Corefile"),
@@ -70,6 +77,9 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	if cfg.PortForwardEnabled, err = boolEnv("KUCHDESK_PORT_FORWARD_ENABLED", false); err != nil {
+		return Config{}, err
+	}
+	if cfg.HostBridgeEnabled, err = boolEnv("KUCHDESK_HOST_BRIDGE_ENABLED", false); err != nil {
 		return Config{}, err
 	}
 	if cfg.MetricsInterval, err = durationEnv("KUCHDESK_METRICS_INTERVAL", cfg.MetricsInterval); err != nil {
@@ -113,6 +123,9 @@ func Load() (Config, error) {
 	}
 	if cfg.PortForwardEnabled && !cfg.ManagementEnabled {
 		return Config{}, errors.New("KUCHDESK_MANAGEMENT_ENABLED is required when port-forward is enabled")
+	}
+	if cfg.HostBridgeEnabled && (!cfg.ManagementEnabled || cfg.BearerToken == "" || cfg.HostBridgeURL == "" || len(cfg.HostBridgeToken) < 32) {
+		return Config{}, errors.New("host bridge requires management, agent bearer, HTTPS URL, and a dedicated bridge bearer")
 	}
 	return cfg, nil
 }

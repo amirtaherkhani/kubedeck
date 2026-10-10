@@ -126,26 +126,49 @@ func (c *Client) ListSecretNames(ctx context.Context, projectID, environment, se
 }
 
 func (c *Client) get(ctx context.Context, path string, query url.Values) ([]byte, error) {
-	for attempt := 0; attempt < 2; attempt++ {
+	return c.request(ctx, http.MethodGet, path, query, nil)
+}
+
+// request retries only GET after a 401. A write may have reached Infisical
+// before an authorization failure, so replaying it could duplicate effects.
+func (c *Client) request(ctx context.Context, method, path string, query url.Values, payload any) ([]byte, error) {
+	attempts := 1
+	if method == http.MethodGet {
+		attempts = 2
+	}
+	for attempt := 0; attempt < attempts; attempt++ {
 		token, err := c.accessToken(ctx)
 		if err != nil {
 			return nil, err
 		}
 		endpoint := c.baseURL.ResolveReference(&url.URL{Path: path, RawQuery: query.Encode()})
-		request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
+		var bodyReader io.Reader
+		if payload != nil {
+			body, err := json.Marshal(payload)
+			if err != nil || len(body) > 64<<10 {
+				return nil, errors.New("invalid Infisical request body")
+			}
+			bodyReader = bytes.NewReader(body)
+		}
+		request, err := http.NewRequestWithContext(ctx, method, endpoint.String(), bodyReader)
 		if err != nil {
 			return nil, errors.New("build Infisical request")
 		}
 		request.Header.Set("Authorization", "Bearer "+token)
+		if payload != nil {
+			request.Header.Set("Content-Type", "application/json")
+		}
 		response, err := c.httpClient.Do(request)
 		if err != nil {
 			return nil, errors.New("Infisical request failed")
 		}
 		body, readErr := io.ReadAll(io.LimitReader(response.Body, 1<<20+1))
 		response.Body.Close()
-		if response.StatusCode == http.StatusUnauthorized && attempt == 0 {
+		if response.StatusCode == http.StatusUnauthorized {
 			c.invalidateToken(token)
-			continue
+			if method == http.MethodGet && attempt == 0 {
+				continue
+			}
 		}
 		if response.StatusCode == http.StatusUnauthorized {
 			c.mu.Lock()

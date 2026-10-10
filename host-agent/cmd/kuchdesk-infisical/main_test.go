@@ -66,6 +66,35 @@ func TestCLINameOnlyAndMissingCredential(t *testing.T) {
 	}
 }
 
+func TestCLIManageReadsStdinAndNeverEchoesSecretValue(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("INFISICAL_CLIENT_ID=id\nINFISICAL_CLIENT_SECRET=test-secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/auth/universal-auth/login" {
+			fmt.Fprint(w, `{"accessToken":"token","expiresIn":60,"tokenType":"Bearer"}`)
+			return
+		}
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v4/secrets/API_KEY" {
+			t.Errorf("unexpected management request: %s %s", r.Method, r.URL.Path)
+		}
+		fmt.Fprint(w, `{"secret":{"secretValue":"upstream-secret"}}`)
+	}))
+	defer server.Close()
+	input := `{"operation":"secret.create","projectId":"project-1","environment":"dev","path":"/app","name":"API_KEY","value":"input-secret","confirm":"secret.create:project-1/dev/app/API_KEY"}`
+	var out, errOut bytes.Buffer
+	code := runWithInput(context.Background(), []string{"-url", server.URL, "manage", "-project-ids", "project-1"}, strings.NewReader(input), &out, &errOut, func(key string) string {
+		if key == "KUCHDESK_PROJECT_ROOT" {
+			return root
+		}
+		return ""
+	})
+	if code != 0 || !strings.Contains(out.String(), `"applied":true`) || strings.Contains(out.String()+errOut.String(), "input-secret") || strings.Contains(out.String()+errOut.String(), "upstream-secret") {
+		t.Fatalf("management output was not redacted: code=%d out=%q err=%q", code, out.String(), errOut.String())
+	}
+}
+
 func TestCLIRejectsIncompleteScope(t *testing.T) {
 	root := t.TempDir()
 	var out, errOut bytes.Buffer
