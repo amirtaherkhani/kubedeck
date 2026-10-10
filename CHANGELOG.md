@@ -7,6 +7,7 @@ All notable KuchDesk changes are documented in this file.
 ### Changed
 
 - Select the Infisical host credential backend explicitly: project-local `.env` by default or an existing macOS Keychain item. Remove the global `host.env` setup command and automatic environment/file fallback; no credentials are provisioned or migrated.
+- Document the verified host bridge and Infisical-to-Helm runtime, including the project membership boundary that prevents unverified automatic all-project grants.
 
 ### Added
 

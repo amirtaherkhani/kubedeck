@@ -26,28 +26,28 @@ Neither Helm values nor the Kubernetes agent contain that pair.
   receives only a dedicated bridge bearer via `secretKeyRef` and an optional
   CA ConfigMap. The Helm chart renders no Infisical bootstrap credentials.
 - MCP `-scope all -manage -project-ids ID` can expose the same typed commands
-  to an AI harness. Existing `doctor-repair` remains credential-free and does
-  not expose Infisical management. Neither scope is registered live.
+  to an AI harness. The live `doctor-repair` registration remains
+  credential-free and does not expose Infisical management.
 
 The command result intentionally contains metadata and write receipts, not
 secret values. This supports secret value creation and rotation while keeping
 AI-facing responses redacted. A future value-delivery operation must name a
 trusted destination rather than return plaintext to an agent.
 
-## Current runtime boundary
+## Verified local runtime (2026-10-10)
 
-The installed cluster agent still uses its earlier image. The host bridge is
-not installed or listening, no bridge token/CA Secret has been created, and
-no MCP registration or Helm rollout has occurred. The host machine identity's
-read-only project check for `home-lab-nb0-k` returned `forbidden`; the
-Infisical Operator's existing Grafana sync is independent. Its current
-namespace scope excludes `development-tools`.
+The host bridge is running with HTTPS on this Mac's LAN address and an explicit
+allowlist containing only the `home-lab-nb0-k` project. The cluster agent is
+running a digest-pinned image and reaches the bridge with a dedicated bearer
+Secret and a scoped CA ConfigMap. The `kuchdesk-doctor` MCP registration exposes
+only the `doctor-repair` scope; deployment apply remains separately gated.
+The Infisical Operator also watches `development-tools`. An opt-in probe
+verified Infisical secret delivery through the Operator, a Kubernetes Secret,
+and a Helm workload; the probe resources and Infisical test secret were then
+removed. None of these runtime steps expands the bridge's project allowlist.
 
-Enabling the bridge needs a reviewed project role, host listener address and
-certificate, a private host bridge token, a matching dedicated Kubernetes
-Secret and trusted CA, a tested cluster-to-host route, and an explicit Helm
-rollout. The local Project Admin role grants secret-value access and project
-administration; an organization role for project creation is separate. No
-identity grant or live write is part of this source change. Chart secret
-consumption by applications remains through the existing Infisical Operator;
-changing its watched namespaces is a separate live operation.
+The host machine identity is Project Admin in `home-lab-nb0-k`. Its
+organization-level Admin role is separate from project membership. Do not
+assume that role grants access to every current or future project. See
+[project onboarding](infisical-project-onboarding.md) for the verified
+boundary and the manual bootstrap needed for other projects.

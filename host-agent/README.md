@@ -146,13 +146,16 @@ mode-0600 project `.env` as the Infisical pair. Start it from the checkout or
 set `KUCHDESK_PROJECT_ROOT` to an absolute checkout path. An approved operator
 must choose the address, TLS identity, project allowlist, and token before
 running it. A loopback listener is the default and cannot be reached from the
-cluster. No live listener or credential has been provisioned.
+cluster. This Mac's live listener uses a dedicated bearer and certificate and
+allows only `home-lab-nb0-k`; see the
+[project onboarding boundary](../docs/infisical-project-onboarding.md) before
+adding another project.
 
 For an explicitly approved AI management client, the existing stdio MCP server
 can add `infisical_manage` with `-scope all -manage -project-ids PROJECT_ID`.
 This uses the same typed host command service, returns no secret values, and
-is not part of `doctor-repair`. The current MCP client configuration has not
-been changed. Existing Grafana Operator sync remains independent.
+is not part of `doctor-repair`. The live MCP registration is `doctor-repair`
+only. Existing Grafana Operator sync remains independent.
 
 ## Local build and deployment workflow
 
@@ -239,5 +242,6 @@ for the same context, namespace, and release. Profile names cannot escape the
 configured directory through path traversal or symlinks. Status and cancel
 are per-process only. The MCP process requires local Docker, `crane`, Helm,
 kubectl, and access to the selected Kubernetes context. This deployment path
-has source tests but has not performed a live agent rollout; enabling
-cluster-admin RBAC and CoreDNS edits remain separate operator decisions.
+has source tests but has not performed a live MCP-driven rollout. The separate
+host CLI and manual Helm rollouts have succeeded. CoreDNS edits remain a
+separate operator decision.
