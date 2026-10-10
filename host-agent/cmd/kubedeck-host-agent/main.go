@@ -47,6 +47,15 @@ func main() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	if cfg.CheckTarget {
+		ip, err := targetIP(ctx, cfg)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "host-agent target check failed:", err)
+			os.Exit(1)
+		}
+		fmt.Println(ip)
+		return
+	}
 	if err := reconcile(ctx, cfg); err != nil {
 		fmt.Fprintln(os.Stderr, "host-agent DNS reconciliation failed:", err)
 		os.Exit(1)
@@ -54,15 +63,9 @@ func main() {
 }
 
 func reconcile(ctx context.Context, cfg config) error {
-	var ip net.IP
-	if cfg.TargetIP != "" {
-		ip = net.ParseIP(cfg.TargetIP).To4()
-	} else {
-		var err error
-		ip, err = lanIP(ctx, cfg.InterfaceName)
-		if err != nil {
-			return err
-		}
+	ip, err := targetIP(ctx, cfg)
+	if err != nil {
+		return err
 	}
 	password, err := adminPassword(ctx, cfg)
 	if err != nil {
@@ -84,6 +87,20 @@ func reconcile(ctx context.Context, cfg config) error {
 	}
 	defer func() { _, _ = client.call(context.Background(), "/api/user/logout", url.Values{}) }()
 	return reconcileDNS(ctx, &client, cfg, ip)
+}
+
+func targetIP(ctx context.Context, cfg config) (net.IP, error) {
+	var ip net.IP
+	if cfg.TargetIP != "" {
+		ip = net.ParseIP(cfg.TargetIP).To4()
+	} else {
+		var err error
+		ip, err = lanIP(ctx, cfg.InterfaceName)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ip, nil
 }
 
 func reconcileDNS(ctx context.Context, client *apiClient, cfg config, ip net.IP) error {
