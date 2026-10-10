@@ -14,6 +14,8 @@
 /lab/*.json.rollback-*
 /work/
 /.worktrees/
+# Private enrollment policy/session journals; never committed or synced.
+/.kuchdesk/
 
 # Generated data from earlier checkouts may still exist locally.
 /.vinext/

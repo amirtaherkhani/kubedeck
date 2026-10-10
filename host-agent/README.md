@@ -254,8 +254,16 @@ to dry-run. No human session or new access is installed by building the binary.
 The network bridge permits only read operations; use the separately scoped local
 CLI/MCP for administrative operations.
 
-Export `KUCHDESK_BASE_PROJECT_NAME` to change the base tools project's display
+Set `KUCHDESK_BASE_PROJECT_NAME` in the private project `.env` to change the base tools project's display
 label (default `Kubedesk Platform`). Optional `KUCHDESK_BASE_PROJECT_ID` and
 `KUCHDESK_BASE_PROJECT_SLUG` are explicit metadata selectors, never inferred from
 the name. Managed projects always retain independent explicit IDs and policies.
 Environment changes require restart; enrollment policy files reload at runtime.
+
+The Host metadata loader uses non-empty process environment, then the private
+project `.env`, then defaults. It reads only the three `KUCHDESK_BASE_PROJECT_*`
+keys and never exports or evaluates file contents. Keep the same private-file
+permissions and literal `KEY=value` syntax used for credentials. File metadata is re-read on each CLI invocation and MCP capabilities request.
+Process environment changes require a restart; enrollment include/exclude
+policy continues to reload independently. Cluster processes use Helm values,
+not the Host credential file.
