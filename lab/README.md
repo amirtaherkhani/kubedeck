@@ -58,7 +58,8 @@ helm repo update
 go run ./cmd/render-site
 SITE_CERT_NAME=$(go run ./cmd/render-site --get secretName)
 kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace observability-tests --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace platform-tests --dry-run=client -o yaml | kubectl apply -f -
+# Retain observability-tests for the existing k6 Helm release record.
 helm upgrade --install cert-manager cert-manager/cert-manager -n platform-system --create-namespace --version v1.21.0 -f apps/platform/cert-manager/values.yaml --wait
 if test -f .generated/manifests/00-selfsigned-issuer.json; then
   CA_CERT_NAME=$(go run ./cmd/render-site --get caSecretName)
@@ -86,7 +87,7 @@ kubectl apply -k apps/observability/grafana/manifests/dashboard
 helm upgrade --install tempo grafana/tempo -n observability --version 1.24.4 -f apps/observability/tempo/values.yaml --wait
 helm upgrade --install alloy grafana/alloy -n observability --version 1.10.1 -f apps/observability/alloy/values.yaml --wait
 helm upgrade --install grafana ./apps/observability/grafana -n observability -f apps/observability/grafana/values.homelab.yaml -f .generated/grafana-values.json --set-string infisical.projectSlug="${INFISICAL_PROJECT_SLUG}" --set-string infisical.envSlug="${INFISICAL_ENV_SLUG}" --wait
-helm upgrade --install k6-operator grafana/k6-operator -n observability-tests --version 4.5.0 -f apps/observability/k6/values.yaml --wait
+# Existing k6 release requires its namespace post-renderer; see migrations/k6-platform-tests/README.md.
 kubectl apply -k apps/observability/k6/dashboard
 ```
 
@@ -110,7 +111,7 @@ The k6 Operator uses Prometheus's enabled remote-write receiver. The dashboard C
 ```bash
 kubectl -n observability get pods,pvc
 kubectl -n observability get infisicalsecret grafana-admin
-kubectl -n observability-tests get deploy,servicemonitor,testruns.k6.io
+kubectl -n platform-tests get deploy,servicemonitor,testruns.k6.io
 curl --fail "$(go run ./cmd/render-site --get grafanaUrl)/api/health"
 kubectl get --raw '/api/v1/namespaces/observability/services/http:loki:3100/proxy/ready'
 kubectl get --raw '/api/v1/namespaces/observability/services/http:tempo:3200/proxy/ready'

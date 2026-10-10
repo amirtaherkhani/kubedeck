@@ -1,6 +1,6 @@
 # Namespace organization proposal
 
-Status: architecture/proposal only. Inventory observed on 2026-10-10; no namespace migration, shared database deployment or new credential provisioning is authorized by this document.
+Status: architecture/proposal only. Inventory observed on 2026-10-10; the approved k6-only stage is complete as recorded below. Other migrations, shared database deployment and new credential provisioning remain proposals.
 
 The retained functional groups are `observability`, `platform-secrets`, `platform-tools`, `platform-networking` and `platform-tests`. Use **`platform-databases`** for proposed shared PostgreSQL and future database services, and **`platform-messaging`** for NATS, RabbitMQ, Kafka and similar brokers. Redis belongs with the function it actually serves; its proposed shared-service placement is not yet a deployed fact. Kubedesk Platform owns these seven shared infrastructure groups. Each independent managed project has its own Infisical project and dedicated configurable Kubernetes namespace, separate from the platform groups. No namespace prefix is mandatory; no namespace is created automatically by Infisical discovery.
 
@@ -12,7 +12,7 @@ The retained functional groups are `observability`, `platform-secrets`, `platfor
 | `platform-secrets` | `platform-secrets`: Infisical, Operator, Infisical PostgreSQL and Redis | Secret management and its internal dependencies; retain grouping and data. |
 | `platform-tools` | `development-tools`: KuchDesk agent; `platform-system`: local registry | Agents and developer infrastructure. |
 | `platform-networking` | `technitium`: DNS; `platform-system`: Traefik and cert-manager | DNS, ingress and certificates. |
-| **`platform-tests`** | Current live namespace remains **`observability-tests`**, containing k6 Operator | k6 and future general testing tools. Selected proposed name; no migration performed. |
+| **`platform-tests`** | Current workloads run in **`platform-tests`** after the approved k6 stage; Helm release metadata remains in `observability-tests` | k6 and future general testing tools. k6 migration complete; future testing tools remain proposed. |
 | **`platform-databases`** | No running shared database workload verified in `platform-storage`; retained PVC inventory below | Shared PostgreSQL and future database services for managed projects, with engine-specific project isolation. Redis used as a data/cache service may belong here. This is a new service design, not permission to adopt old volumes. |
 | **`platform-messaging`** | No running NATS, RabbitMQ or Kafka workload or matching Service/current Helm release found in the fresh inventory | Shared broker infrastructure and engine-specific project accounts/ACLs for NATS, RabbitMQ, Kafka and similar systems; proposed only. |
 
@@ -110,3 +110,5 @@ Keep namespace names, service endpoints, database names and credential reference
 System namespaces and the 10 bound `platform-storage` PVCs remain untouched. This document changes neither cluster configuration, permissions nor credentials.
 
 See [migration preparation](namespace-migration-plan.md) for the resource mapping, approval gates, health checks and rollback sequence.
+
+Base project display metadata defaults to `KUCHDESK_BASE_PROJECT_NAME=Kubedesk Platform`; `KUCHDESK_BASE_PROJECT_ID` and `KUCHDESK_BASE_PROJECT_SLUG` remain separately configurable. Do not derive immutable identity from the display name. See [backup defaults](backup-defaults.md) and [retained storage audit](platform-storage-audit-2026-10-10.md).
