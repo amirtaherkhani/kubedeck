@@ -23,6 +23,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/yaml"
 )
 
@@ -30,11 +31,17 @@ var segment = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]{0,252}$`)
 
 // Manager exposes bounded Kubernetes operations and excludes the Secret resource.
 type Manager struct {
-	Dynamic   dynamic.Interface
-	Discovery discovery.DiscoveryInterface
-	Kube      kubernetes.Interface
-	Logger    *slog.Logger
-	Jobs      *WorkloadJobs
+	Dynamic     dynamic.Interface
+	Discovery   discovery.DiscoveryInterface
+	Kube        kubernetes.Interface
+	RESTConfig  *rest.Config
+	Logger      *slog.Logger
+	Jobs        *WorkloadJobs
+	ExecEnabled bool
+	ExecRun     PodExecRunner
+	execOnce    sync.Once
+	execSlots   chan struct{}
+	execTimeout time.Duration
 }
 
 func (m *Manager) Handler() http.Handler {
@@ -44,6 +51,9 @@ func (m *Manager) Handler() http.Handler {
 	mux.HandleFunc("/v1/manage/resources/{group}/{version}/{resource}", m.resource)
 	mux.HandleFunc("GET /v1/manage/pods/{namespace}/{name}/logs", m.logs)
 	mux.HandleFunc("GET /v1/manage/events/{namespace}", m.events)
+	if m.ExecEnabled {
+		mux.HandleFunc("POST /v1/manage/pods/{namespace}/{name}/exec", m.execPod)
+	}
 	mux.HandleFunc("POST /v1/manage/workloads/{kind}/{namespace}/{name}/{action}", m.workload)
 	if m.Jobs != nil {
 		mux.HandleFunc("POST /v1/manage/workloads/{kind}/{namespace}/{name}/{action}/jobs", m.submitWorkloadJob)
@@ -191,7 +201,7 @@ func (m *Manager) capabilities(w http.ResponseWriter, r *http.Request) {
 	if _, err := m.Discovery.ServerResourcesForGroupVersion("metrics.k8s.io/v1beta1"); err == nil {
 		metrics = true
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"managementEnabled": true, "metricsAvailable": metrics, "resources": resources, "authorizationNamespace": namespace, "workloadActions": []string{"scale", "restart", "status"}, "asyncWorkloadActions": m.Jobs != nil, "podLogs": true, "events": true, "note": "allowedVerbs are point-in-time authorization information; each operation is authorized again by Kubernetes"})
+	writeJSON(w, http.StatusOK, map[string]any{"managementEnabled": true, "metricsAvailable": metrics, "resources": resources, "authorizationNamespace": namespace, "workloadActions": []string{"scale", "restart", "status"}, "asyncWorkloadActions": m.Jobs != nil, "podLogs": true, "podExec": m.ExecEnabled, "events": true, "note": "allowedVerbs are point-in-time authorization information; each operation is authorized again by Kubernetes"})
 }
 
 func allowedByRules(rules []authv1.ResourceRule, attributes authv1.ResourceAttributes) bool {

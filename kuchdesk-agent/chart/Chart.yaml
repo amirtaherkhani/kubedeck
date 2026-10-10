@@ -5,5 +5,5 @@ home: https://github.com/amirtaherkhani/kuchdesk
 sources:
   - https://github.com/amirtaherkhani/kuchdesk/tree/main/kuchdesk-agent
 type: application
-version: 0.9.0
-appVersion: "0.6.0"
+version: 0.10.0
+appVersion: "0.7.0"

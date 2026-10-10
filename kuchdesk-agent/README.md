@@ -65,6 +65,7 @@ permission to scrape kubelet Summary APIs.
 | `GET /v1/manage/capabilities?namespace=apps` | Served resources and subresources, their verbs, point-in-time authorization checks, and Metrics API availability |
 | `GET/POST/PUT/PATCH/DELETE /v1/manage/resources/{group}/{version}/{resource}` | Bounded Kubernetes resource operations; use `core` for the core API group |
 | `GET /v1/manage/pods/{namespace}/{name}/logs` | Up to 1 MiB and 1,000 tail lines of pod logs |
+| `POST /v1/manage/pods/{namespace}/{name}/exec` | Opt-in, noninteractive Pod command with bounded output |
 | `GET /v1/manage/events/{namespace}` | Up to 100 namespace events |
 | `GET /v1/manage/workloads/{kind}/{namespace}/{name}/{action}` | Deployment/StatefulSet status or scale; DaemonSet status |
 | `POST /v1/manage/workloads/{kind}/{namespace}/{name}/{action}` | Deployment/StatefulSet scale, restart, status; DaemonSet restart/status |
@@ -107,12 +108,26 @@ status and Pods separately. Cancellation cannot undo a mutation already
 accepted by Kubernetes. Agent restart cancels in-flight work and loses job
 history; this feature is not a durable task service.
 
+Pod exec requires `KUCHDESK_EXEC_ENABLED=true` in addition to management mode
+and the bearer token. Send JSON such as
+`{"container":"main","command":["/bin/true"]}` with exact
+`X-KuchDesk-Confirm: pods/NAMESPACE/NAME/exec`, `If-Match-UID` and `If-Match`
+(Pod resource version) headers. The target Pod and container must be running.
+The API accepts no stdin or TTY, runs at most four commands concurrently, gives
+each command 30 seconds, and caps each output stream at 256 KiB. It returns
+`stdout`, `stderr`, and `exitCode`; nonzero command exits still return HTTP 200.
+The Pod is checked before starting, but Kubernetes exec addresses a Pod by
+name, so a replacement between the check and stream setup cannot be ruled out.
+Do not use this endpoint for destructive commands against rapidly recreated
+Pods. Output may contain application secrets and is never written to audit
+logs; restrict API clients and handle returned output accordingly.
+
 Raw Secret resources are excluded from generic discovery and operations. Logs,
 events, ConfigMaps, and other resources can contain sensitive content; limit
 agent API client access and avoid saving these responses. Audit logs
 record action metadata and request IDs, not request or response bodies.
-Exec, attach, port-forward, Helm operations, and generic subresource writes
-are not implemented; each needs separate streaming and authorization design.
+Attach, port-forward, Helm operations, and generic subresource writes are not
+implemented; each needs separate streaming and authorization design.
 
 The stream sends an initial snapshot, debounced resource-change snapshots,
 metrics snapshots, and heartbeat comments. It supports the standard

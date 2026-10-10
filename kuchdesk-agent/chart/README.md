@@ -28,6 +28,14 @@ Clients send `Authorization: Bearer <token>` to the internal Service. Limit whic
 
 The default ClusterRole allows discovery and metrics reads. CoreDNS alias writes and general resource management are disabled by default. General management requires an explicit bearer Secret and `rbac.clusterAdmin=true`, granting the agent ServiceAccount full cluster access. DNS alias management needs the bearer Secret but uses a narrow Role for `get` and `update` on the existing CoreDNS ConfigMap. Review the [agent API](../README.md) before enabling it. On Docker Desktop KIND, set `dnsManagement.enabled=true` only after backing up `kube-system/coredns` and verifying its `Corefile` contains a `.:53` block with `kubernetes` and `reload`. The agent owns only its marked block and the chart never creates the system ConfigMap.
 
+`agent.execEnabled` is an additional opt-in switch, default `false`. It
+requires `agent.managementEnabled=true`, an existing bearer Secret, and the
+existing management RBAC configuration. It adds no Role or Secret. The
+noninteractive Pod exec API returns bounded stdout/stderr; restrict callers to
+trusted administrators because commands may read application data. Enabling
+this switch requires a Helm upgrade and Pod restart; do not place commands or
+tokens in chart values.
+
 The agent can start without `metrics.k8s.io`; CPU and memory usage remain unavailable until a compatible metrics-server is installed.
 
 `service.targetPort` sets both the container port and the agent's HTTP listener. Use `agent.listenHost` only to change the bind host; the default listens on all interfaces. Remove any old `agent.listenAddress` override when upgrading from chart 0.5.x. Direct binary invocations also require `KUCHDESK_CLUSTER_ID` and `KUCHDESK_CLUSTER_NAME`; they no longer silently identify an unknown cluster as `default`.
@@ -39,11 +47,11 @@ helm lint ./kuchdesk-agent/chart \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kuchdesk-agent \
-  --set image.tag=0.6.0
+  --set image.tag=0.7.0
 helm template kuchdesk-agent ./kuchdesk-agent/chart \
   --namespace development-tools \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kuchdesk-agent \
-  --set image.tag=0.6.0
+  --set image.tag=0.7.0
 ```
