@@ -314,3 +314,30 @@ func TestBrowserListenerBindsOnlyIPv4Loopback(t *testing.T) {
 		t.Fatal("callback listener is not exclusive loopback")
 	}
 }
+
+func TestBrowserLoginEmitsOnlySafeCallbackStages(t *testing.T) {
+	h, s, p, token := loginFixture(t, false, false, false)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	events := make(chan string, 20)
+	_, e := BrowserLogin(ctx, h, p, s, func(u string) error {
+		go func() { callback(t, u, "https://foreign.invalid", token); callback(t, u, h.base.String(), token) }()
+		return nil
+	}, func(event string) { events <- event })
+	if e != nil {
+		t.Fatal(e)
+	}
+	close(events)
+	seen := map[string]bool{}
+	for event := range events {
+		seen[event] = true
+		if strings.Contains(event, token) || strings.Contains(event, "foreign.invalid") || strings.Contains(event, "private@example") {
+			t.Fatal("unsafe event")
+		}
+	}
+	for _, event := range []string{"callback_waiting", "callback_rejected_origin", "callback_received", "callback_session_saved"} {
+		if !seen[event] {
+			t.Errorf("missing safe stage %s", event)
+		}
+	}
+}

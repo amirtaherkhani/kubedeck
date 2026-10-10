@@ -102,8 +102,15 @@ func CheckHumanStatus(ctx context.Context, h *Transport, p Policy, store *Store)
 // BrowserLogin uses Infisical v0.151.0's official callback_port contract.
 // Passwords, SSO and MFA remain in the official browser UI. Only the user's
 // explicit login callback is received; no browser storage is inspected.
-func BrowserLogin(ctx context.Context, h *Transport, p Policy, store *Store, announce func(string) error) (HumanStatus, error) {
+func BrowserLogin(ctx context.Context, h *Transport, p Policy, store *Store, announce func(string) error, events ...func(string)) (HumanStatus, error) {
 	initial := HumanStatus{Status: "login_not_completed", ObservedAt: time.Now()}
+	emit := func(stage string) {
+		for _, event := range events {
+			if event != nil {
+				event(stage)
+			}
+		}
+	}
 	if p.Version != "v0.151.0" {
 		return initial, ErrUnsupported
 	}
@@ -125,7 +132,19 @@ func BrowserLogin(ctx context.Context, h *Transport, p Policy, store *Store, ann
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil || !net.ParseIP(ip).IsLoopback() || r.Host != listener.Addr().String() || r.Header.Get("Origin") != origin || r.URL.Path != "/" || r.URL.RawQuery != "" {
+		rejected := ""
+		switch {
+		case err != nil || !net.ParseIP(ip).IsLoopback():
+			rejected = "callback_rejected_peer"
+		case r.Host != listener.Addr().String():
+			rejected = "callback_rejected_host"
+		case r.Header.Get("Origin") != origin:
+			rejected = "callback_rejected_origin"
+		case r.URL.Path != "/" || r.URL.RawQuery != "":
+			rejected = "callback_rejected_route"
+		}
+		if rejected != "" {
+			emit(rejected)
 			http.Error(w, "callback_rejected", 403)
 			return
 		}
@@ -133,6 +152,7 @@ func BrowserLogin(ctx context.Context, h *Transport, p Policy, store *Store, ann
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Vary", "Origin")
 		if r.Method == "OPTIONS" {
+			emit("callback_preflight_received")
 			if r.Header.Get("Access-Control-Request-Method") != "POST" {
 				http.Error(w, "callback_rejected", 403)
 				return
@@ -147,31 +167,38 @@ func BrowserLogin(ctx context.Context, h *Transport, p Policy, store *Store, ann
 		}
 		media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if r.Method != "POST" || err != nil || media != "application/json" {
+			emit("callback_rejected_request")
 			http.Error(w, "callback_rejected", 400)
 			return
 		}
 		token, err := decodeBrowserCallback(http.MaxBytesReader(w, r.Body, 32<<10))
 		if err != nil {
+			emit("callback_rejected_payload")
 			http.Error(w, "callback_rejected", 400)
 			return
 		}
 		expiry, err := tokenExpiry(token, p.OrganizationID)
 		if err != nil || len(token) > 16<<10 || !time.Now().Before(expiry) {
+			emit("callback_rejected_scope")
 			http.Error(w, "callback_scope_rejected", 400)
 			return
 		}
 		mu.Lock()
 		if used {
 			mu.Unlock()
+			emit("callback_rejected_replay")
 			http.Error(w, "callback_already_used", 409)
 			return
 		}
 		used = true
 		mu.Unlock()
+		emit("callback_received")
 		report, err := completeBrowserLogin(ctx, h, p, store, token)
 		if err != nil {
+			emit("callback_server_validation_failed")
 			http.Error(w, "login_not_completed_check_terminal", 400)
 		} else {
+			emit("callback_session_saved")
 			w.WriteHeader(200)
 			_, _ = io.WriteString(w, "login_completed")
 		}
@@ -186,6 +213,7 @@ func BrowserLogin(ctx context.Context, h *Transport, p Policy, store *Store, ann
 		_ = server.Close()
 	}()
 	loginURL := origin + "/login?" + url.Values{"callback_port": {strings.Split(listener.Addr().String(), ":")[1]}}.Encode()
+	emit("callback_waiting")
 	if e = announce(loginURL); e != nil {
 		return initial, errors.New("login_instructions_unavailable")
 	}
@@ -193,6 +221,7 @@ func BrowserLogin(ctx context.Context, h *Transport, p Policy, store *Store, ann
 	case o := <-result:
 		return o.report, o.err
 	case <-ctx.Done():
+		emit("callback_timeout_or_cancel")
 		return initial, errors.New("login_cancelled_or_timed_out")
 	}
 }
