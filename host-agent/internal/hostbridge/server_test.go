@@ -141,3 +141,18 @@ func TestCommandResponseHasNoValueField(t *testing.T) {
 		t.Fatalf("secret echoed in response")
 	}
 }
+
+func TestBridgeRejectsEveryAdministrativeOperationBeforeCommander(t *testing.T) {
+	server, _ := New(fakeCommands{call: func(context.Context, infisical.Command) (infisical.CommandResult, error) {
+		t.Fatal("K8 invoked host admin commander")
+		return infisical.CommandResult{}, nil
+	}}, fakeDoctor{}, bridgeToken)
+	for _, op := range []string{"project.rename", "project.create", "project.delete", "secret.create", "secret.update", "secret.delete", "membership.add", "membership.list", "role.create", "future.operation"} {
+		body, _ := json.Marshal(map[string]string{"operation": op, "projectId": "any-project"})
+		w := httptest.NewRecorder()
+		server.Handler().ServeHTTP(w, authorizedRequest("/v1/infisical/commands", string(body)))
+		if w.Code != http.StatusForbidden {
+			t.Errorf("%s returned %d", op, w.Code)
+		}
+	}
+}

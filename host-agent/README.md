@@ -147,7 +147,7 @@ set `KUCHDESK_PROJECT_ROOT` to an absolute checkout path. An approved operator
 must choose the address, TLS identity, project allowlist, and token before
 running it. A loopback listener is the default and cannot be reached from the
 cluster. This Mac's live listener uses a dedicated bearer and certificate and
-allows only `home-lab-nb0-k`; see the
+allows only Kubedesk Platform (`home-lab-nb0-k`); see the
 [project onboarding boundary](../docs/infisical-project-onboarding.md) before
 adding another project.
 
@@ -245,3 +245,17 @@ kubectl, and access to the selected Kubernetes context. This deployment path
 has source tests but has not performed a live MCP-driven rollout. The separate
 host CLI and manual Helm rollouts have succeeded. CoreDNS edits remain a
 separate operator decision.
+
+## Hybrid enrollment and base project metadata
+
+The optional local [hybrid controller](../docs/infisical-hybrid-control.md) separates
+human project enrollment from routine machine authentication. Its policy defaults
+to dry-run. No human session or new access is installed by building the binary.
+The network bridge permits only read operations; use the separately scoped local
+CLI/MCP for administrative operations.
+
+Export `KUCHDESK_BASE_PROJECT_NAME` to change the base tools project's display
+label (default `Kubedesk Platform`). Optional `KUCHDESK_BASE_PROJECT_ID` and
+`KUCHDESK_BASE_PROJECT_SLUG` are explicit metadata selectors, never inferred from
+the name. Managed projects always retain independent explicit IDs and policies.
+Environment changes require restart; enrollment policy files reload at runtime.

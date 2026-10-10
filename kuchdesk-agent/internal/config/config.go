@@ -8,12 +8,17 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 type Config struct {
+	BaseProjectName      string
+	BaseProjectID        string
+	BaseProjectSlug      string
 	ListenAddress        string
 	ClusterID            string
 	ClusterName          string
@@ -46,6 +51,9 @@ func Load() (Config, error) {
 		}
 	}
 	cfg := Config{
+		BaseProjectName:    os.Getenv("KUCHDESK_BASE_PROJECT_NAME"),
+		BaseProjectID:      os.Getenv("KUCHDESK_BASE_PROJECT_ID"),
+		BaseProjectSlug:    os.Getenv("KUCHDESK_BASE_PROJECT_SLUG"),
 		ListenAddress:      envOrDefault("KUCHDESK_AGENT_LISTEN_ADDRESS", ":8080"),
 		ClusterID:          strings.TrimSpace(os.Getenv("KUCHDESK_CLUSTER_ID")),
 		ClusterName:        strings.TrimSpace(os.Getenv("KUCHDESK_CLUSTER_NAME")),
@@ -66,6 +74,18 @@ func Load() (Config, error) {
 		EventLimit:         100,
 	}
 
+	if cfg.BaseProjectName == "" {
+		cfg.BaseProjectName = "Kubedesk Platform"
+	}
+	cfg.BaseProjectName = strings.TrimSpace(cfg.BaseProjectName)
+	if cfg.BaseProjectName == "" || !utf8.ValidString(cfg.BaseProjectName) || utf8.RuneCountInString(cfg.BaseProjectName) > 128 || strings.IndexFunc(cfg.BaseProjectName, unicode.IsControl) >= 0 {
+		return Config{}, errors.New("invalid KUCHDESK_BASE_PROJECT_NAME")
+	}
+	for _, v := range []string{cfg.BaseProjectID, cfg.BaseProjectSlug} {
+		if strings.ContainsAny(v, "/\\?# \t\n\r") || len(v) > 128 {
+			return Config{}, errors.New("invalid base project selector")
+		}
+	}
 	var err error
 	if cfg.DNSManagementEnabled, err = boolEnv("KUCHDESK_DNS_MANAGEMENT_ENABLED", false); err != nil {
 		return Config{}, err

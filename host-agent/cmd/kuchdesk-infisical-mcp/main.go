@@ -15,6 +15,7 @@ import (
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/deploy"
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/doctor"
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/infisical"
+	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/platform"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -26,8 +27,9 @@ type capability struct {
 }
 
 type capabilityOutput struct {
-	Configured   bool         `json:"configured"`
-	Capabilities []capability `json:"capabilities"`
+	BaseProject  platform.Profile `json:"baseProject"`
+	Configured   bool             `json:"configured"`
+	Capabilities []capability     `json:"capabilities"`
 }
 
 type listInput struct {
@@ -157,12 +159,16 @@ func newServerWithServices(service *infisical.Service, runner *async.Runner, cfg
 	server := mcp.NewServer(&mcp.Implementation{Name: "kuchdesk-infisical", Version: "0.1.0"}, nil)
 	mcp.AddTool(server, &mcp.Tool{Name: "infisical_capabilities", Description: "Show implemented Infisical tools and local credential configuration without accessing secrets.", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}},
 		func(context.Context, *mcp.CallToolRequest, capabilityInput) (*mcp.CallToolResult, capabilityOutput, error) {
-			return nil, capabilityOutput{Configured: service.Configured(), Capabilities: []capability{
+			profile, err := platform.Load(os.Getenv)
+			if err != nil {
+				return nil, capabilityOutput{}, err
+			}
+			return nil, capabilityOutput{BaseProject: profile, Configured: service.Configured(), Capabilities: []capability{
 				{Name: "list_secret_names", Status: "implemented; live permissions unverified"},
 				{Name: "async_name_listing", Status: "implemented in memory; bounded to four concurrent operations and 64 records"},
 				{Name: "secret_values", Status: "not exposed to MCP"},
 				{Name: "secret_writes", Status: "planned; not implemented"},
-				{Name: "project_admin", Status: "planned; not implemented"},
+				{Name: "project_admin", Status: "local opt-in scoped management; forbidden through the K8 bridge"},
 				{Name: "helm_deploy", Status: "implemented as opt-in local profile workflow; live rollout unverified"},
 			}}, nil
 		})

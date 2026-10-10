@@ -163,3 +163,28 @@ func TestAdministrativeCommandsUseVersionPinnedEndpoints(t *testing.T) {
 		})
 	}
 }
+
+func TestProjectRenamePreservesUnspecifiedMetadata(t *testing.T) {
+	calls := 0
+	client := commandClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/auth/universal-auth/login" {
+			commandLogin(w)
+			return
+		}
+		calls++
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if r.Method != "PATCH" || len(body) != 1 || body["name"] != "Platform Example" {
+			t.Error("rename changed fields other than name")
+		}
+		_, _ = io.WriteString(w, `{"project":{"id":"stable-id","name":"Platform Example","slug":"existing-slug"}}`)
+	})
+	s := CommandService{Client: client, AllowedProjects: map[string]bool{"stable-id": true}}
+	c := Command{Operation: "project.rename", ProjectID: "stable-id", Name: "Platform Example", Confirm: "project.rename:stable-id"}
+	if _, e := s.Execute(context.Background(), c); e != nil {
+		t.Fatal(e)
+	}
+	if calls != 1 {
+		t.Fatal("rename repeated")
+	}
+}

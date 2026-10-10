@@ -6,12 +6,51 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean" },
-        "url": { "type": "string" },
-        "tokenSecretName": { "type": "string", "maxLength": 253 },
-        "tokenKey": { "type": "string", "maxLength": 253 },
-        "caConfigMapName": { "type": "string", "maxLength": 253 },
-        "caKey": { "type": "string", "maxLength": 253 }
+        "enabled": {
+          "type": "boolean"
+        },
+        "url": {
+          "type": "string"
+        },
+        "tokenSecretName": {
+          "type": "string",
+          "maxLength": 253
+        },
+        "tokenKey": {
+          "type": "string",
+          "maxLength": 253
+        },
+        "caConfigMapName": {
+          "type": "string",
+          "maxLength": 253
+        },
+        "caKey": {
+          "type": "string",
+          "maxLength": 253
+        }
+      }
+    },
+    "baseProject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "\\S"
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "slug": {
+          "type": "string",
+          "maxLength": 128
+        }
       }
     }
   }

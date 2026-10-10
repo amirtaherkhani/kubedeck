@@ -63,9 +63,17 @@ type CommandService struct {
 	Client             *Client
 	AllowedProjects    map[string]bool
 	AllowProjectCreate bool
+	ProjectPolicy      interface{ Projects() map[string]bool }
+	ReadOnly           bool
 }
 
 func (s CommandService) Execute(ctx context.Context, command Command) (CommandResult, error) {
+	if s.ReadOnly && !ReadOperation(command.Operation) {
+		return CommandResult{}, ErrProjectDenied
+	}
+	if s.ProjectPolicy != nil {
+		s.AllowedProjects = s.ProjectPolicy.Projects()
+	}
 	if s.Client == nil {
 		return CommandResult{}, ErrNotConfigured
 	}
@@ -96,6 +104,8 @@ func (s CommandService) Execute(ctx context.Context, command Command) (CommandRe
 		body, err = s.Client.get(ctx, "/api/v1/projects/"+command.ProjectID, nil)
 	case "project.create":
 		body, err = s.Client.request(ctx, http.MethodPost, "/api/v1/projects", nil, map[string]any{"projectName": command.Name, "slug": command.Slug, "projectDescription": command.Description, "type": "secret-manager"})
+	case "project.rename":
+		body, err = s.Client.request(ctx, http.MethodPatch, "/api/v1/projects/"+command.ProjectID, nil, map[string]string{"name": command.Name})
 	case "project.update":
 		body, err = s.Client.request(ctx, http.MethodPatch, "/api/v1/projects/"+command.ProjectID, nil, map[string]any{"name": command.Name, "description": command.Description})
 	case "project.delete":
@@ -235,10 +245,10 @@ func validateCommand(c Command) (target string, write bool, err error) {
 	target = c.ProjectID
 	switch parts[0] {
 	case "project":
-		if parts[1] != "list" && parts[1] != "get" && parts[1] != "update" && parts[1] != "delete" {
+		if parts[1] != "list" && parts[1] != "get" && parts[1] != "update" && parts[1] != "rename" && parts[1] != "delete" {
 			return "", false, ErrInvalidCommand
 		}
-		if parts[1] == "update" && strings.TrimSpace(c.Name) == "" {
+		if (parts[1] == "update" || parts[1] == "rename") && strings.TrimSpace(c.Name) == "" {
 			return "", false, ErrInvalidCommand
 		}
 	case "environment":
@@ -453,4 +463,13 @@ func readMetadata(body []byte, operation string) ([]Resource, error) {
 		items = append(items, resource)
 	}
 	return items, nil
+}
+
+// ReadOperation is deliberately an allowlist: new operations are denied to K8.
+func ReadOperation(operation string) bool {
+	switch operation {
+	case "project.list", "project.get", "environment.list", "folder.list", "secret.list", "secret.get":
+		return true
+	}
+	return false
 }

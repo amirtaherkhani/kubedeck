@@ -75,3 +75,11 @@ helm template kuchdesk-agent ./kuchdesk-agent/chart \
   --set image.repository=example.invalid/kuchdesk-agent \
   --set image.tag=0.9.0
 ```
+
+`baseProject.name` defaults to `Kubedesk Platform` and populates
+`KUCHDESK_BASE_PROJECT_NAME`. Optional `baseProject.id` and `baseProject.slug`
+populate explicit base-project metadata, returned by authenticated
+`GET /v1/platform`. These fields never choose a managed project or grant access.
+Changing Helm environment values requires a rollout. Enrollment policy reload is
+handled separately on the Host. The cluster's Infisical bridge refuses all write,
+delete, membership and role commands regardless of cluster RBAC privileges.

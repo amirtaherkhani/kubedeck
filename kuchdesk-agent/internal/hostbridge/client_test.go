@@ -93,3 +93,15 @@ func TestClientRejectsUntrustedCertificateAndOversizedResponse(t *testing.T) {
 		t.Fatalf("oversized response = %d", response.Code)
 	}
 }
+
+func TestClusterProxyRejectsHostAdministrativeOperations(t *testing.T) {
+	c := &Client{}
+	for _, operation := range []string{"membership.add", "membership.delete", "project.rename", "secret.update", "secret.delete", "role.list"} {
+		r := httptest.NewRequest("POST", "/v1/host/infisical/commands", strings.NewReader(`{"operation":"`+operation+`"}`))
+		w := httptest.NewRecorder()
+		c.ServeHTTP(w, r)
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("%s returned %d", operation, w.Code)
+		}
+	}
+}

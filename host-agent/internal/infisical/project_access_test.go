@@ -18,9 +18,9 @@ func TestProjectAccessMatrix(t *testing.T) {
 		detailStatus          int
 		want                  ProjectAccess
 	}{
-		{"org-admin-without-project-membership", `{"projects":[]}`, `{"message":"not a member","secret":"never-return"}`, 403, ProjectAccess{Slug: "home-lab", DetailStatus: "forbidden"}},
-		{"explicit-project-membership", `{"projects":[{"slug":"home-lab"}]}`, `{"id":"project-1","slug":"home-lab","secret":"never-return"}`, 200, ProjectAccess{Slug: "home-lab", Listed: true, DetailStatus: "allowed", ProjectID: "project-1"}},
-		{"unknown-project", `{"projects":[]}`, `{"message":"not found"}`, 404, ProjectAccess{Slug: "home-lab", DetailStatus: "not_found"}},
+		{"org-admin-without-project-membership", `{"projects":[]}`, `{"message":"not a member","secret":"never-return"}`, 403, ProjectAccess{Slug: "team-example", DetailStatus: "forbidden"}},
+		{"explicit-project-membership", `{"projects":[{"slug":"team-example"}]}`, `{"id":"project-1","slug":"team-example","secret":"never-return"}`, 200, ProjectAccess{Slug: "team-example", Listed: true, DetailStatus: "allowed", ProjectID: "project-1"}},
+		{"unknown-project", `{"projects":[]}`, `{"message":"not found"}`, 404, ProjectAccess{Slug: "team-example", DetailStatus: "not_found"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -35,7 +35,7 @@ func TestProjectAccessMatrix(t *testing.T) {
 						t.Error("missing bearer on project list")
 					}
 					fmt.Fprint(w, tt.listing)
-				case "/api/v1/projects/slug/home-lab":
+				case "/api/v1/projects/slug/team-example":
 					w.WriteHeader(tt.detailStatus)
 					fmt.Fprint(w, tt.detail)
 				default:
@@ -47,7 +47,7 @@ func TestProjectAccessMatrix(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			got, err := client.InspectProjectAccess(context.Background(), "home-lab")
+			got, err := client.InspectProjectAccess(context.Background(), "team-example")
 			if err != nil || got != tt.want || requests.Load() != 3 {
 				t.Fatalf("access=%+v err=%v calls=%d", got, err, requests.Load())
 			}
@@ -67,7 +67,7 @@ func TestProjectAccessRejectsUnsafeAndInvalidResponses(t *testing.T) {
 		{"list-forbidden", `{"secret":"never-return"}`, ``, 403},
 		{"missing-projects-field", `{}`, ``, 200},
 		{"null-project-list", `{"projects":null}`, ``, 200},
-		{"malformed-detail", `{"projects":[]}`, `{"project":{"id":"project-1","slug":"home-lab"}}`, 200},
+		{"malformed-detail", `{"projects":[]}`, `{"project":{"id":"project-1","slug":"team-example"}}`, 200},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestProjectAccessRejectsUnsafeAndInvalidResponses(t *testing.T) {
 						w.WriteHeader(tt.listingStatus)
 					}
 					fmt.Fprint(w, tt.listing)
-				case "/api/v1/projects/slug/home-lab":
+				case "/api/v1/projects/slug/team-example":
 					fmt.Fprint(w, tt.detail)
 				default:
 					t.Error("unsafe or unexpected request")
@@ -88,19 +88,19 @@ func TestProjectAccessRejectsUnsafeAndInvalidResponses(t *testing.T) {
 			}))
 			defer server.Close()
 			client, _ := NewClient(server.URL, "id", "secret", server.Client())
-			_, err := client.InspectProjectAccess(context.Background(), "home-lab")
+			_, err := client.InspectProjectAccess(context.Background(), "team-example")
 			if err == nil || strings.Contains(err.Error(), "never-return") {
 				t.Fatalf("invalid response accepted or leaked: %v", err)
 			}
 		})
 	}
 	client, _ := NewClient("https://example.invalid", "", "", nil)
-	for _, slug := range []string{"", "../home-lab", "home/lab", "Home-Lab", strings.Repeat("a", 129)} {
+	for _, slug := range []string{"", "../team-example", "team/example", "Team-Example", strings.Repeat("a", 129)} {
 		if _, err := client.InspectProjectAccess(context.Background(), slug); err == nil {
 			t.Errorf("accepted invalid slug %q", slug)
 		}
 	}
-	if _, err := client.InspectProjectAccess(context.Background(), "home-lab"); !errors.Is(err, ErrNotConfigured) {
+	if _, err := client.InspectProjectAccess(context.Background(), "team-example"); !errors.Is(err, ErrNotConfigured) {
 		t.Fatalf("missing auth should fail before project read: %v", err)
 	}
 }

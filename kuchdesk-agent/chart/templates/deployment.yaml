@@ -95,6 +95,12 @@ spec:
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
           env:
+            - name: KUCHDESK_BASE_PROJECT_NAME
+              value: {{ required "baseProject.name is required" .Values.baseProject.name | quote }}
+            - name: KUCHDESK_BASE_PROJECT_ID
+              value: {{ .Values.baseProject.id | quote }}
+            - name: KUCHDESK_BASE_PROJECT_SLUG
+              value: {{ .Values.baseProject.slug | quote }}
             - name: KUCHDESK_AGENT_LISTEN_ADDRESS
               value: {{ printf "%s:%v" .Values.agent.listenHost .Values.service.targetPort | quote }}
             - name: KUCHDESK_CLUSTER_ID

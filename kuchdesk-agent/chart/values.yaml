@@ -1,3 +1,8 @@
+baseProject:
+  name: Kubedesk Platform
+  id: ""
+  slug: ""
+
 replicaCount: 1
 
 image:

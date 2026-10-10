@@ -76,6 +76,7 @@ func run(logger *slog.Logger) error {
 		cfg.SSEHeartbeat,
 		logger,
 	)
+	api.SetBaseProject(cfg.BaseProjectName, cfg.BaseProjectID, cfg.BaseProjectSlug)
 	if cfg.ManagementEnabled {
 		dynamicClient, err := dynamic.NewForConfig(restConfig)
 		if err != nil {

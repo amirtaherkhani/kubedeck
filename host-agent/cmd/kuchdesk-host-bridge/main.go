@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/doctor"
+	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/enrollment"
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/hostbridge"
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/infisical"
 )
@@ -36,7 +37,15 @@ func run() error {
 	privateKey := flag.String("tls-key", "", "TLS private key file")
 	projects := flag.String("project-ids", "", "comma-separated Infisical project ID allowlist")
 	allowCreate := flag.Bool("allow-project-create", false, "allow organization-level project creation")
+	policyPath := flag.String("enrollment-policy", "", "opt-in private runtime enrollment policy")
+	stateDir := flag.String("enrollment-state-dir", "", "existing private enrollment state directory")
 	flag.Parse()
+	if *allowCreate {
+		return errors.New("host bridge is read-only; project creation requires the local CLI or MCP")
+	}
+	if (*policyPath == "") != (*stateDir == "") {
+		return errors.New("enrollment policy and state directory must be supplied together")
+	}
 	if flag.NArg() != 0 || *baseURL == "" || *certificate == "" || *privateKey == "" {
 		return errors.New("Infisical URL and TLS certificate/key files are required")
 	}
@@ -52,7 +61,7 @@ func run() error {
 			allowed[id] = true
 		}
 	}
-	if len(allowed) == 0 && !*allowCreate {
+	if len(allowed) == 0 && !*allowCreate && *policyPath == "" {
 		return errors.New("at least one project ID must be allowed")
 	}
 	clientID, clientSecret, err := infisical.HostCredentials(os.Getenv)
@@ -67,7 +76,20 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	api, err := hostbridge.New(infisical.CommandService{Client: client, AllowedProjects: allowed, AllowProjectCreate: *allowCreate}, doctor.Service{}, bridgeToken)
+	commands := infisical.CommandService{Client: client, AllowedProjects: allowed, ReadOnly: true}
+	var diagnostics hostbridge.Diagnostician = doctor.Service{}
+	var control *enrollment.Controller
+	if *policyPath != "" {
+		var store *enrollment.Store
+		control, store, err = enrollment.OpenRuntime(*baseURL, *policyPath, *stateDir, client)
+		if err != nil {
+			return err
+		}
+		defer store.Close()
+		commands.ProjectPolicy = control.Access
+		diagnostics = enrollment.Diagnostics{Controller: control}
+	}
+	api, err := hostbridge.New(commands, diagnostics, bridgeToken)
 	if err != nil {
 		return err
 	}
@@ -83,6 +105,11 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	if control != nil {
+		done := make(chan struct{})
+		go func() { defer close(done); control.Run(ctx, nil) }()
+		defer func() { stop(); <-done }()
+	}
 	go func() {
 		<-ctx.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)

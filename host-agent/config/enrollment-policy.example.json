@@ -1,0 +1,14 @@
+{
+  "version": "v0.151.0",
+  "organizationId": "example-organization-id",
+  "hostIdentityId": "example-host-identity-id",
+  "k8IdentityId": "example-k8-identity-id",
+  "createK8Identity": false,
+  "include": ["example-project-id"],
+  "exclude": [],
+  "allProjects": false,
+  "apply": false,
+  "repairRevocations": false,
+  "intervalSeconds": 60,
+  "maxProjects": 100
+}

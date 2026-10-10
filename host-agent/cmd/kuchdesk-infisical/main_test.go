@@ -165,7 +165,7 @@ func TestCLIProjectAccessDoesNotEquateEmptyListWithMissingProject(t *testing.T) 
 			fmt.Fprint(w, `{"accessToken":"token","expiresIn":60,"tokenType":"Bearer"}`)
 		case "/api/v1/projects":
 			fmt.Fprint(w, `{"projects":[]}`)
-		case "/api/v1/projects/slug/home-lab":
+		case "/api/v1/projects/slug/team-example":
 			w.WriteHeader(http.StatusForbidden)
 			fmt.Fprint(w, `{"secret":"never-print-me"}`)
 		default:
@@ -174,7 +174,7 @@ func TestCLIProjectAccessDoesNotEquateEmptyListWithMissingProject(t *testing.T) 
 	}))
 	defer server.Close()
 	var out, errOut bytes.Buffer
-	code := run(context.Background(), []string{"-url", server.URL, "check-project-access", "-slug", "home-lab"}, &out, &errOut, func(key string) string {
+	code := run(context.Background(), []string{"-url", server.URL, "check-project-access", "-slug", "team-example"}, &out, &errOut, func(key string) string {
 		if key == "KUCHDESK_PROJECT_ROOT" {
 			return root
 		}
@@ -185,7 +185,7 @@ func TestCLIProjectAccessDoesNotEquateEmptyListWithMissingProject(t *testing.T) 
 	}
 	out.Reset()
 	errOut.Reset()
-	code = run(context.Background(), []string{"-url", server.URL, "check-project-access", "-slug", "../home-lab"}, &out, &errOut, func(key string) string {
+	code = run(context.Background(), []string{"-url", server.URL, "check-project-access", "-slug", "../team-example"}, &out, &errOut, func(key string) string {
 		if key == "KUCHDESK_PROJECT_ROOT" {
 			return root
 		}

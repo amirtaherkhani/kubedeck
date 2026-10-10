@@ -23,6 +23,7 @@ type SnapshotSource interface {
 }
 
 type Server struct {
+	baseProject map[string]string
 	source      SnapshotSource
 	broker      *stream.Broker
 	dns         *dnsconfig.Manager
@@ -58,8 +59,16 @@ func New(
 	}
 }
 
+func (s *Server) SetBaseProject(name, id, slug string) {
+	s.baseProject = map[string]string{"name": name, "projectId": id, "slug": slug}
+}
+
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.Handle("GET /v1/platform", s.authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(s.baseProject)
+	})))
 	mux.HandleFunc("GET /healthz", s.health)
 	mux.HandleFunc("GET /readyz", s.ready)
 	mux.Handle("GET /v1/snapshot", s.authenticate(http.HandlerFunc(s.snapshot)))
