@@ -28,6 +28,10 @@ type config struct {
 func parseConfig(args []string) (config, error) {
 	var cfg config
 	flags := flag.NewFlagSet("kuchdesk-host-agent", flag.ContinueOnError)
+	flags.Usage = func() {
+		fmt.Fprintln(flags.Output(), "Usage: kuchdesk-host-agent [DNS options]\n       kuchdesk-host-agent admin-login [--project-root /absolute/project]")
+		flags.PrintDefaults()
+	}
 	flags.BoolVar(&cfg.CheckTarget, "check-target", false, "resolve and print the DNS target without changing Technitium")
 	flags.StringVar(&cfg.InterfaceName, "interface", "", "LAN interface override; default is the operating system's default route interface")
 	flags.StringVar(&cfg.TargetIP, "target-ip", "", "explicit IPv4 address for the DNS wildcard; default is the selected interface's private address")

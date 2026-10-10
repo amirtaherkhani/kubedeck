@@ -1,4 +1,4 @@
-package main
+package enrollmentcli
 
 import (
 	"bytes"
@@ -64,5 +64,44 @@ func TestEasyLoginDoesNotOpenBrowserWhileWriterIsActive(t *testing.T) {
 	e = runWithBrowser([]string{"-login-easy", "-project-root", root}, &out, &out, func(context.Context, string) error { t.Fatal("duplicate login opened browser"); return nil })
 	if e == nil || e.Error() != "controller_already_running" {
 		t.Fatalf("expected writer lock rejection: %v", e)
+	}
+}
+
+func TestEasyLoginConfiguredRootRejectsNonTTYBeforeBrowser(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("KUCHDESK_PROJECT_ROOT", root)
+	for _, dir := range []string{"host-agent", "lab", ".kuchdesk/infisical-control"} {
+		if err := os.MkdirAll(filepath.Join(root, dir), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	files := map[string]string{
+		"host-agent/go.mod":                       "module test",
+		"lab/site.json":                           `{"domain":"example.test","hosts":{"infisical":"vault"}}`,
+		".kuchdesk/infisical-control/policy.json": `{"version":"v0.151.0","organizationId":"org","hostIdentityId":"host","k8IdentityId":"k8","intervalSeconds":30,"maxProjects":20}`,
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(body), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	input, err := os.CreateTemp(t.TempDir(), "non-terminal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer input.Close()
+	old := os.Stdin
+	os.Stdin = input
+	defer func() { os.Stdin = old }()
+	var out bytes.Buffer
+	err = runWithBrowser([]string{"-login-easy"}, &out, &out, func(context.Context, string) error { t.Fatal("browser opened for noninteractive login"); return nil })
+	if err == nil || err.Error() != "interactive_terminal_required" {
+		t.Fatal("wrong non-TTY result", err)
+	}
+	if out.Len() != 0 {
+		t.Fatal("unexpected browser or credential output")
+	}
+	if _, err := os.Stat(filepath.Join(root, ".kuchdesk/infisical-control/session.json")); !os.IsNotExist(err) {
+		t.Fatal("noninteractive login changed session")
 	}
 }

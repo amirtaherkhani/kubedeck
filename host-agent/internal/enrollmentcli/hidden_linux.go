@@ -1,4 +1,4 @@
-package main
+package enrollmentcli
 
 import "golang.org/x/sys/unix"
 

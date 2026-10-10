@@ -1,13 +1,13 @@
 #!/bin/sh
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
-binary="$root/.kuchdesk/bin/kuchdesk-enrollment-easy"
+binary="${KUCHDESK_HOST_AGENT:-$HOME/.local/bin/kuchdesk-host-agent}"
 if [ ! -x "$binary" ]; then
-  echo 'Login binary is missing. Build/install kuchdesk-enrollment-easy for this project first.' >&2
+  echo 'Host Agent is missing. Install kuchdesk-host-agent with admin-login support first.' >&2
   exit 1
 fi
 if [ ! -t 0 ]; then
   echo 'Run this command yourself in an interactive terminal.' >&2
   exit 1
 fi
-exec "$binary" -login-easy -project-root "$root"
+exec "$binary" admin-login --project-root "$root"

@@ -81,3 +81,15 @@ then returned ready for both approved projects, read back the required roles,
 and recorded identity `d05fbb07-7b0c-402a-888d-980b9ac06cde` with no pending creation.
 This does not claim successful Kubernetes-auth login or consumer cutover; those
 and the Host bridge restart remain outstanding. No slug or service upgrade occurred.
+
+## Live activation checkpoint — 2026-10-10
+
+- Kubernetes-auth configuration verified for identity `d05fbb07-7b0c-402a-888d-980b9ac06cde`, dedicated `development-tools/kubedesk-infisical-reader`, TTL/max TTL 900 seconds, and API token review with no persisted reviewer JWT. Positive login and metadata reads of both approved projects succeeded. Default accounts in development-tools and observability were denied (401); this does not isolate a same-name cross-namespace test.
+- Isolated secret test: Host create/update/delete succeeded; K8 PATCH returned 403. The disposable secret was deleted; no business-secret value was printed.
+- Existing human-session refresh executed through the production Session refresh/persistence path. Server authority was revalidated after saving the refreshed session.
+- Grafana Helm revision 3 deployed with a postrenderer preserving revision 2 resources except the authentication block. Helm merging retained the old Universal Auth block; an exact-test JSON Patch removed only that block. Live CR generation 3 reports only Kubernetes Auth, successful token loading and two secrets synced. Grafana remains 1/1 ready.
+- Host bridge binary and plist backed up privately. Enrollment flags enabled against the existing absolute policy/state paths. One stop/start cycle performed; launchd bootstrap initially returned error 5, then a retry succeeded. PID 80221 stayed running across follow-up checks. Doctor passed 8/8 including enrollment ready. This verifies restart recovery and current service health; the public Doctor evidence does not expose a per-cycle timestamp, so repeated healthy reads alone are not proof of a second completed reconciliation cycle.
+- Host `admin-login` shares the existing tested CLI implementation. Focused race tests passed for Host command, enrollment CLI and enrollment core. Built command installed at the existing Host executable path and help verified outside the checkout. The optional root script now uses this binary, with no separate login helper dependency.
+- Rollback artifacts remain private under `.kuchdesk/activation-rollback` (original Grafana release values/manifest/CR and prior Host binaries/plist). No upgrade, project slug change, dependency deletion or unrelated identity/grant mutation was performed.
+
+Remaining live acceptance gate: creating and later deleting a disposable Infisical project is outside the enumerated two-project activation bundle. Approve that isolated project lifecycle before testing discovery/enrollment of a newly created project against the live organization. Future-project discovery and policy reload have fixture coverage; do not call the live new-project scenario verified yet. See [helper inventory](host-helper-inventory.md).
