@@ -56,11 +56,11 @@ helm lint ./kuchdesk-agent/chart \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kuchdesk-agent \
-  --set image.tag=0.8.0
+  --set image.tag=0.9.0
 helm template kuchdesk-agent ./kuchdesk-agent/chart \
   --namespace development-tools \
   --set cluster.id=example \
   --set cluster.name='Example cluster' \
   --set image.repository=example.invalid/kuchdesk-agent \
-  --set image.tag=0.8.0
+  --set image.tag=0.9.0
 ```

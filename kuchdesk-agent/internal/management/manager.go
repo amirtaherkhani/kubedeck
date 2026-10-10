@@ -58,6 +58,9 @@ func (m *Manager) Handler() http.Handler {
 	mux.HandleFunc("/v1/manage/resources/{group}/{version}/{resource}", m.resource)
 	mux.HandleFunc("GET /v1/manage/pods/{namespace}/{name}/logs", m.logs)
 	mux.HandleFunc("GET /v1/manage/events/{namespace}", m.events)
+	mux.HandleFunc("GET /v1/manage/batch/jobs/{namespace}/{name}", m.jobStatus)
+	mux.HandleFunc("POST /v1/manage/batch/cronjobs/{namespace}/{name}/run", m.runCronJob)
+	mux.HandleFunc("DELETE /v1/manage/batch/jobs/{namespace}/{name}", m.deleteJob)
 	if m.ExecEnabled {
 		mux.HandleFunc("POST /v1/manage/pods/{namespace}/{name}/exec", m.execPod)
 	}
@@ -211,7 +214,7 @@ func (m *Manager) capabilities(w http.ResponseWriter, r *http.Request) {
 	if _, err := m.Discovery.ServerResourcesForGroupVersion("metrics.k8s.io/v1beta1"); err == nil {
 		metrics = true
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"managementEnabled": true, "metricsAvailable": metrics, "resources": resources, "authorizationNamespace": namespace, "workloadActions": []string{"scale", "restart", "status"}, "asyncWorkloadActions": m.Jobs != nil, "podLogs": true, "podExec": m.ExecEnabled, "podPortForward": m.PortForwardEnabled, "events": true, "note": "allowedVerbs are point-in-time authorization information; each operation is authorized again by Kubernetes"})
+	writeJSON(w, http.StatusOK, map[string]any{"managementEnabled": true, "metricsAvailable": metrics, "resources": resources, "authorizationNamespace": namespace, "workloadActions": []string{"scale", "restart", "status"}, "asyncWorkloadActions": m.Jobs != nil, "podLogs": true, "podExec": m.ExecEnabled, "podPortForward": m.PortForwardEnabled, "batchJobLifecycle": true, "events": true, "note": "allowedVerbs are point-in-time authorization information; each operation is authorized again by Kubernetes"})
 }
 
 func allowedByRules(rules []authv1.ResourceRule, attributes authv1.ResourceAttributes) bool {
