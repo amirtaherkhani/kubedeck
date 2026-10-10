@@ -22,6 +22,13 @@ func loginFixture(t *testing.T, denied, mfa, noCookie bool, suppliedToken ...str
 		token = suppliedToken[0]
 	}
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Infisical/Fastify parses advertised JSON even on a bodyless auth route.
+		if r.Header.Get("Content-Type") == "application/json" && r.ContentLength == 0 {
+			w.WriteHeader(500)
+			fmt.Fprint(w, `{"code":"FST_ERR_CTP_EMPTY_JSON_BODY"}`)
+			return
+		}
+
 		if r.URL.Path == "/api/v1/auth/token" {
 			cookie, e := r.Cookie("jid")
 			if e != nil || cookie.Value != token {

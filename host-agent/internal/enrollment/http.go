@@ -17,6 +17,8 @@ import (
 // StatusError deliberately discards response bodies and URLs.
 type StatusError struct {
 	Code       int
+	Method     string
+	Endpoint   string
 	RetryAfter time.Duration
 }
 
@@ -79,7 +81,11 @@ func (h *Transport) call(ctx context.Context, method, path string, q url.Values,
 	if r.Header == nil {
 		r.Header = make(http.Header)
 	}
-	r.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		r.Header.Set("Content-Type", "application/json")
+	} else {
+		r.Header.Del("Content-Type")
+	}
 	r.Header.Set("User-Agent", "kuchdesk-enrollment")
 	res, e := h.client.Do(r)
 	if e != nil {
@@ -99,7 +105,16 @@ func (h *Transport) call(ctx context.Context, method, path string, q url.Values,
 		if delay > time.Hour {
 			delay = time.Hour
 		}
-		return &StatusError{Code: res.StatusCode, RetryAfter: delay}
+		failure := &StatusError{Code: res.StatusCode, RetryAfter: delay}
+		// Fixed auth routes only; never emit dynamic paths, query values or bodies.
+		switch path {
+		case "/api/v1/auth/checkAuth", "/api/v1/auth/token", "/api/v1/organization-admin/projects", "/api/v3/auth/select-organization":
+			failure.Endpoint = path
+			if method == "GET" || method == "POST" {
+				failure.Method = method
+			}
+		}
+		return failure
 	}
 	b, e := io.ReadAll(io.LimitReader(res.Body, maxState+1))
 	if e != nil || len(b) > maxState {

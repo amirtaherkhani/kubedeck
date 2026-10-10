@@ -21,6 +21,9 @@ import (
 // HumanStatus never contains tokens, user details, or upstream error bodies.
 // AccessAllProjects is the server capability used for self-enrollment, not a role name.
 type HumanStatus struct {
+	HTTPStatus                int       `json:"httpStatus,omitempty"`
+	RequestMethod             string    `json:"requestMethod,omitempty"`
+	RequestEndpoint           string    `json:"requestEndpoint,omitempty"`
 	Status                    string    `json:"status"`
 	ServerAuthenticated       bool      `json:"serverAuthenticated"`
 	OrganizationScopeVerified bool      `json:"organizationScopeVerified"`
@@ -31,7 +34,7 @@ type HumanStatus struct {
 
 func verifyHuman(ctx context.Context, h *Transport, p Policy, token string) (HumanStatus, error) {
 	r := HumanStatus{Status: "not_verified", ObservedAt: time.Now()}
-	fail := func(e error) (HumanStatus, error) { r.Status = classify(e); return r, e }
+	fail := func(e error) (HumanStatus, error) { r.Status = classify(e); return requestFailure(r, e), e }
 	if p.Version != "v0.151.0" {
 		return fail(ErrUnsupported)
 	}
@@ -277,7 +280,7 @@ func completeBrowserLogin(ctx context.Context, h *Transport, p Policy, store *St
 	headers := http.Header{"Authorization": []string{"Bearer " + token}}
 	e = h.call(ctx, "POST", "/api/v3/auth/select-organization", nil, headers, map[string]string{"organizationId": p.OrganizationID, "userAgent": "cli"}, &selected, &cookies)
 	if e != nil {
-		return HumanStatus{Status: classify(e), ObservedAt: time.Now()}, e
+		return requestFailure(HumanStatus{Status: classify(e), ObservedAt: time.Now()}, e), e
 	}
 	if selected.MFA == nil || *selected.MFA {
 		return HumanStatus{Status: "browser_mfa_required", ObservedAt: time.Now()}, errors.New("browser_mfa_required")
@@ -389,4 +392,15 @@ func decodeBrowserToken(encoded string) (string, error) {
 		return "", errors.New("invalid_browser_fallback")
 	}
 	return token, nil
+}
+
+// requestFailure exposes only fixed route metadata and numeric HTTP status.
+func requestFailure(report HumanStatus, err error) HumanStatus {
+	var failure *StatusError
+	if errors.As(err, &failure) {
+		report.HTTPStatus = failure.Code
+		report.RequestMethod = failure.Method
+		report.RequestEndpoint = failure.Endpoint
+	}
+	return report
 }

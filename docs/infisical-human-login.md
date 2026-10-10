@@ -156,3 +156,26 @@ No live credentials were entered during implementation. After the user's login
 succeeds, continue the previously approved activation with a fresh dry run,
 reviewed identity/project reconciliation, Kubernetes-auth validation and consumer
 cutover. Login alone does not complete those steps.
+
+## Verified downstream request correction
+
+The local fallback reached `checkAuth`, but the backend recorded HTTP 500 and
+`FST_ERR_CTP_EMPTY_JSON_BODY` at the failed attempt on 2026-10-10. The client sent
+an empty body while declaring `Content-Type: application/json`. Bodyless requests
+now omit that header; JSON-bearing select-organization requests retain it.
+This is a request-shape correction, not evidence of expired or invalid credentials.
+
+The official v0.151.0 sequence is unchanged: decode the copied base64 JSON
+(`JTWToken`, email, empty privateKey); check local scope/expiry hints; POST
+`/api/v1/auth/checkAuth` with Bearer authorization; GET
+`/api/v1/organization-admin/projects` to verify enrollment authority; POST
+`/api/v3/auth/select-organization` with the configured organization ID and
+`userAgent: cli`; require completed MFA and the `jid` refresh cookie; revalidate
+the returned access token; then persist privately. No separate raw-JWT token
+exchange is required for the copied fallback payload.
+
+Non-success responses now add numeric `httpStatus`, fixed `requestMethod` and
+allowlisted `requestEndpoint` to the sanitized status. Headers, query values,
+response bodies, credentials and private session contents remain excluded.
+The login fixture models the deployed empty-JSON failure so both automatic and
+manual paths are regression-tested against this boundary.
