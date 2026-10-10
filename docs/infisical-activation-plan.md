@@ -135,29 +135,13 @@ Infisical identity. The Operator is the first consumer of that identity.
 
 ## Human login: user-only handoff
 
-The user signs in personally at the exact origin, selects the organization above,
-and supplies an organization-scoped human session through a local private-file
-handoff. Never send a password, access token, refresh token, cookie, or screenshot
-of those values to Codex. No automated browser/cookie extraction is authorized.
-
-The shipped CLI imports a session; it does **not** implement a browser/SSO callback
-or automatic session export. The user must obtain the access/refresh pair from their own authorized,
-organization-scoped login output, not from a machine account. The local handoff
-must be entered privately; browser credentials are never read by the agent. The handoff
-must be mode-0600 `session-handoff.json` inside the private state directory, with
-`origin`, `organizationId`, `version`, `accessToken`, `refreshToken`, and both
-`refreshPending:false` and `expired:false`. The user enters only the two tokens
-in their own local private editor (not chat, shell arguments or command history); the three scope fields are the exact values above. Do not substitute a
-machine token. If the login cannot produce this supported handoff, stop rather
-than extracting browser storage or promising unattended access.
-
-With the controller stopped, the user runs the built `kuchdesk-enrollment` using
-`-url https://infisical.local.dev`, `-policy <state>/policy.json`,
-`-state-dir <state>`, and `-import-session <state>/session-handoff.json`. The importer
-validates scope/expiry and writes session state under a single-writer lock. Remove
-the redundant handoff file locally once import succeeds. Re-login remains a user
-step when the session expires or is revoked. This handoff is the remaining local
-login integration gate, not a request to paste credentials into chat.
+Use the supported [user-run browser login](infisical-human-login.md). The local
+`kuchdesk-enrollment -login` command receives the official v0.151.0 callback after
+the user completes login/MFA/SSO and organization selection in Infisical. It
+validates server authority and saves the private session without token copying.
+Run `-status` separately for sanitized, read-only server-authority validation.
+The older `-import-session` remains an explicit compatibility path; local import
+alone is not server-authority proof and is no longer the normal user workflow.
 
 ## One approval bundle and execution order
 
