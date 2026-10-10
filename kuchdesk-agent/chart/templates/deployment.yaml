@@ -40,6 +40,9 @@
 {{- if and .Values.agent.execEnabled (not .Values.agent.managementEnabled) }}
 {{- fail "agent.managementEnabled is required when agent.execEnabled=true." }}
 {{- end }}
+{{- if and .Values.agent.portForwardEnabled (not .Values.agent.managementEnabled) }}
+{{- fail "agent.managementEnabled is required when agent.portForwardEnabled=true." }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -107,6 +110,8 @@ spec:
               value: {{ .Values.agent.managementEnabled | quote }}
             - name: KUCHDESK_EXEC_ENABLED
               value: {{ .Values.agent.execEnabled | quote }}
+            - name: KUCHDESK_PORT_FORWARD_ENABLED
+              value: {{ .Values.agent.portForwardEnabled | quote }}
             - name: KUCHDESK_COREDNS_NAMESPACE
               value: {{ required "dnsManagement.namespace is required" .Values.dnsManagement.namespace | quote }}
             - name: KUCHDESK_COREDNS_CONFIGMAP

@@ -82,7 +82,7 @@ func run(logger *slog.Logger) error {
 		}
 		jobs := management.NewWorkloadJobs(signalContext)
 		defer jobs.Close()
-		api.SetManagementHandler((&management.Manager{Dynamic: dynamicClient, Discovery: kube.Discovery(), Kube: kube, RESTConfig: restConfig, Logger: logger, Jobs: jobs, ExecEnabled: cfg.ExecEnabled}).Handler())
+		api.SetManagementHandler((&management.Manager{Dynamic: dynamicClient, Discovery: kube.Discovery(), Kube: kube, RESTConfig: restConfig, Logger: logger, Jobs: jobs, ExecEnabled: cfg.ExecEnabled, PortForwardEnabled: cfg.PortForwardEnabled}).Handler())
 	}
 	server := &http.Server{
 		Addr:              cfg.ListenAddress,
@@ -110,6 +110,7 @@ func run(logger *slog.Logger) error {
 			"dnsManagementEnabled", cfg.DNSManagementEnabled,
 			"managementEnabled", cfg.ManagementEnabled,
 			"execEnabled", cfg.ExecEnabled,
+			"portForwardEnabled", cfg.PortForwardEnabled,
 		)
 		serverErrors <- server.ListenAndServe()
 	}()
