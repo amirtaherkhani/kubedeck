@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "hostBridge": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "url": { "type": "string" },
+        "tokenSecretName": { "type": "string", "maxLength": 253 },
+        "tokenKey": { "type": "string", "maxLength": 253 },
+        "caConfigMapName": { "type": "string", "maxLength": 253 },
+        "caKey": { "type": "string", "maxLength": 253 }
+      }
+    }
+  }
+}

@@ -144,6 +144,41 @@ func TestDoctorScopesExposeOnlySupportedToolsWithoutInfisicalCredentials(t *test
 	}
 }
 
+func TestInfisicalManagementToolIsExplicitAndProjectScoped(t *testing.T) {
+	client, err := infisical.NewClient("https://infisical.example", "", "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	runner := async.NewRunner(ctx, 2, 4)
+	defer runner.Close()
+	server := newServerWithScope(infisical.NewService(client), runner, deployConfig{}, fakeDoctorRunner{}, "all")
+	registerInfisicalManagement(server, infisical.CommandService{Client: client, AllowedProjects: map[string]bool{"allowed": true}})
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	serverSession, err := server.Connect(ctx, serverTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer serverSession.Close()
+	session, err := mcp.NewClient(&mcp.Implementation{Name: "management-test"}, nil).Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	tools, err := session.ListTools(ctx, nil)
+	if err != nil || len(tools.Tools) != 14 {
+		t.Fatalf("management tool catalog = %d, %v", len(tools.Tools), err)
+	}
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "infisical_manage", Arguments: map[string]any{"operation": "secret.get", "projectId": "denied", "environment": "dev", "path": "/", "name": "API_KEY"}})
+	if err != nil || !result.IsError {
+		t.Fatalf("project allowlist bypassed: %v %+v", err, result)
+	}
+	encoded, _ := json.Marshal(result)
+	if !strings.Contains(string(encoded), "project_denied") || strings.Contains(string(encoded), "clientSecret") {
+		t.Fatalf("unredacted management error: %s", encoded)
+	}
+}
+
 type fakeDoctorRunner struct{ report doctor.Report }
 
 func (f fakeDoctorRunner) Run(context.Context, doctor.Config) (doctor.Report, error) {

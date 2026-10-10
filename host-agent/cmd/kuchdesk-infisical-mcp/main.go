@@ -361,6 +361,17 @@ func newServerWithScope(service *infisical.Service, runner *async.Runner, cfg de
 	return server
 }
 
+func registerInfisicalManagement(server *mcp.Server, commands infisical.CommandService) {
+	mcp.AddTool(server, &mcp.Tool{Name: "infisical_manage", Description: "Execute one explicitly scoped Infisical project, environment, folder, secret, role, or identity-membership command. Writes require operation:target confirmation. Responses never include secret values."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, input infisical.Command) (*mcp.CallToolResult, infisical.CommandResult, error) {
+			result, err := commands.Execute(ctx, input)
+			if err != nil {
+				return nil, infisical.CommandResult{}, infisical.PublicError(err)
+			}
+			return nil, result, nil
+		})
+}
+
 func doctorPromptConfig(arguments map[string]string) (doctor.Config, error) {
 	config := doctor.Config{Domain: arguments["domain"], KubeContext: arguments["kubeContext"], RegistryURL: arguments["registryUrl"], DiskPath: arguments["diskPath"]}
 	if raw := strings.TrimSpace(arguments["services"]); raw != "" {
@@ -403,18 +414,27 @@ func publicError(err error) error {
 func main() {
 	baseURL := flag.String("url", "", "Infisical HTTPS origin (required only with -scope all)")
 	scope := flag.String("scope", "all", "MCP tool scope: all, doctor-repair, or doctor-readonly")
+	manage := flag.Bool("manage", false, "expose scoped Infisical management commands in all scope")
+	projects := flag.String("project-ids", "", "comma-separated Infisical project ID allowlist for management")
+	allowProjectCreate := flag.Bool("allow-project-create", false, "allow organization-level project creation")
 	flag.Parse()
 	if (*scope != "all" && *scope != "doctor-repair" && *scope != "doctor-readonly") || flag.NArg() != 0 {
 		fmt.Fprintln(os.Stderr, "provide a valid -scope and no positional arguments")
 		os.Exit(2)
 	}
+	if *manage && *scope != "all" {
+		fmt.Fprintln(os.Stderr, "Infisical management requires -scope all")
+		os.Exit(2)
+	}
 	var service *infisical.Service
+	var client *infisical.Client
 	if *scope == "all" {
 		if *baseURL == "" {
 			fmt.Fprintln(os.Stderr, "provide -url with the Infisical HTTPS origin")
 			os.Exit(2)
 		}
-		client, err := hostClient(*baseURL, os.Getenv)
+		var err error
+		client, err = hostClient(*baseURL, os.Getenv)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "invalid Infisical configuration:", err)
 			os.Exit(2)
@@ -427,7 +447,21 @@ func main() {
 	runner := async.NewRunner(context.Background(), 4, 64)
 	defer runner.Close()
 	cfg := deployConfig{ProfileDir: os.Getenv("KUCHDESK_DEPLOY_PROFILE_DIR"), Enabled: os.Getenv("KUCHDESK_DEPLOY_ENABLED") == "true", Runner: deploy.ExecRunner{}}
-	if err := newServerWithScope(service, runner, cfg, doctor.Service{}, *scope).Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+	server := newServerWithScope(service, runner, cfg, doctor.Service{}, *scope)
+	if *manage {
+		allowed := make(map[string]bool)
+		for _, raw := range strings.Split(*projects, ",") {
+			if id := strings.TrimSpace(raw); id != "" {
+				allowed[id] = true
+			}
+		}
+		if len(allowed) == 0 && !*allowProjectCreate {
+			fmt.Fprintln(os.Stderr, "Infisical management requires a project allowlist")
+			os.Exit(2)
+		}
+		registerInfisicalManagement(server, infisical.CommandService{Client: client, AllowedProjects: allowed, AllowProjectCreate: *allowProjectCreate})
+	}
+	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		fmt.Fprintln(os.Stderr, "Infisical MCP server stopped")
 		os.Exit(1)
 	}

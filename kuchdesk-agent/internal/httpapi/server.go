@@ -30,10 +30,15 @@ type Server struct {
 	heartbeat   time.Duration
 	logger      *slog.Logger
 	management  http.Handler
+	hostBridge  http.Handler
 }
 
 // SetManagementHandler enables the separately configured management API.
 func (s *Server) SetManagementHandler(handler http.Handler) { s.management = handler }
+
+// SetHostBridgeHandler exposes the separately configured, agent-authenticated
+// path to the host control plane. It is absent when the bridge is disabled.
+func (s *Server) SetHostBridgeHandler(handler http.Handler) { s.hostBridge = handler }
 
 func New(
 	source SnapshotSource,
@@ -63,6 +68,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PUT /v1/dns/config", s.authenticate(http.HandlerFunc(s.replaceDNSConfig)))
 	if s.management != nil {
 		mux.Handle("/v1/manage/", s.authenticate(s.management))
+	}
+	if s.hostBridge != nil {
+		mux.Handle("/v1/host/", s.authenticate(s.hostBridge))
 	}
 	return s.recover(mux)
 }

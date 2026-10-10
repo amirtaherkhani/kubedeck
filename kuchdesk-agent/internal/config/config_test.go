@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -94,6 +95,53 @@ func TestPortForwardRequiresExplicitManagement(t *testing.T) {
 	cfg, err := Load()
 	if err != nil || !cfg.PortForwardEnabled {
 		t.Fatalf("explicit port-forward config = %#v, %v", cfg, err)
+	}
+}
+
+func TestHostBridgeRequiresManagementAndDedicatedBearer(t *testing.T) {
+	setClusterIdentity(t)
+	t.Setenv("KUCHDESK_HOST_BRIDGE_ENABLED", "true")
+	t.Setenv("KUCHDESK_HOST_BRIDGE_URL", "https://host.docker.internal:8181")
+	t.Setenv("KUCHDESK_HOST_BRIDGE_TOKEN", "0123456789abcdef0123456789abcdef")
+	t.Setenv("KUCHDESK_AGENT_TOKEN", "agent-token")
+	if _, err := Load(); err == nil {
+		t.Fatal("host bridge started without management")
+	}
+	t.Setenv("KUCHDESK_MANAGEMENT_ENABLED", "true")
+	if cfg, err := Load(); err != nil || !cfg.HostBridgeEnabled {
+		t.Fatalf("valid host bridge config = %#v, %v", cfg, err)
+	}
+	t.Setenv("KUCHDESK_HOST_BRIDGE_TOKEN", "")
+	if _, err := Load(); err == nil {
+		t.Fatal("host bridge started without separate bearer")
+	}
+}
+
+func TestChartHostBridgeUsesOnlySecretReferences(t *testing.T) {
+	helm, err := exec.LookPath("helm")
+	if err != nil {
+		t.Skip("helm is not installed")
+	}
+	chart := filepath.Join("..", "..", "chart")
+	base := []string{"template", "agent", chart, "--set", "cluster.id=example", "--set", "cluster.name=Example", "--set", "image.repository=example.invalid/agent", "--set", "image.tag=git-123456789abc"}
+	render := func(extra ...string) (string, error) {
+		command := exec.Command(helm, append(append([]string{}, base...), extra...)...)
+		output, err := command.CombinedOutput()
+		return string(output), err
+	}
+	output, err := render()
+	if err != nil || !strings.Contains(output, "KUCHDESK_HOST_BRIDGE_ENABLED") || strings.Contains(output, "KUCHDESK_HOST_BRIDGE_TOKEN") {
+		t.Fatalf("disabled chart render = %v", err)
+	}
+	output, err = render("--set", "agent.managementEnabled=true", "--set", "rbac.clusterAdmin=true", "--set", "hostBridge.enabled=true", "--set", "hostBridge.url=https://host.docker.internal:8181", "--set", "hostBridge.tokenSecretName=host-bridge-auth", "--set", "hostBridge.caConfigMapName=host-bridge-ca")
+	if err != nil || !strings.Contains(output, "name: \"host-bridge-auth\"") || !strings.Contains(output, "secretKeyRef:") || !strings.Contains(output, "host-bridge-ca") {
+		t.Fatalf("enabled chart missing named Secret or CA reference: %v", err)
+	}
+	if strings.Contains(output, "INFISICAL_CLIENT_SECRET") || strings.Contains(output, "INFISICAL_CLIENT_ID") {
+		t.Fatal("Infisical bootstrap credential appeared in rendered chart")
+	}
+	if _, err := render("--set", "hostBridge.token=plaintext-canary"); err == nil {
+		t.Fatal("chart accepted a literal bridge token in Helm values")
 	}
 }
 

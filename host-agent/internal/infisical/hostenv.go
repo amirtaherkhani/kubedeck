@@ -21,6 +21,31 @@ type CredentialBackend interface {
 type Credentials struct {
 	ClientID     string
 	ClientSecret string
+	BridgeToken  string
+}
+
+// HostBridgeToken reads the separate bridge bearer from the same private host
+// file. It is not an Infisical credential and is never copied into Helm values.
+func HostBridgeToken(getenv func(string) string) (string, error) {
+	root := getenv("KUCHDESK_PROJECT_ROOT")
+	if root == "" {
+		var err error
+		root, err = findProjectRoot()
+		if err != nil {
+			return "", err
+		}
+	}
+	if !filepath.IsAbs(root) {
+		return "", errors.New("KUCHDESK_PROJECT_ROOT must be absolute")
+	}
+	credentials, err := (envBackend{projectRoot: root}).Load(context.Background())
+	if err != nil {
+		return "", err
+	}
+	if len(credentials.BridgeToken) < 32 || len(credentials.BridgeToken) > 256 {
+		return "", errors.New("private .env requires a 32-256 character KUCHDESK_HOST_BRIDGE_TOKEN")
+	}
+	return credentials.BridgeToken, nil
 }
 
 type envBackend struct{ projectRoot string }
@@ -110,7 +135,7 @@ func readProjectEnv(path string) (Credentials, error) {
 		return Credentials{}, errors.New("project .env unavailable")
 	}
 	var result Credentials
-	seen := make(map[string]bool, 2)
+	seen := make(map[string]bool, 3)
 	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSuffix(line, "\r")
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -120,7 +145,7 @@ func readProjectEnv(path string) (Credentials, error) {
 		if !found || key == "" || strings.ContainsAny(key, " \t\r\x00") || strings.ContainsAny(value, "\r\x00") {
 			return Credentials{}, errors.New("project .env contains invalid entries")
 		}
-		if key != "INFISICAL_CLIENT_ID" && key != "INFISICAL_CLIENT_SECRET" {
+		if key != "INFISICAL_CLIENT_ID" && key != "INFISICAL_CLIENT_SECRET" && key != "KUCHDESK_HOST_BRIDGE_TOKEN" {
 			continue
 		}
 		if seen[key] || strings.TrimSpace(value) != value {
@@ -129,8 +154,10 @@ func readProjectEnv(path string) (Credentials, error) {
 		seen[key] = true
 		if key == "INFISICAL_CLIENT_ID" {
 			result.ClientID = value
-		} else {
+		} else if key == "INFISICAL_CLIENT_SECRET" {
 			result.ClientSecret = value
+		} else {
+			result.BridgeToken = value
 		}
 	}
 	if (result.ClientID == "") != (result.ClientSecret == "") {

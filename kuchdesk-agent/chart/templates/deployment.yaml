@@ -43,6 +43,15 @@
 {{- if and .Values.agent.portForwardEnabled (not .Values.agent.managementEnabled) }}
 {{- fail "agent.managementEnabled is required when agent.portForwardEnabled=true." }}
 {{- end }}
+{{- if or (hasKey .Values.hostBridge "token") (hasKey .Values.hostBridge "clientId") (hasKey .Values.hostBridge "clientSecret") }}
+{{- fail "hostBridge accepts only existing Secret references, never literal credentials." }}
+{{- end }}
+{{- if and .Values.hostBridge.enabled (not .Values.agent.managementEnabled) }}
+{{- fail "agent.managementEnabled is required when hostBridge.enabled=true." }}
+{{- end }}
+{{- if and .Values.hostBridge.enabled (or (not .Values.auth.existingSecret) (not .Values.hostBridge.tokenSecretName) (not (regexMatch "^https://[^/?#@]+/?$" .Values.hostBridge.url))) }}
+{{- fail "hostBridge requires agent auth, an HTTPS origin, and an existing bridge token Secret." }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -112,6 +121,21 @@ spec:
               value: {{ .Values.agent.execEnabled | quote }}
             - name: KUCHDESK_PORT_FORWARD_ENABLED
               value: {{ .Values.agent.portForwardEnabled | quote }}
+            - name: KUCHDESK_HOST_BRIDGE_ENABLED
+              value: {{ .Values.hostBridge.enabled | quote }}
+            {{- if .Values.hostBridge.enabled }}
+            - name: KUCHDESK_HOST_BRIDGE_URL
+              value: {{ .Values.hostBridge.url | quote }}
+            - name: KUCHDESK_HOST_BRIDGE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.hostBridge.tokenSecretName | quote }}
+                  key: {{ .Values.hostBridge.tokenKey | quote }}
+            {{- if .Values.hostBridge.caConfigMapName }}
+            - name: KUCHDESK_HOST_BRIDGE_CA_FILE
+              value: /etc/kuchdesk/host-bridge/ca.crt
+            {{- end }}
+            {{- end }}
             - name: KUCHDESK_COREDNS_NAMESPACE
               value: {{ required "dnsManagement.namespace is required" .Values.dnsManagement.namespace | quote }}
             - name: KUCHDESK_COREDNS_CONFIGMAP
@@ -125,6 +149,12 @@ spec:
                   name: {{ . | quote }}
                   key: {{ $.Values.auth.tokenKey | quote }}
             {{- end }}
+          {{- if and .Values.hostBridge.enabled .Values.hostBridge.caConfigMapName }}
+          volumeMounts:
+            - name: host-bridge-ca
+              mountPath: /etc/kuchdesk/host-bridge
+              readOnly: true
+          {{- end }}
           readinessProbe:
             httpGet:
               path: /readyz
@@ -143,6 +173,15 @@ spec:
             failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      {{- if and .Values.hostBridge.enabled .Values.hostBridge.caConfigMapName }}
+      volumes:
+        - name: host-bridge-ca
+          configMap:
+            name: {{ .Values.hostBridge.caConfigMapName | quote }}
+            items:
+              - key: {{ .Values.hostBridge.caKey | quote }}
+                path: ca.crt
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -81,6 +81,41 @@ func TestSnapshotRequiresBearerToken(t *testing.T) {
 	}
 }
 
+func TestHostBridgeRoutesRequireAgentBearerAndStayAbsentByDefault(t *testing.T) {
+	server := New(
+		staticSource{ready: true},
+		stream.NewBroker("homelab", 8),
+		dnsconfig.New(kubernetesfake.NewSimpleClientset(), dnsconfig.Options{}),
+		"agent-token",
+		time.Second,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+	path := "/v1/host/doctor"
+	response := httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{}`)))
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("disabled host bridge returned %d", response.Code)
+	}
+	server.SetHostBridgeHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != path {
+			t.Errorf("wrong host bridge path: %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	response = httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{}`)))
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthorized host route returned %d", response.Code)
+	}
+	request := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{}`))
+	request.Header.Set("Authorization", "Bearer agent-token")
+	response = httptest.NewRecorder()
+	server.Handler().ServeHTTP(response, request)
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("authorized host route returned %d", response.Code)
+	}
+}
+
 func TestEventsRejectsRequestsUntilInformerCachesAreReady(t *testing.T) {
 	t.Parallel()
 

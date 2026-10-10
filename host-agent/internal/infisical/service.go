@@ -42,6 +42,12 @@ func PublicError(err error) error {
 		return errors.New("invalid_scope")
 	case errors.Is(err, ErrInvalidProjectSlug):
 		return errors.New("invalid_project_slug")
+	case errors.Is(err, ErrInvalidCommand):
+		return errors.New("invalid_command")
+	case errors.Is(err, ErrProjectDenied):
+		return errors.New("project_denied")
+	case errors.Is(err, ErrConfirmation):
+		return errors.New("confirmation_required")
 	case errors.Is(err, ErrAuthRejected):
 		return errors.New("authentication_rejected")
 	case errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusForbidden:

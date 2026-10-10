@@ -62,6 +62,20 @@ func TestMissingProjectEnvIsUnconfiguredWithoutFallback(t *testing.T) {
 	}
 }
 
+func TestHostBridgeTokenUsesPrivateProjectFile(t *testing.T) {
+	root := fixtureProject(t, "INFISICAL_CLIENT_ID=id\nINFISICAL_CLIENT_SECRET=secret\nKUCHDESK_HOST_BRIDGE_TOKEN=0123456789abcdef0123456789abcdef\n")
+	token, err := HostBridgeToken(projectEnv(root))
+	if err != nil || len(token) != 32 {
+		t.Fatalf("bridge token unavailable: %v", err)
+	}
+	if err := os.Chmod(filepath.Join(root, ".env"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := HostBridgeToken(projectEnv(root)); err == nil {
+		t.Fatal("bridge token read from unsafe file")
+	}
+}
+
 func TestProjectEnvRejectsUnsafeMetadataAndPartialValues(t *testing.T) {
 	root := fixtureProject(t, "INFISICAL_CLIENT_ID=id\nINFISICAL_CLIENT_SECRET=sensitive-value\n")
 	path := filepath.Join(root, ".env")

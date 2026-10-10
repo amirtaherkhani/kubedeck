@@ -10,6 +10,10 @@ All notable KuchDesk changes are documented in this file.
 
 ### Added
 
+- Add a disabled-by-default HTTPS host control plane for typed Infisical
+  management and Doctor checks, plus an authenticated TLS bridge in the
+  Kubernetes agent. Helm uses only Secret and CA ConfigMap references; no
+  Infisical bootstrap credential enters a Pod or Helm release.
 - Add credential-free Doctor MCP scopes: `doctor-repair` retains the guarded deployment workflow, while `doctor-readonly` exposes diagnosis and verification only; neither scope is registered in a live MCP client.
 - Add typed Kubernetes Job status, manual CronJob run, and guarded Job deletion endpoints; responses exclude Pod templates and support dry-run writes.
 - Add opt-in WebSocket Pod port-forwarding to the Kubernetes agent with exact Pod confirmation, loopback-only tunnel setup, bounded sessions, and no new Service port or RBAC grant.
