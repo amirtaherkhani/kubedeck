@@ -3,14 +3,9 @@ package infisical
 import (
 	"context"
 	"errors"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-	"syscall"
-)
 
-const maxHostEnvBytes = 4096
+	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/projectenv"
+)
 
 // CredentialBackend keeps storage selection separate from Infisical's client.
 // Neither backend writes credentials or falls back to another backend.
@@ -27,16 +22,9 @@ type Credentials struct {
 // HostBridgeToken reads the separate bridge bearer from the same private host
 // file. It is not an Infisical credential and is never copied into Helm values.
 func HostBridgeToken(getenv func(string) string) (string, error) {
-	root := getenv("KUCHDESK_PROJECT_ROOT")
-	if root == "" {
-		var err error
-		root, err = findProjectRoot()
-		if err != nil {
-			return "", err
-		}
-	}
-	if !filepath.IsAbs(root) {
-		return "", errors.New("KUCHDESK_PROJECT_ROOT must be absolute")
+	root, err := projectenv.ResolveRoot(getenv)
+	if err != nil {
+		return "", err
 	}
 	credentials, err := (envBackend{projectRoot: root}).Load(context.Background())
 	if err != nil {
@@ -67,16 +55,9 @@ func HostCredentials(getenv func(string) string) (string, string, error) {
 func SelectCredentialBackend(getenv func(string) string) (CredentialBackend, error) {
 	switch getenv("KUCHDESK_INFISICAL_CREDENTIAL_BACKEND") {
 	case "", "env":
-		root := getenv("KUCHDESK_PROJECT_ROOT")
-		if root == "" {
-			var err error
-			root, err = findProjectRoot()
-			if err != nil {
-				return nil, err
-			}
-		}
-		if !filepath.IsAbs(root) {
-			return nil, errors.New("KUCHDESK_PROJECT_ROOT must be absolute")
+		root, err := projectenv.ResolveRoot(getenv)
+		if err != nil {
+			return nil, err
 		}
 		return envBackend{projectRoot: root}, nil
 	case "keychain":
@@ -86,87 +67,14 @@ func SelectCredentialBackend(getenv func(string) string) (CredentialBackend, err
 	}
 }
 
-func findProjectRoot() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", errors.New("project working directory unavailable")
-	}
-	for {
-		if _, err := os.Lstat(filepath.Join(dir, ".git")); err == nil {
-			if _, err := os.Stat(filepath.Join(dir, "host-agent", "go.mod")); err == nil {
-				return dir, nil
-			}
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", errors.New("KuchDesk project root not found; set KUCHDESK_PROJECT_ROOT")
-		}
-		dir = parent
-	}
-}
-
 func (backend envBackend) Load(context.Context) (Credentials, error) {
-	root, err := filepath.EvalSymlinks(backend.projectRoot)
+	values, err := projectenv.Read(backend.projectRoot, "INFISICAL_CLIENT_ID", "INFISICAL_CLIENT_SECRET", "KUCHDESK_HOST_BRIDGE_TOKEN")
 	if err != nil {
-		return Credentials{}, errors.New("KuchDesk project root unavailable")
+		return Credentials{}, err
 	}
-	info, err := os.Stat(root)
-	if err != nil || !info.IsDir() || info.Mode().Perm()&0o022 != 0 || !ownedByCurrentUser(info) {
-		return Credentials{}, errors.New("KuchDesk project root must be user-owned and not group/world writable")
-	}
-	return readProjectEnv(filepath.Join(root, ".env"))
-}
-
-func readProjectEnv(path string) (Credentials, error) {
-	file, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
-	if errors.Is(err, os.ErrNotExist) {
-		return Credentials{}, nil
-	}
-	if err != nil {
-		return Credentials{}, errors.New("project .env unavailable")
-	}
-	defer file.Close()
-	info, err := file.Stat()
-	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 || !ownedByCurrentUser(info) || info.Size() > maxHostEnvBytes {
-		return Credentials{}, errors.New("project .env must be user-owned regular mode 0600 and at most 4 KiB")
-	}
-	data, err := io.ReadAll(io.LimitReader(file, maxHostEnvBytes+1))
-	if err != nil || len(data) > maxHostEnvBytes {
-		return Credentials{}, errors.New("project .env unavailable")
-	}
-	var result Credentials
-	seen := make(map[string]bool, 3)
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSuffix(line, "\r")
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		key, value, found := strings.Cut(line, "=")
-		if !found || key == "" || strings.ContainsAny(key, " \t\r\x00") || strings.ContainsAny(value, "\r\x00") {
-			return Credentials{}, errors.New("project .env contains invalid entries")
-		}
-		if key != "INFISICAL_CLIENT_ID" && key != "INFISICAL_CLIENT_SECRET" && key != "KUCHDESK_HOST_BRIDGE_TOKEN" {
-			continue
-		}
-		if seen[key] || strings.TrimSpace(value) != value {
-			return Credentials{}, errors.New("project .env contains invalid or duplicate Infisical keys")
-		}
-		seen[key] = true
-		if key == "INFISICAL_CLIENT_ID" {
-			result.ClientID = value
-		} else if key == "INFISICAL_CLIENT_SECRET" {
-			result.ClientSecret = value
-		} else {
-			result.BridgeToken = value
-		}
-	}
+	result := Credentials{ClientID: values["INFISICAL_CLIENT_ID"], ClientSecret: values["INFISICAL_CLIENT_SECRET"], BridgeToken: values["KUCHDESK_HOST_BRIDGE_TOKEN"]}
 	if (result.ClientID == "") != (result.ClientSecret == "") {
 		return Credentials{}, errors.New("project .env requires both Infisical credential keys")
 	}
 	return result, nil
-}
-
-func ownedByCurrentUser(info os.FileInfo) bool {
-	stat, ok := info.Sys().(*syscall.Stat_t)
-	return ok && stat.Uid == uint32(os.Getuid())
 }

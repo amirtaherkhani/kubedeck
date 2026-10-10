@@ -20,11 +20,17 @@ InfisicalSecret selects the existing slug; it must not be changed independently.
 project only. They never select a managed project or grant permission. Managed
 projects use immutable IDs in policy and explicit command scopes. Spaces and
 non-ASCII names are supported; empty/unset selects the default, whitespace-only
-or control characters are rejected. Environment changes require a process
-restart. The cluster chart maps `baseProject.name`, `id`, and `slug` to these
+or control characters are rejected. Process environment changes require a restart; `.env` metadata is re-read on
+each CLI invocation and MCP capabilities request. The cluster chart maps `baseProject.name`, `id`, and `slug` to these
 variables; `/v1/platform` and CLI/MCP capabilities expose the display metadata.
-Export these variables in the process environment: the credential `.env` loader
-intentionally does not source arbitrary environment entries.
+The Host CLI/MCP load these three literal keys from the same private project
+`.env` selected by `KUCHDESK_PROJECT_ROOT` (or repository discovery). Non-empty
+process environment overrides `.env`; defaults apply last. Empty process values
+fall back to the file. Unknown keys are never exported or evaluated, and the
+loader never writes the file. Keep the existing user-owned mode 0600 and 4 KiB
+limit; do not shell-source it. Credential backend selection and credential
+precedence remain unchanged. Kubernetes uses the same variable names from Helm
+`baseProject` values; it never receives or mounts the Host `.env`.
 
 ## Compatibility
 
@@ -59,7 +65,8 @@ minute deadline; API requests are bounded and serialized, and discovery has a
 configured cap. A failed project does not authorize access to that project.
 
 Proposed state location (not installed by this code change):
-`~/Library/Application Support/KuchDesk/infisical-control/`, user-owned mode 0700.
+`<KUCHDESK_PROJECT_ROOT>/.kuchdesk/infisical-control/`, user-owned mode 0700
+and covered by the repository `.gitignore`.
 It must be explicitly created for activation. `controller.lock`, `session.json`
 and `ledger.json` are mode 0600. Saves use a temporary file, fsync, atomic rename
 and directory fsync; the process lock prevents competing refresh writers.
@@ -153,3 +160,7 @@ Tests cover session refresh/rotation, concurrent requests, crash markers, disk
 failure, restart, pagination, cross-organization rejection, repeated startup,
 external enrollment, identity reuse, uncertain writes, partial failures,
 revocation, reload, renamed projects, K8 admin denial and redacted errors.
+
+The concrete [activation approval bundle](infisical-activation-plan.md) records
+verified identity IDs, all-project scope, project-local state and K8 auth/RBAC
+effects. It supersedes the earlier open-ended activation questions.

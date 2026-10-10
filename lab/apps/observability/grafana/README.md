@@ -23,3 +23,14 @@ The local Grafana admin credential is stored in Infisical/Kubernetes Secret and
 must never be committed to this repository. Supply the active Infisical project
 and environment with `--set-string infisical.projectSlug=...` and
 `--set-string infisical.envSlug=...` when deploying this chart.
+
+Native Kubernetes auth is opt-in via `infisical.authMethod=kubernetesAuth`. Set
+`infisical.kubernetesAuth.identityId` to the approved identity UUID and provide
+`serviceAccountRef.name` and `.namespace` under the same key. The Operator requests
+short-lived tokens; no Universal Auth credential reference is rendered in this
+mode. The default remains `universalAuth`. Unknown modes or missing native fields
+fail rendering. Prepare the service account, TokenRequest/TokenReview permissions
+and Infisical auth configuration from the [activation plan](../../../../docs/infisical-activation-plan.md)
+before applying. Template tests verify auth changes do not change either Grafana
+Deployment; keep the existing managed Secret during cutover. The checked-in
+homelab environment now matches the verified live `dev` scope.
