@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/infisical"
+	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/platform"
 )
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer, getenv func(string) string) int {
@@ -24,6 +25,11 @@ func runWithInput(ctx context.Context, args []string, stdin io.Reader, stdout, s
 	timeout := flags.Duration("timeout", 10*time.Second, "request timeout")
 	if err := flags.Parse(args); err != nil || *baseURL == "" || *timeout <= 0 {
 		fmt.Fprintln(stderr, "usage: kuchdesk-infisical -url HTTPS_ORIGIN [-timeout 10s] capabilities|check-project-access|list-secret-names|manage")
+		return 2
+	}
+	profile, profileErr := platform.Load(getenv)
+	if profileErr != nil {
+		fmt.Fprintln(stderr, profileErr)
 		return 2
 	}
 	clientID, clientSecret, err := infisical.HostCredentials(getenv)
@@ -49,7 +55,7 @@ func runWithInput(ctx context.Context, args []string, stdin io.Reader, stdout, s
 			fmt.Fprintln(stderr, "capabilities accepts no arguments")
 			return 2
 		}
-		if err := encoder.Encode(map[string]any{"configured": service.Configured(), "commands": []string{"capabilities", "check-project-access", "list-secret-names", "manage"}}); err != nil {
+		if err := encoder.Encode(map[string]any{"baseProject": profile, "configured": service.Configured(), "commands": []string{"capabilities", "check-project-access", "list-secret-names", "manage"}}); err != nil {
 			fmt.Fprintln(stderr, "write output failed")
 			return 1
 		}

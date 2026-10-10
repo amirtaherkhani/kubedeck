@@ -36,3 +36,12 @@ An automatic all-project policy needs a supported, version-pinned Infisical
 organization-level discovery and grant mechanism, plus an explicit decision
 to expand access. Until both exist, keep the home-lab allowlist and fail closed
 for other project IDs.
+
+## Current code path
+
+The existing project's display name is now **Kubedesk Platform**, with its UUID
+and `home-lab-nb0-k` slug preserved. The boundary above describes the original live
+bridge. An opt-in [hybrid controller](infisical-hybrid-control.md) now provides
+version-pinned human enrollment, machine memberships, runtime policy and a
+read-only K8 bridge. It is not activated by this code change. Its explicit live
+setup gates replace neither existing grants nor the need for human re-login.

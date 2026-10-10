@@ -21,3 +21,5 @@ Verify the Kubernetes Secret contains the expected key by checking key names
 only. Do not print Secret data or pass the value through Helm values. Remove
 the Helm release and the dedicated test secret from Infisical when the test is
 complete, after confirming no other workload uses them.
+
+With the hybrid bridge, create/update the test secret through the explicitly scoped local Host CLI/MCP. The Kubernetes bridge is read-only and cannot perform the administrative setup step. The base project is displayed as Kubedesk Platform; its existing slug remains an explicit input until coordinated migration.

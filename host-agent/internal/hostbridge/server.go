@@ -74,6 +74,10 @@ func (s *Server) command(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &command) {
 		return
 	}
+	if !infisical.ReadOperation(command.Operation) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "read_only_bridge"})
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
 	result, err := s.Commands.Execute(ctx, command)

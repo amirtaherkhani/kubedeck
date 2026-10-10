@@ -37,7 +37,7 @@ trusted destination rather than return plaintext to an agent.
 ## Verified local runtime (2026-10-10)
 
 The host bridge is running with HTTPS on this Mac's LAN address and an explicit
-allowlist containing only the `home-lab-nb0-k` project. The cluster agent is
+allowlist containing only the Kubedesk Platform (`home-lab-nb0-k`) project. The cluster agent is
 running a digest-pinned image and reaches the bridge with a dedicated bearer
 Secret and a scoped CA ConfigMap. The `kuchdesk-doctor` MCP registration exposes
 only the `doctor-repair` scope; deployment apply remains separately gated.
@@ -46,7 +46,7 @@ verified Infisical secret delivery through the Operator, a Kubernetes Secret,
 and a Helm workload; the probe resources and Infisical test secret were then
 removed. None of these runtime steps expands the bridge's project allowlist.
 
-The host machine identity is Project Admin in `home-lab-nb0-k`. Its
+The host machine identity is Project Admin in Kubedesk Platform (`home-lab-nb0-k`). Its
 organization-level Admin role is separate from project membership. Do not
 assume that role grants access to every current or future project. See
 [project onboarding](infisical-project-onboarding.md) for the verified

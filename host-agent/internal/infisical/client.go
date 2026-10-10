@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,7 +23,10 @@ var (
 )
 
 // APIError deliberately excludes the response body, which may contain secrets.
-type APIError struct{ StatusCode int }
+type APIError struct {
+	StatusCode int
+	RetryAfter time.Duration
+}
 
 func (e *APIError) Error() string { return fmt.Sprintf("Infisical API returned HTTP %d", e.StatusCode) }
 
@@ -181,7 +185,7 @@ func (c *Client) request(ctx context.Context, method, path string, query url.Val
 			c.mu.Unlock()
 		}
 		if response.StatusCode < 200 || response.StatusCode >= 300 {
-			return nil, &APIError{StatusCode: response.StatusCode}
+			return nil, &APIError{StatusCode: response.StatusCode, RetryAfter: retryAfter(response.Header.Get("Retry-After"))}
 		}
 		if readErr != nil || len(body) > 1<<20 {
 			return nil, errors.New("Infisical response exceeds the 1 MiB limit")
@@ -265,4 +269,36 @@ func (c *Client) accessToken(ctx context.Context) (string, error) {
 	c.expiresAt = now.Add(validFor)
 	c.retryAt = time.Time{}
 	return c.token, nil
+}
+
+// EnrollmentRequest is a host-internal metadata adapter, never a bridge route.
+// It reuses the bounded machine-auth lifecycle; the caller supplies typed routes.
+func (c *Client) EnrollmentRequest(ctx context.Context, method, path string, query url.Values, payload, out any) error {
+	body, err := c.request(ctx, method, path, query, payload)
+	if err != nil {
+		return err
+	}
+	if out != nil && json.Unmarshal(body, out) != nil {
+		return errors.New("invalid enrollment metadata")
+	}
+	return nil
+}
+
+func retryAfter(raw string) time.Duration {
+	var d time.Duration
+	if n, e := strconv.Atoi(raw); e == nil && n > 0 {
+		if n > 3600 {
+			return time.Hour
+		}
+		d = time.Duration(n) * time.Second
+	} else if at, e := http.ParseTime(raw); e == nil {
+		d = time.Until(at)
+	}
+	if d < 0 {
+		return 0
+	}
+	if d > time.Hour {
+		return time.Hour
+	}
+	return d
 }

@@ -221,3 +221,30 @@ func writeKubeconfig(t *testing.T, name, server string) string {
 	}
 	return path
 }
+
+func TestBaseProjectNameIsConfigurableDisplayOnly(t *testing.T) {
+	setClusterIdentity(t)
+	for _, name := range []string{"", "Another Base Project", "ابزارها"} {
+		t.Setenv("KUCHDESK_BASE_PROJECT_NAME", name)
+		cfg, e := Load()
+		if e != nil {
+			t.Fatal(e)
+		}
+		want := name
+		if want == "" {
+			want = "Kubedesk Platform"
+		}
+		if cfg.BaseProjectName != want {
+			t.Fatal("display name mismatch")
+		}
+		if cfg.BaseProjectID != "" {
+			t.Fatal("name selected a project")
+		}
+	}
+	for _, name := range []string{"  ", "bad\nname"} {
+		t.Setenv("KUCHDESK_BASE_PROJECT_NAME", name)
+		if _, e := Load(); e == nil {
+			t.Fatal("invalid name accepted")
+		}
+	}
+}

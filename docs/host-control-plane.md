@@ -18,10 +18,8 @@ Infisical Operator ── Kubernetes Secret ── application Pod
 
 The host command service validates named operations and explicit project,
 environment, and folder scope before using the installed Infisical v0.151 API.
-It returns typed metadata and write receipts, never bootstrap tokens, secret
-values, or upstream response bodies. A secret value may enter a create/update
-request over authenticated TLS but is not echoed, logged, stored in a Helm
-release, or returned to an AI client. Non-idempotent writes are not replayed
+Local CLI/MCP commands return typed metadata and write receipts, never bootstrap tokens, secret
+values, or upstream response bodies. The updated network bridge accepts only metadata reads; secret values and administrative writes must use the separately scoped local CLI/MCP. Values are not echoed, logged, stored in a Helm release, or returned to an AI client. Non-idempotent writes are not replayed
 after an authentication failure. Infisical enforces the machine identity's
 project role on every call; the host service also restricts project IDs when a
 project allowlist is configured. Project creation is a separate opt-in action.
@@ -46,3 +44,5 @@ references. The live rollout, listener, home-lab Project Admin membership,
 `doctor-repair` MCP registration, and a temporary DNS probe were verified.
 The probe was removed after its exact record and wildcard fallback were
 checked. Cross-project grants and project creation remain disabled.
+
+The optional [hybrid enrollment controller](infisical-hybrid-control.md) adds runtime policy and enrollment diagnostics. This code is not yet activated on the live bridge.
