@@ -395,7 +395,7 @@ func (c *Controller) project(ctx context.Context, p Policy, project Project, k8 
 }
 func (c *Controller) Run(ctx context.Context, emit func(Report)) {
 	failures := 0
-	for {
+	for ctx.Err() == nil {
 		cycle, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		r := c.Cycle(cycle)
 		cancel()
@@ -407,25 +407,12 @@ func (c *Controller) Run(ctx context.Context, emit func(Report)) {
 		} else {
 			failures++
 		}
-		p, e := LoadPolicy(c.PolicyPath)
-		if e != nil {
-			p = c.Initial
-		}
-		d := delay(p, failures)
-		if r.RetryAfter > d {
-			d = r.RetryAfter
-		}
-		// Bounded deterministic jitter prevents synchronized retries across controllers.
-		d += time.Duration(time.Now().UnixNano() % int64(time.Second))
-		timer := time.NewTimer(d)
-		select {
-		case <-ctx.Done():
-			timer.Stop()
+		if !waitForNextCycle(ctx, func() (Policy, error) { return LoadPolicy(c.PolicyPath) }, c.Initial, failures, r.RetryAfter) {
 			return
-		case <-timer.C:
 		}
 	}
 }
+
 func (r Report) String() string {
 	return fmt.Sprintf("enrollment status=%s projects=%d", r.Status, len(r.Results))
 }

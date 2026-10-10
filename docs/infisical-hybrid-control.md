@@ -94,7 +94,10 @@ human session.
 
 See `host-agent/config/enrollment-policy.example.json`. Start with explicit IDs,
 `allProjects:false`, `apply:false`, `createK8Identity:false`, and
-`repairRevocations:false`. Policy edits reload at each cycle and bridge request;
+`repairRevocations:false`. Policy edits reload at each cycle and bridge request; interval changes also
+update the active wait within one second without resetting elapsed time or
+bypassing backoff/server Retry-After. Other policy fields take effect at their
+existing request/cycle boundaries;
 invalid JSON or changed organization/version/identity bindings deny access.
 Identity binding changes require restart and reviewed state migration.
 Includes/all-project discovery authorize nothing outside the approved policy;

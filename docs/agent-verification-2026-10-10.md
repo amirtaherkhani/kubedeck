@@ -39,7 +39,7 @@ acceptance. No live acceptance is inferred from a passing unit suite.
 | Base project name/ID/slug in `.env` | Re-read on CLI invocation and MCP capabilities request; nonempty process environment takes precedence. |
 | Enrollment include/exclude/allProjects | Re-read per request; restrictions filter verified access immediately. New access waits for successful reconciliation. |
 | apply, repairRevocations, createK8Identity, maxProjects | Re-read each cycle; write authorization rechecks policy immediately before mutations. |
-| intervalSeconds | Re-read after a cycle; an existing sleep is not interrupted. This timing behavior is source-inspected, not directly regression-tested. |
+| intervalSeconds | Re-read at bounded one-second intervals while waiting; deadline remains relative to the completed cycle. Shorter/longer intervals affect the active wait without restart; backoff and server Retry-After remain enforced. |
 | Version, organization, Host identity, K8 identity/name | Restart required; changed bindings fail closed. Identity changes also need reviewed persisted-state migration. |
 | Process environment, credentials, bridge listener/URL/TLS/static allowlist | Startup configuration; restart required. |
 | Enrollment policy/state paths and enabling enrollment | Startup configuration; restart required. |
@@ -65,3 +65,19 @@ live user acceptance remains outstanding.
 The existing slug migration inventory remains a read-only plan. Its external
 CI/integration inventory gate is still open (`infisical-activation-plan.md`).
 No fresh external inventory or live slug mutation was attempted here.
+
+## Subsequent implementation and live activation checkpoint
+
+Dynamic interval reload is now implemented in `reload_wait.go` and wired into
+controller Run. Virtual-time race tests cover shortening, extension, an overdue
+edit, Retry-After, failure backoff, malformed-policy fallback and cancellation.
+Run also avoids starting a cycle when already canceled. No live restart was
+performed to activate this new code.
+
+Following the empty-JSON protocol fix (`fb76b87`), supported read-only status
+returned human_authority_verified with all four authority/refresh flags true.
+A fresh dry-run planned exactly one K8 identity. The approved bounded apply cycle
+then returned ready for both approved projects, read back the required roles,
+and recorded identity `d05fbb07-7b0c-402a-888d-980b9ac06cde` with no pending creation.
+This does not claim successful Kubernetes-auth login or consumer cutover; those
+and the Host bridge restart remain outstanding. No slug or service upgrade occurred.

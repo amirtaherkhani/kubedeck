@@ -1,14 +1,18 @@
-> Update 2026-10-10: the additional Operator RBAC narrowing was explicitly approved
-> and applied at revision 4. The [observability audit](infisical-observability-audit-2026-10-10.md)
-> records successful checks. Human-session handoff remains pending. Earlier
-> preflight findings below are retained as history.
+> Update 2026-10-10: human authority is now server-verified, including organization
+> scope, AccessAllProjects and refresh availability. The approved apply cycle
+> completed with `ready` for both project UUIDs below. The new K8 read-only
+> identity is `d05fbb07-7b0c-402a-888d-980b9ac06cde`; identity creation is not pending.
+> Policy apply is enabled; this was one bounded cycle, not a running daemon.
+> Kubernetes-auth configuration/login tests, Grafana consumer cutover and the
+> Host bridge restart remain outstanding. Operator RBAC narrowing is already
+> applied at revision 4. Earlier preflight findings below are historical.
 
 # Infisical activation approval bundle
 
-Prepared from read-only checks on 2026-10-10. **Activation remains paused.**
+Prepared from read-only checks on 2026-10-10. **Identity/project stage completed; consumer activation remains pending.**
 The approved private state/template and five dedicated SA/RBAC resources have
-since been created; no human session, Infisical identity, consumer cutover or Host
-restart has occurred. The separately approved
+since been created. Human session and identity/project reconciliation are now
+verified; consumer cutover and Host restart have not occurred. The separately approved
 [targeted TokenRequest correction](infisical-tokenrequest-narrowing.md) is now applied.
 This plan uses the
 installed Infisical v0.151.0 and Operator v0.11.11; no upgrade is included.
