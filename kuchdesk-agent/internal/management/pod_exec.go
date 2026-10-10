@@ -12,6 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -141,7 +142,17 @@ func (m *Manager) runPodExec(ctx context.Context, namespace, name string, option
 		return errors.New("Kubernetes REST configuration unavailable")
 	}
 	request := m.Kube.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(name).SubResource("exec").VersionedParams(options, scheme.ParameterCodec)
-	executor, err := remotecommand.NewSPDYExecutor(m.RESTConfig, http.MethodPost, request.URL())
+	websocket, err := remotecommand.NewWebSocketExecutor(m.RESTConfig, http.MethodGet, request.URL().String())
+	if err != nil {
+		return err
+	}
+	spdy, err := remotecommand.NewSPDYExecutor(m.RESTConfig, http.MethodPost, request.URL())
+	if err != nil {
+		return err
+	}
+	// Retry only a failed protocol upgrade. A command that reached the Pod must
+	// never be replayed after an execution or transport-stream error.
+	executor, err := remotecommand.NewFallbackExecutor(websocket, spdy, httpstream.IsUpgradeFailure)
 	if err != nil {
 		return err
 	}
