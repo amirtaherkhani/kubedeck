@@ -1,6 +1,11 @@
 # Infisical activation approval bundle
 
-Prepared from read-only checks on 2026-10-10. **Not activated.** This plan uses the
+Prepared from read-only checks on 2026-10-10. **Activation remains paused.**
+The approved private state/template and five dedicated SA/RBAC resources have
+since been created; no human session, Infisical identity, consumer cutover or Host
+restart has occurred. The existing Operator Roles require a separate
+[targeted TokenRequest correction](infisical-tokenrequest-narrowing.md).
+This plan uses the
 installed Infisical v0.151.0 and Operator v0.11.11; no upgrade is included.
 
 ## Verified targets
@@ -96,8 +101,10 @@ Exact proposed changes after approval:
 3. Create namespaced Role/RoleBinding `development-tools/kubedesk-infisical-token-request`,
    allowing only `create` on `serviceaccounts/token`, restricted to resource name
    `kubedesk-infisical-reader`, for existing service account
-   `platform-secrets/infisical-opera-controller-manager`. Its current permission
-   check for this namespace returned **no**.
+   `platform-secrets/infisical-opera-controller-manager`. The initial permission check was incorrect: it did not query the token
+   subresource. Correct named-subresource checks found broader pre-existing
+   TokenRequest grants in all three watched namespaces. The new dedicated Role
+   is scoped correctly but cannot override those grants; see the correction plan.
 4. Configure Kubernetes Auth on `kubedesk-k8-readonly`: API review mode,
    host `https://kubernetes.default.svc`, actual public cluster CA with TLS
    verification, allowed namespace `development-tools`, allowed service-account

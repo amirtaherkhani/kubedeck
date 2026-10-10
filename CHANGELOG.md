@@ -11,6 +11,8 @@ All notable KuchDesk changes are documented in this file.
 
 ### Added
 
+- Add an offline, checksum-pinned Infisical Operator chart preparation workflow and typed TokenRequest permission checks. The proposed namespace/account restrictions require separate live rollout approval.
+
 - Add an opt-in Infisical-to-Helm integration probe that checks Operator sync,
   a Kubernetes Secret reference, and workload readiness without placing a
   secret value in Helm. Scope the Operator to `development-tools` for this test.
