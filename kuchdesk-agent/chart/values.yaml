@@ -19,6 +19,7 @@ agent:
   # The HTTP port follows service.targetPort; leave empty to listen on all interfaces.
   listenHost: ""
   managementEnabled: false
+  execEnabled: false
   metricsInterval: 10s
   refreshDebounce: 250ms
   sseHeartbeat: 15s

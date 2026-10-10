@@ -23,6 +23,7 @@ type Config struct {
 	BearerToken          string
 	DNSManagementEnabled bool
 	ManagementEnabled    bool
+	ExecEnabled          bool
 	CoreDNSNamespace     string
 	CoreDNSConfigMap     string
 	CoreDNSCorefileKey   string
@@ -64,6 +65,9 @@ func Load() (Config, error) {
 	if cfg.ManagementEnabled, err = boolEnv("KUCHDESK_MANAGEMENT_ENABLED", false); err != nil {
 		return Config{}, err
 	}
+	if cfg.ExecEnabled, err = boolEnv("KUCHDESK_EXEC_ENABLED", false); err != nil {
+		return Config{}, err
+	}
 	if cfg.MetricsInterval, err = durationEnv("KUCHDESK_METRICS_INTERVAL", cfg.MetricsInterval); err != nil {
 		return Config{}, err
 	}
@@ -99,6 +103,9 @@ func Load() (Config, error) {
 	}
 	if cfg.ManagementEnabled && cfg.BearerToken == "" {
 		return Config{}, errors.New("KUCHDESK_AGENT_TOKEN is required when management is enabled")
+	}
+	if cfg.ExecEnabled && !cfg.ManagementEnabled {
+		return Config{}, errors.New("KUCHDESK_MANAGEMENT_ENABLED is required when exec is enabled")
 	}
 	return cfg, nil
 }

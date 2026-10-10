@@ -10,6 +10,7 @@ All notable KuchDesk changes are documented in this file.
 
 ### Added
 
+- Add opt-in, noninteractive Kubernetes Pod exec with bearer authentication, Pod identity confirmation, bounded output, concurrency and timeout. It is disabled in chart defaults and adds no RBAC grant.
 - Add a read-only Infisical CLI project-access check that separates identity-scoped listing from project-detail authorization and never returns API error bodies.
 - Add a scoped site-profile configuration CLI with snapshot, strict validation, field diff, dry-run, revision-confirmed apply, private rollback, and concurrent-write protection; live infrastructure still uses explicit deployment workflows.
 - Add a project-local, Git-ignored `.env` credential reader shared by the Infisical CLI and MCP, with an explicit macOS Keychain backend and no automatic fallback.
