@@ -40,6 +40,8 @@ func PublicError(err error) error {
 		return errors.New("credentials_not_configured")
 	case errors.Is(err, ErrInvalidScope):
 		return errors.New("invalid_scope")
+	case errors.Is(err, ErrInvalidProjectSlug):
+		return errors.New("invalid_project_slug")
 	case errors.Is(err, ErrAuthRejected):
 		return errors.New("authentication_rejected")
 	case errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusForbidden:

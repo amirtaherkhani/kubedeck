@@ -91,3 +91,31 @@ func TestVerificationRequiresFreshOKChecks(t *testing.T) {
 		t.Fatal("missing check accepted")
 	}
 }
+
+func TestRepairPlanRequiresExactSequenceAndSingleProfile(t *testing.T) {
+	valid := []PlanStep{
+		{Tool: "kuchdesk_deploy_plan", Profile: "agent.json"},
+		{Tool: "kuchdesk_deploy_preflight", Profile: "agent.json"},
+		{Tool: "kuchdesk_deploy_start", Profile: "agent.json", Confirm: "kuchdesk-agent/development-tools"},
+		{Tool: "kuchdesk_doctor_verify", CheckIDs: []string{"kind"}},
+	}
+	for name, mutate := range map[string]func([]PlanStep){
+		"changed-profile":         func(steps []PlanStep) { steps[1].Profile = "other.json" },
+		"missing-confirmation":    func(steps []PlanStep) { steps[2].Confirm = "" },
+		"action-before-preflight": func(steps []PlanStep) { steps[1].Tool = "kuchdesk_deploy_start" },
+		"missing-checks":          func(steps []PlanStep) { steps[3].CheckIDs = nil },
+		"invented-tool":           func(steps []PlanStep) { steps[2].Tool = "kubectl_exec" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			steps := append([]PlanStep(nil), valid...)
+			mutate(steps)
+			if err := ValidatePlan(RepairPlan{Steps: steps}); err == nil {
+				t.Fatal("unsafe repair plan accepted")
+			}
+		})
+	}
+	report := Report{Checks: []Check{{ID: "kind", Status: "ok"}}}
+	if _, err := Verify(report, []string{"kind", "kind"}); err == nil {
+		t.Fatal("duplicate verification check accepted")
+	}
+}

@@ -169,3 +169,35 @@ func TestRegistryProbeDoesNotFollowRedirect(t *testing.T) {
 		t.Fatalf("redirect followed: %+v hits=%d err=%v", report.Checks[4], hits.Load(), err)
 	}
 }
+
+type canceledCommands struct{}
+
+func (canceledCommands) Output(ctx context.Context, _ string, _ ...string) ([]byte, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+type canceledResolver struct{}
+
+func (canceledResolver) LookupIPAddr(ctx context.Context, _ string) ([]net.IPAddr, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+func TestDoctorCanceledRunKeepsStableCompleteReport(t *testing.T) {
+	service, config := fixture(t)
+	service.Commands = canceledCommands{}
+	service.Resolver = canceledResolver{}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	report, err := service.Run(ctx, config)
+	if err != nil || report.Healthy || report.Summary.Total != 8 || report.Summary.Passed+report.Summary.Warnings+report.Summary.Failed != 8 {
+		t.Fatalf("incomplete canceled report: %+v %v", report, err)
+	}
+	want := []string{"network", "dns", "docker", "kind", "registry", "disk", "resources", "service:development-tools/kuchdesk-agent"}
+	for i, id := range want {
+		if report.Checks[i].ID != id || report.Checks[i].Status == "" || report.Checks[i].Source == "" {
+			t.Fatalf("check %d missing after cancellation: %+v", i, report.Checks[i])
+		}
+	}
+}

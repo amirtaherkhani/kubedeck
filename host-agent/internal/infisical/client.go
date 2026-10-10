@@ -104,19 +104,19 @@ func (c *Client) ListSecretNames(ctx context.Context, projectID, environment, se
 		return nil, err
 	}
 	var response struct {
-		Secrets []struct {
+		Secrets *[]struct {
 			Key  string `json:"secretKey"`
 			Path string `json:"secretPath"`
 		} `json:"secrets"`
 	}
-	if err := json.Unmarshal(body, &response); err != nil {
+	if err := json.Unmarshal(body, &response); err != nil || response.Secrets == nil {
 		return nil, errors.New("Infisical returned an invalid secret list")
 	}
-	if len(response.Secrets) > 1000 {
+	if len(*response.Secrets) > 1000 {
 		return nil, errors.New("Infisical secret list exceeds the 1000-name limit")
 	}
-	names := make([]SecretName, 0, len(response.Secrets))
-	for _, item := range response.Secrets {
+	names := make([]SecretName, 0, len(*response.Secrets))
+	for _, item := range *response.Secrets {
 		if item.Key == "" {
 			return nil, errors.New("Infisical secret list contains an empty name")
 		}
