@@ -46,6 +46,8 @@ All notable KuchDesk changes are documented in this file.
 
 ### Fixed
 
+- Avoid declaring JSON on bodyless Infisical auth requests, fixing the deployed empty-JSON parser rejection; report sanitized HTTP status and fixed auth endpoint on failure.
+
 - Support the official Infisical browser Copy-to-clipboard fallback through a hidden user-run terminal prompt, with server authority validation before private session persistence.
 
 - Stage a digest-pinned local image through KIND's containerd before registering it with CRI, avoiding a direct CRI manifest short-read while preserving the kubelet visibility gate.
