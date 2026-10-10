@@ -105,6 +105,15 @@ func CheckHumanStatus(ctx context.Context, h *Transport, p Policy, store *Store)
 // Passwords, SSO and MFA remain in the official browser UI. Only the user's
 // explicit login callback is received; no browser storage is inspected.
 func BrowserLogin(ctx context.Context, h *Transport, p Policy, store *Store, announce func(string) error, events ...func(string)) (HumanStatus, error) {
+	return browserLogin(ctx, h, p, store, announce, nil, events...)
+}
+
+// BrowserLoginWithFallback keeps one official callback attempt and one hidden
+// user-input path under the same writer lock and single-use validation gate.
+func BrowserLoginWithFallback(ctx context.Context, h *Transport, p Policy, store *Store, announce func(string) error, read func(context.Context) (string, error), events ...func(string)) (HumanStatus, error) {
+	return browserLogin(ctx, h, p, store, announce, read, events...)
+}
+func browserLogin(ctx context.Context, h *Transport, p Policy, store *Store, announce func(string) error, read func(context.Context) (string, error), events ...func(string)) (HumanStatus, error) {
 	initial := HumanStatus{Status: "login_not_completed", ObservedAt: time.Now()}
 	emit := func(stage string) {
 		for _, event := range events {
@@ -127,7 +136,7 @@ func BrowserLogin(ctx context.Context, h *Transport, p Policy, store *Store, ann
 		report HumanStatus
 		err    error
 	}
-	result := make(chan outcome, 1)
+	result := make(chan outcome, 2)
 	var mu sync.Mutex
 	used := false
 	origin := strings.TrimSuffix(h.base.String(), "/")
@@ -218,6 +227,33 @@ func BrowserLogin(ctx context.Context, h *Transport, p Policy, store *Store, ann
 	emit("callback_waiting")
 	if e = announce(loginURL); e != nil {
 		return initial, errors.New("login_instructions_unavailable")
+	}
+	if read != nil {
+		finished := make(chan struct{})
+		go func() {
+			defer close(finished)
+			encoded, err := read(ctx)
+			if err != nil {
+				result <- outcome{initial, err}
+				return
+			}
+			token, err := decodeBrowserToken(encoded)
+			if err != nil {
+				result <- outcome{initial, err}
+				return
+			}
+			mu.Lock()
+			if used {
+				mu.Unlock()
+				return
+			}
+			used = true
+			mu.Unlock()
+			emit("fallback_received")
+			report, err := completeBrowserLogin(ctx, h, p, store, token)
+			result <- outcome{report, err}
+		}()
+		defer func() { cancel(); <-finished }()
 	}
 	select {
 	case o := <-result:
@@ -334,16 +370,23 @@ func LoginFromBrowserToken(ctx context.Context, h *Transport, p Policy, store *S
 	if p.Version != "v0.151.0" {
 		return rejected, ErrUnsupported
 	}
+	token, e := decodeBrowserToken(encoded)
+	if e != nil {
+		return rejected, e
+	}
+	return completeBrowserLogin(ctx, h, p, store, token)
+}
+func decodeBrowserToken(encoded string) (string, error) {
 	if len(encoded) > 64<<10 {
-		return rejected, errors.New("invalid_browser_fallback")
+		return "", errors.New("invalid_browser_fallback")
 	}
 	data, e := base64.StdEncoding.Strict().DecodeString(strings.TrimSpace(encoded))
 	if e != nil || len(data) > 32<<10 {
-		return rejected, errors.New("invalid_browser_fallback")
+		return "", errors.New("invalid_browser_fallback")
 	}
 	token, e := decodeBrowserCallback(bytes.NewReader(data))
 	if e != nil {
-		return rejected, errors.New("invalid_browser_fallback")
+		return "", errors.New("invalid_browser_fallback")
 	}
-	return completeBrowserLogin(ctx, h, p, store, token)
+	return token, nil
 }

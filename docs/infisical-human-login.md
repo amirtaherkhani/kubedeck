@@ -1,18 +1,32 @@
 # User-run Infisical browser login (v0.151.0)
 
-Run the local command below yourself. On macOS it opens your default browser
-and also prints the exact official login URL. Complete your normal login/MFA/SSO
-and select the approved organization. If opening fails, it clearly reports the
-failure and keeps the printed URL usable for manual opening. Keep the terminal open. No password or token is entered
-in chat, copied from developer tools, or passed as a shell argument.
+From the project root, run:
 
 ```sh
-/Users/mac/Documents/GitHub/kuchdesk/.kuchdesk/bin/kuchdesk-enrollment \
-  -login \
-  -url https://infisical.local.dev \
-  -policy /Users/mac/Documents/GitHub/kuchdesk/.kuchdesk/infisical-control/policy.json \
-  -state-dir /Users/mac/Documents/GitHub/kuchdesk/.kuchdesk/infisical-control
+./infisical-login
 ```
+
+If an older login/import command is still waiting, cancel it with Ctrl-C first.
+The single command resolves absolute paths (including paths with spaces), reads
+the configured Infisical host from `lab/site.json` and organization from the
+existing private policy, then opens the official CLI browser flow with a fresh
+loopback callback port. It never starts a second prompt when the writer lock is
+already held. No Keychain or machine credential access is used for human login.
+
+Complete login/MFA and select the displayed organization. If **Copy to clipboard**
+appears, copy immediately, return to the already waiting hidden terminal prompt,
+paste and press Enter. Its browser copy expires after 30 seconds. Input is hidden;
+no value belongs in chat, shell arguments or shell history. Automatic callback
+success cancels the hidden reader and restores terminal settings. Ctrl-C cancels
+both paths. If opening the browser fails, use the exact URL printed by this same
+attempt. Never use an old callback URL. Input waits up to five minutes; a timed
+out or expired attempt requires running this short command again yourself.
+
+The launcher expects `.kuchdesk/bin/kuchdesk-enrollment-easy` installed in this
+project. Missing binary, invalid site settings, missing/private policy or state,
+and active writers fail before browser launch. Server rejection preserves prior
+session state. A success JSON must verify authentication, organization,
+AccessAllProjects and refresh availability; browser completion alone is not proof.
 
 The expected organization is `b46cad64-747c-4cec-a59a-e401cede95bd`. The controller
 must be stopped for login; a competing writer produces `controller_already_running`.
@@ -31,8 +45,8 @@ the human token and permits `AccessAllProjects`, the capability used by the
 self-enrollment endpoint. It does not claim an exact organization role name or
 prove that dependent identity/project operations have already completed.
 
-For a separate read-only check, run the same command with **`-status` instead of
-`-login`**. Status can run alongside the controller: it does not take its writer
+For a separate read-only check, use the enrollment binary’s `-status` mode with the existing absolute
+URL/policy/state arguments. Status can run alongside the controller: it does not take its writer
 lock, refresh tokens, modify files or grant access. It reports `session_missing`,
 `session_expired`, denied/unavailable, or verified authority. `refreshAvailable`
 means a refresh credential is present, not that it has been tested. An expired
@@ -63,8 +77,8 @@ The v0.151.0 frontend creates this base64 JSON only after a CLI callback failure
 and gives its browser copy a 30-second expiry. `/cli-redirect` alone does not
 generate a new value. There is no verified standalone manual-token URL. A fresh
 CLI browser flow needs a newly allocated callback port; never invent a port or
-reuse an expired URL. A combined browser-plus-hidden-input flow remains needed
-for reliable recovery after the original page has closed.
+reuse an expired URL. The short `./infisical-login` command combines a fresh browser/callback with
+hidden input and is the supported entry point when the original page has closed.
 
 If the official value is already available:
 
