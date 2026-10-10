@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -323,5 +324,23 @@ func TestRevokedProjectWithdrawnBeforeLaterProjectChecks(t *testing.T) {
 	c.Cycle(context.Background())
 	if !checked {
 		t.Fatal("later project was not checked")
+	}
+}
+
+func TestMissingIdentityDryRunDoesNotClaimHumanAuthority(t *testing.T) {
+	p := testPolicy()
+	p.Apply = false
+	p.K8IdentityID = ""
+	p.K8IdentityName = "new-reader"
+	p.CreateK8Identity = true
+	c, f := newTestController(t, p)
+	f.identities = []Identity{{ID: "host"}}
+	r := c.Cycle(context.Background())
+	encoded, _ := json.Marshal(r)
+	if r.Status != "dry_run" || !strings.Contains(string(encoded), `"humanAuthority":"not_checked"`) {
+		t.Fatalf("ambiguous dry run %s", encoded)
+	}
+	if f.enrolls != 0 || f.writes != 0 {
+		t.Fatal("dry run wrote")
 	}
 }

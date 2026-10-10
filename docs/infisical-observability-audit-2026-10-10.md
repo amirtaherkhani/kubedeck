@@ -100,30 +100,10 @@ jobs were written during this read-only audit.
   new trace ingestion remain untested; they must not be inferred from health
   endpoints or cumulative counters.
 
-## Remaining local human handoff
+## Remaining user login
 
-The RBAC gate is cleared. The remaining activation dependency is the user's own
-organization-scoped Admin-session handoff. See the
-[activation plan](infisical-activation-plan.md#human-login-user-only-handoff).
-Use the existing private template in
-`/Users/mac/Documents/GitHub/kuchdesk/.kuchdesk/infisical-control/` and save a
-mode-0600 `session-handoff.json`, entering tokens only in a private local editor.
-Never paste them into chat or shell arguments. Scope must remain
-`https://infisical.local.dev`, organization
-`b46cad64-747c-4cec-a59a-e401cede95bd`, version `v0.151.0`.
-
-With the controller stopped, the local import command is:
-
-```sh
-/Users/mac/Documents/GitHub/kuchdesk/.kuchdesk/bin/kuchdesk-enrollment \
-  -url https://infisical.local.dev \
-  -policy /Users/mac/Documents/GitHub/kuchdesk/.kuchdesk/infisical-control/policy.json \
-  -state-dir /Users/mac/Documents/GitHub/kuchdesk/.kuchdesk/infisical-control \
-  -import-session /Users/mac/Documents/GitHub/kuchdesk/.kuchdesk/infisical-control/session-handoff.json
-```
-
-The CLI imports a supported session pair; it does not provide browser/SSO export.
-If the user's authorized login cannot supply that pair, the handoff integration
-remains blocked. Do not extract browser storage or substitute machine credentials.
-After successful import, remove the redundant handoff locally and resume the
-previously approved activation with a fresh dry run before enabling application.
+The RBAC gate is cleared. At the audit snapshot no human session existed.
+The subsequent [browser-login implementation](infisical-human-login.md) now
+provides a supported user-run callback; manual token handoff is no longer the
+normal workflow. Follow that document for the exact command and read-only
+server-authority check. No live login was performed by the assistant.

@@ -251,6 +251,8 @@ separate operator decision.
 The optional local [hybrid controller](../docs/infisical-hybrid-control.md) separates
 human project enrollment from routine machine authentication. Its policy defaults
 to dry-run. No human session or new access is installed by building the binary.
+Use the [user-run browser login and status commands](../docs/infisical-human-login.md)
+for supported v0.151.0 authentication without copying tokens.
 The network bridge permits only read operations; use the separately scoped local
 CLI/MCP for administrative operations.
 

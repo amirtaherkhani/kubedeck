@@ -75,14 +75,13 @@ in Git, cloud sync, logs or diagnostic bundles. Interrupted writes can leave
 private `.pending-*` files; treat them as sensitive, not ordinary debug output.
 
 Machine bootstrap remains the existing private project `.env`, with optional
-explicit Keychain selection. No rotating secret rewrites `.env`. Human login is
-a separately approved browser/SSO handoff into a private session file. There is
-no password capture, browser extraction or AI-facing login endpoint. With the
-controller stopped, `-import-session PRIVATE_FILE` validates the expected origin,
-organization, version and unexpired human JWT claims, then writes session state.
-Infisical still verifies signatures and permissions on every authenticated call.
-Re-login uses the same explicit handoff; runtime import must never be automated
-through chat. Activation must approve this storage before credentials are entered.
+explicit Keychain selection. No rotating secret rewrites `.env`. Human login uses
+the [user-run official browser callback](infisical-human-login.md), with the
+controller stopped. `-login` verifies human server authority before private
+persistence; `-status` checks saved authority without refresh, writes or grants.
+No password capture, browser extraction or AI-facing login endpoint is added.
+The older explicit `-import-session` checks local scope/expiry hints only; it is
+not proof of server authentication. Activation must approve storage before login.
 
 v0.151.0 refresh reuses its refresh cookie. v0.166.3 rotates it. A durable pending
 marker is written before refresh; a restart or ambiguous failure during a

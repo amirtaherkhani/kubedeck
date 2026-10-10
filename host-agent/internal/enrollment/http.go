@@ -54,6 +54,11 @@ func NewTransport(origin string, client *http.Client) (*Transport, error) {
 	return &Transport{base: u, client: &c, MinInterval: 200 * time.Millisecond}, nil
 }
 func (h *Transport) Call(ctx context.Context, method, path string, q url.Values, headers http.Header, body, out any) error {
+	return h.call(ctx, method, path, q, headers, body, out, nil)
+}
+
+// call can capture only this response's cookies for an explicit user login.
+func (h *Transport) call(ctx context.Context, method, path string, q url.Values, headers http.Header, body, out any, cookies *[]*http.Cookie) error {
 	if e := h.Wait(ctx); e != nil {
 		return e
 	}
@@ -75,6 +80,7 @@ func (h *Transport) Call(ctx context.Context, method, path string, q url.Values,
 		r.Header = make(http.Header)
 	}
 	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("User-Agent", "kuchdesk-enrollment")
 	res, e := h.client.Do(r)
 	if e != nil {
 		return ErrUnavailable
@@ -101,6 +107,9 @@ func (h *Transport) Call(ctx context.Context, method, path string, q url.Values,
 	}
 	if out != nil && json.Unmarshal(b, out) != nil {
 		return ErrUnavailable
+	}
+	if cookies != nil {
+		*cookies = res.Cookies()
 	}
 	return nil
 }

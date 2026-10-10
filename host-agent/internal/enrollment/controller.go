@@ -38,10 +38,11 @@ type Result struct {
 	Action    string `json:"action,omitempty"`
 }
 type Report struct {
-	Status     string        `json:"status"`
-	Results    []Result      `json:"results"`
-	ObservedAt time.Time     `json:"observedAt"`
-	RetryAfter time.Duration `json:"-"`
+	HumanAuthority string        `json:"humanAuthority"`
+	Status         string        `json:"status"`
+	Results        []Result      `json:"results"`
+	ObservedAt     time.Time     `json:"observedAt"`
+	RetryAfter     time.Duration `json:"-"`
 }
 type Controller struct {
 	Backend    Backend
@@ -114,7 +115,7 @@ func (c *Controller) Snapshot() Report {
 func (c *Controller) Cycle(ctx context.Context) Report {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	report := Report{Status: "ready", ObservedAt: time.Now(), Results: []Result{}}
+	report := Report{HumanAuthority: "not_checked", Status: "ready", ObservedAt: time.Now(), Results: []Result{}}
 	verified := map[string]bool{}
 	defer func() { c.Access.Publish(verified); c.last = report }()
 	fail := func(e error) Report {

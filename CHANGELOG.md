@@ -11,6 +11,8 @@ All notable KuchDesk changes are documented in this file.
 
 ### Added
 
+- Add a user-run Infisical v0.151.0 browser login callback with private session persistence and read-only server-authority status. Dry-run enrollment now explicitly reports human authority as not checked.
+
 - Add an offline, checksum-pinned Infisical Operator chart preparation workflow and typed TokenRequest permission checks. The proposed namespace/account restrictions require separate live rollout approval.
 
 - Add an opt-in Infisical-to-Helm integration probe that checks Operator sync,
