@@ -109,6 +109,14 @@ Health gates: target 1/1 Ready, `/healthz` and `/readyz`, authenticated cluster 
 
 Offline manifest comparison prepared from the exact current release changes only the three resource namespace fields and two RBAC subjects; the CoreDNS Role remains identical. Secret values were not read for preparation. The target Secret/ConfigMap copies and live security changes require the specific approval above. No gated action has been executed.
 
+## Agent stage execution checkpoint: idle gate blocked
+
+The exact agent move was subsequently approved, including the two Secret copies and two RBAC subject changes. Execution preflight rechecked context `docker-desktop`, release revision **6** with status `deployed`, source Deployment **1/1**, and absence of `platform-tools`. No live mutation followed.
+
+The required idle-operation gate could not be established. The last 15 minutes of agent logs contained no entries, but this is insufficient: exec and port-forward audit logging happens only when handlers return; asynchronous jobs log when execution starts, leaving queued work silent. The API exposes status only for a known job ID, with no global active/queued-operation inventory or admission/drain control. Source review independently confirmed the gap. Time limits and quiet logs do not prove that current operations are absent.
+
+The healthy source agent remains running. No namespace, credential copy, RBAC change, endpoint change or Helm revision was applied; the five-minute rollback gate was not entered. Proceed only after establishing quiescence through a reviewed mechanism, or after explicit acceptance of potentially interrupting active operations. That acceptance was not included in the approved idle-check condition. Infisical upgrade remains paused and retained PVCs remain excluded.
+
 ## Verification-helper preservation
 
 The active worktree's two untracked activation-helper source files were copied byte-for-byte to a private task archive under the Codex task-artifacts directory. Copies use `.go.txt`, with SHA-256 manifest, directory mode0700 and files0600. Independent source review found no embedded actual credential literal. No environment/session files, credentials, binaries or database data were included.
