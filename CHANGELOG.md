@@ -10,6 +10,9 @@ All notable KuchDesk changes are documented in this file.
 
 ### Added
 
+- Add an opt-in Infisical-to-Helm integration probe that checks Operator sync,
+  a Kubernetes Secret reference, and workload readiness without placing a
+  secret value in Helm. Scope the Operator to `development-tools` for this test.
 - Add a disabled-by-default HTTPS host control plane for typed Infisical
   management and Doctor checks, plus an authenticated TLS bridge in the
   Kubernetes agent. Helm uses only Secret and CA ConfigMap references; no
