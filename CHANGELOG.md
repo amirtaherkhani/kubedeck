@@ -46,6 +46,8 @@ All notable KuchDesk changes are documented in this file.
 
 ### Fixed
 
+- Apply enrollment interval edits to the active wait without restarting the controller, preserving elapsed time, retry backoff and server Retry-After limits.
+
 - Avoid declaring JSON on bodyless Infisical auth requests, fixing the deployed empty-JSON parser rejection; report sanitized HTTP status and fixed auth endpoint on failure.
 
 - Support the official Infisical browser Copy-to-clipboard fallback through a hidden user-run terminal prompt, with server authority validation before private session persistence.
