@@ -1,8 +1,9 @@
 # User-run Infisical browser login (v0.151.0)
 
-Run the local command below yourself. It prints an official Infisical login URL;
-open that URL in your browser, complete your normal login/MFA/SSO, and select the
-approved organization. Keep the terminal open. No password or token is entered
+Run the local command below yourself. On macOS it opens your default browser
+and also prints the exact official login URL. Complete your normal login/MFA/SSO
+and select the approved organization. If opening fails, it clearly reports the
+failure and keeps the printed URL usable for manual opening. Keep the terminal open. No password or token is entered
 in chat, copied from developer tools, or passed as a shell argument.
 
 ```sh
@@ -39,11 +40,31 @@ access token is not reported as authenticated simply because refresh is availabl
 Normal controller refresh remains separate. Dry-run reconciliation explicitly
 reports `humanAuthority:"not_checked"`; a planned identity is never Admin proof.
 
-If the browser cannot reach the local callback, allow the site's loopback/local
-network access if your browser asks, or retry the same command in a browser on
-this Mac. Do not copy the browser's fallback token into chat or extract storage.
-The listener expires after ten minutes; Ctrl-C cancels it. Unsupported login/MFA
-flows remain in the official UI; incomplete MFA or policy denial fails closed.
+The terminal prints only fixed callback stages:
+
+- `callback_waiting`: listener ready; no valid callback received yet.
+- `callback_preflight_received`: the browser reached the listener's preflight.
+- `callback_rejected_origin`, `callback_rejected_host`, `callback_rejected_route`,
+  `callback_rejected_payload` or `callback_rejected_scope`: specific validation
+  failed; no credentials or incoming field values are printed.
+- `callback_received`: a well-formed, correctly scoped candidate reached the server checks.
+- `callback_server_validation_failed`: use the sanitized final JSON status to
+  distinguish denied, expired, unavailable or incomplete MFA.
+- `callback_session_saved`: validated private state was persisted.
+- `callback_timeout_or_cancel`: this attempt has ended; its old URL cannot work.
+
+If Infisical displays a fallback token while the terminal is waiting, do not
+paste it into chat or this terminal. This command deliberately uses the automatic
+callback only. The fallback page alone does not identify whether the POST was
+blocked by the browser, sent to an expired listener, or rejected. Report only the
+fixed callback stages, never the token. Browser request telemetry or those stages
+are needed to identify the actual cause; do not disable browser protections.
+
+The listener expires after ten minutes; Ctrl-C cancels it. Once an attempt has
+ended, run the command yourself again and use its newly generated URL. Never
+reuse an old port or start a second command while the first remains active.
+Unsupported login/MFA flows remain in the official UI; incomplete MFA or policy
+denial fails closed.
 
 ## Supported protocol and boundaries
 

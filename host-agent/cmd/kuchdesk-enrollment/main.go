@@ -22,6 +22,10 @@ func main() {
 	}
 }
 func run(args []string, stdout, stderr io.Writer) error {
+	return runWithBrowser(args, stdout, stderr, openBrowser)
+}
+
+func runWithBrowser(args []string, stdout, stderr io.Writer, opener browserOpener) error {
 	flags := flag.NewFlagSet("kuchdesk-enrollment", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	origin := flags.String("url", "", "Infisical HTTPS origin")
@@ -78,9 +82,8 @@ func run(args []string, stdout, stderr io.Writer) error {
 		}
 		defer store.Close()
 		report, e := enrollment.BrowserLogin(ctx, h, p, store, func(loginURL string) error {
-			_, err := fmt.Fprintf(stderr, "Open this official login URL in your browser:\n%s\nComplete login and MFA, then select organization %s. Keep this terminal open.\nEnter credentials only in the official page; tokens are saved privately on this Mac.\n", loginURL, p.OrganizationID)
-			return err
-		})
+			return announceBrowserLogin(ctx, stderr, loginURL, p.OrganizationID, opener)
+		}, func(stage string) { _, _ = fmt.Fprintln(stderr, stage) })
 		if err := json.NewEncoder(stdout).Encode(report); err != nil {
 			return errors.New("status_output_failed")
 		}
