@@ -84,6 +84,66 @@ func TestMCPDiscoveryAndRedactedErrors(t *testing.T) {
 	}
 }
 
+func TestDoctorScopesExposeOnlySupportedToolsWithoutInfisicalCredentials(t *testing.T) {
+	for _, tc := range []struct {
+		scope string
+		want  []string
+	}{
+		{"doctor-readonly", []string{"kuchdesk_doctor", "kuchdesk_doctor_verify"}},
+		{"doctor-repair", []string{"kuchdesk_deploy_plan", "kuchdesk_deploy_preflight", "kuchdesk_deploy_start", "kuchdesk_job_status", "kuchdesk_cancel_job", "kuchdesk_doctor", "kuchdesk_doctor_validate_plan", "kuchdesk_doctor_verify"}},
+	} {
+		t.Run(tc.scope, func(t *testing.T) {
+			ctx := context.Background()
+			runner := async.NewRunner(ctx, 2, 4)
+			defer runner.Close()
+			clientTransport, serverTransport := mcp.NewInMemoryTransports()
+			serverSession, err := newServerWithScope(nil, runner, deployConfig{}, fakeDoctorRunner{doctor.Report{SchemaVersion: "kuchdesk.doctor/v2", Healthy: true}}, tc.scope).Connect(ctx, serverTransport, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer serverSession.Close()
+			client, err := mcp.NewClient(&mcp.Implementation{Name: "scope-test"}, nil).Connect(ctx, clientTransport, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer client.Close()
+			catalog, err := client.ListTools(ctx, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(catalog.Tools) != len(tc.want) {
+				t.Fatalf("scope=%s exposed %d tools, want %d", tc.scope, len(catalog.Tools), len(tc.want))
+			}
+			expected := make(map[string]bool, len(tc.want))
+			for _, name := range tc.want {
+				expected[name] = true
+			}
+			for _, tool := range catalog.Tools {
+				if !expected[tool.Name] || tool.InputSchema == nil {
+					t.Fatalf("scope=%s exposed unsupported or untyped tool %s", tc.scope, tool.Name)
+				}
+			}
+			prompts, err := client.ListPrompts(ctx, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.scope == "doctor-readonly" && len(prompts.Prompts) != 0 || tc.scope == "doctor-repair" && (len(prompts.Prompts) != 1 || prompts.Prompts[0].Name != "kuchdesk_doctor_repair") {
+				t.Fatalf("scope=%s prompts=%+v", tc.scope, prompts.Prompts)
+			}
+			result, err := client.CallTool(ctx, &mcp.CallToolParams{Name: "kuchdesk_doctor", Arguments: map[string]any{"domain": "infisical.local.dev", "kubeContext": "docker-desktop", "registryUrl": "http://127.0.0.1:5001", "diskPath": "/tmp"}})
+			if err != nil || result.IsError {
+				t.Fatalf("Doctor unavailable in %s: %v %+v", tc.scope, err, result)
+			}
+			if tc.scope == "doctor-repair" {
+				start, err := client.CallTool(ctx, &mcp.CallToolParams{Name: "kuchdesk_deploy_start", Arguments: map[string]any{"profile": "agent.json", "confirm": "kuchdesk-agent/development-tools"}})
+				if err != nil || !start.IsError {
+					t.Fatalf("disabled repair accepted: %v %+v", err, start)
+				}
+			}
+		})
+	}
+}
+
 type fakeDoctorRunner struct{ report doctor.Report }
 
 func (f fakeDoctorRunner) Run(context.Context, doctor.Config) (doctor.Report, error) {
