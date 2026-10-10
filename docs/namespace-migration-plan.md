@@ -91,3 +91,26 @@ Read-only inventory on 2026-10-10 found three tracked `Chart.yaml` files and no 
 The upstream release commands and pinned versions are recorded in `lab/README.md`; the Operator's specialized rendering/upgrade instructions are in its own README. No new chart was fetched or installed for this inventory. Retained broker/database PVCs are not chart definitions or proof of current releases.
 
 Operational backup defaults are [native local exports without an added encrypted container](backup-defaults.md), outside Git with restrictive permissions and restoration checks. No backup was created for the k6 move. Infisical upgrade work is paused; see the [storage audit and checkpoint](platform-storage-audit-2026-10-10.md).
+
+## Next approval bundle: stateless KuchDesk agent
+
+Prepared, not applied. Fresh inspection confirms release `kuchdesk-agent` revision **6**, chart **0.13.0**, source Deployment 1/1 ready and target namespace `platform-tools` absent.
+
+Proposed smallest remaining stage:
+
+- Create `platform-tools`; move Deployment, Service and ServiceAccount `kuchdesk-agent` from `development-tools`, retaining the same image, configuration and names. Keep the Helm release record in `development-tools` using a reviewed namespace post-renderer, as with k6.
+- Copy existing Secrets `kuchdesk-agent-auth` and `kuchdesk-host-bridge-token` to the target namespace through an in-memory private workflow; reuse their existing data without printing, rotating or placing it in Git. Retain the source copies for rollback. Copy ConfigMap `kuchdesk-host-bridge-ca`, which contains the public trust certificate. No private key, certificate issuance, CA/Issuer or Infisical identity change is included.
+- Change only the namespace of the `kuchdesk-agent` ServiceAccount subject in ClusterRoleBinding `kuchdesk-agent-admin` and RoleBinding `kube-system/kuchdesk-agent-coredns`. Preserve `cluster-admin` and the existing CoreDNS Role/rules exactly; do not add privileges. This is an explicit security approval gate, including the one binding in kube-system; no CoreDNS ConfigMap or other system resource changes are proposed.
+- Keep `development-tools`, the Infisical reader ServiceAccount, its RBAC/auth restrictions, Grafana's reference, all PVCs and other workloads unchanged. Update only relevant client namespace/port-forward references. The internal Service DNS moves to `kuchdesk-agent.platform-tools.svc`; do not silently assume external clients already use it.
+
+Expect a brief interruption to the agent API/SSE stream, followed by reconnect. Its in-memory operation history is not durable; confirm no active operations before stopping it and defer if the idle state cannot be established. No unrelated application service should be restarted.
+
+Health gates: target 1/1 Ready, `/healthz` and `/readyz`, authenticated cluster snapshot and SSE reconnect, Host bridge/Infisical metadata reads, Doctor 8/8, unchanged CoreDNS configuration, and unchanged Infisical/K8 permissions. Allow five minutes for readiness. On failure, roll Helm back to revision **6** in `development-tools`, restore the original two RBAC subjects and client references, and verify source readiness/health. Preserve the old namespace and Secret copies; no automatic data cleanup.
+
+Offline manifest comparison prepared from the exact current release changes only the three resource namespace fields and two RBAC subjects; the CoreDNS Role remains identical. Secret values were not read for preparation. The target Secret/ConfigMap copies and live security changes require the specific approval above. No gated action has been executed.
+
+## Verification-helper preservation
+
+The active worktree's two untracked activation-helper source files were copied byte-for-byte to a private task archive under the Codex task-artifacts directory. Copies use `.go.txt`, with SHA-256 manifest, directory mode0700 and files0600. Independent source review found no embedded actual credential literal. No environment/session files, credentials, binaries or database data were included.
+
+This is historical acceptance-test source, not a supported production command. It has hard-coded installation IDs/paths, mutable authentication/probe modes, best-effort cleanup and direct session reads with fewer safeguards than production storage code. Preserve it for evidence; do not execute it without fresh review. Original files and worktree remain intact; no cleanup was performed.
