@@ -1,8 +1,9 @@
 # Proposed Operator TokenRequest narrowing
 
-**Not applied. Separate informed approval is required for these existing Role
-changes.** The earlier activation approval remains valid. Human-session entry and
-consumer cutover remain paused. This change is not an Infisical/Operator upgrade.
+**Applied with explicit user approval on 2026-10-10, Helm revision 4.**
+See the [rollout and observability audit](infisical-observability-audit-2026-10-10.md).
+The proposal and pre-apply evidence below are retained for review. Human-session
+handoff is still pending. This change is not an Infisical/Operator upgrade.
 
 ## Verified live ownership and consumers
 
