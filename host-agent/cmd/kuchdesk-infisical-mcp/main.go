@@ -342,6 +342,25 @@ func newServerWithServices(service *infisical.Service, runner *async.Runner, cfg
 	return server
 }
 
+// Scope is applied before an MCP client connects. In Doctor modes the
+// Infisical tools are removed, so no credential backend is needed.
+func newServerWithScope(service *infisical.Service, runner *async.Runner, cfg deployConfig, diagnostics doctorRunner, scope string) *mcp.Server {
+	server := newServerWithServices(service, runner, cfg, diagnostics)
+	switch scope {
+	case "all":
+	case "doctor-repair", "doctor-readonly":
+		server.RemoveTools("infisical_capabilities", "infisical_list_secret_names", "infisical_start_list_secret_names", "infisical_job_status", "infisical_cancel_job")
+		if scope == "doctor-readonly" {
+			server.RemoveTools("kuchdesk_deploy_plan", "kuchdesk_deploy_preflight", "kuchdesk_deploy_start", "kuchdesk_job_status", "kuchdesk_cancel_job", "kuchdesk_doctor_validate_plan")
+			server.RemovePrompts("kuchdesk_doctor_repair")
+			server.RemoveResources("kuchdesk://doctor/prompt/v2")
+		}
+	default:
+		panic("unsupported MCP tool scope")
+	}
+	return server
+}
+
 func doctorPromptConfig(arguments map[string]string) (doctor.Config, error) {
 	config := doctor.Config{Domain: arguments["domain"], KubeContext: arguments["kubeContext"], RegistryURL: arguments["registryUrl"], DiskPath: arguments["diskPath"]}
 	if raw := strings.TrimSpace(arguments["services"]); raw != "" {
@@ -382,20 +401,33 @@ func publicError(err error) error {
 }
 
 func main() {
-	baseURL := flag.String("url", "", "Infisical HTTPS origin (required)")
+	baseURL := flag.String("url", "", "Infisical HTTPS origin (required only with -scope all)")
+	scope := flag.String("scope", "all", "MCP tool scope: all, doctor-repair, or doctor-readonly")
 	flag.Parse()
-	if *baseURL == "" || flag.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "provide -url with the Infisical HTTPS origin")
+	if (*scope != "all" && *scope != "doctor-repair" && *scope != "doctor-readonly") || flag.NArg() != 0 {
+		fmt.Fprintln(os.Stderr, "provide a valid -scope and no positional arguments")
 		os.Exit(2)
 	}
-	client, err := hostClient(*baseURL, os.Getenv)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "invalid Infisical configuration:", err)
+	var service *infisical.Service
+	if *scope == "all" {
+		if *baseURL == "" {
+			fmt.Fprintln(os.Stderr, "provide -url with the Infisical HTTPS origin")
+			os.Exit(2)
+		}
+		client, err := hostClient(*baseURL, os.Getenv)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "invalid Infisical configuration:", err)
+			os.Exit(2)
+		}
+		service = infisical.NewService(client)
+	} else if *baseURL != "" {
+		fmt.Fprintln(os.Stderr, "-url is only valid with -scope all")
 		os.Exit(2)
 	}
 	runner := async.NewRunner(context.Background(), 4, 64)
 	defer runner.Close()
-	if err := newServerWithRunner(infisical.NewService(client), runner).Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+	cfg := deployConfig{ProfileDir: os.Getenv("KUCHDESK_DEPLOY_PROFILE_DIR"), Enabled: os.Getenv("KUCHDESK_DEPLOY_ENABLED") == "true", Runner: deploy.ExecRunner{}}
+	if err := newServerWithScope(service, runner, cfg, doctor.Service{}, *scope).Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		fmt.Fprintln(os.Stderr, "Infisical MCP server stopped")
 		os.Exit(1)
 	}

@@ -72,7 +72,7 @@ post-checks remain unresolved.
 
 `cmd/kuchdesk-infisical-mcp` is a separate, long-running stdio MCP server. It does not change the periodic DNS LaunchAgent or run as a network listener. It uses the official MCP Go SDK v1.6.0 and Infisical's documented REST API from the deployed v0.151.0 OpenAPI; the host-agent Go module now requires Go 1.25. The local client implements Universal Auth login, in-memory token renewal from `expiresIn`, restart re-login, one bounded retry of a read after HTTP 401, and a pause after a repeated 401. It does not assume a year-long access token.
 
-The CLI and MCP process use one explicitly selected credential backend. The
+The Infisical CLI and MCP `all` scope use one explicitly selected credential backend. The
 default `env` backend reads only the KuchDesk project's `.env` file. Find the
 project from the working directory or set `KUCHDESK_PROJECT_ROOT` to its
 absolute path. A missing `.env` leaves the client unconfigured; an existing
@@ -95,6 +95,17 @@ HTTPS origin separately:
 cd host-agent
 go run ./cmd/kuchdesk-infisical-mcp -url https://YOUR-INFISICAL-HOST
 ```
+
+The default `-scope all` exposes the Infisical name-listing tools, Doctor,
+and the opt-in deployment workflow. `-scope doctor-repair` exposes only Doctor
+and deployment tools, including the typed repair-plan validator and prompt;
+it needs no Infisical URL or credential. Deployment remains disabled unless
+`KUCHDESK_DEPLOY_ENABLED=true` is set with a trusted profile directory and an
+exact release/namespace confirmation. `-scope doctor-readonly` exposes only
+Doctor and post-check verification with the report schema; it does not offer
+repair tools or the repair prompt. For example, a local diagnosis can start
+with `go run ./cmd/kuchdesk-infisical-mcp -scope doctor-readonly`. These modes
+select tools in the server itself; no MCP client registration has been made.
 
 Restart the MCP stdio process after changing backend configuration or rotating
 an existing credential. Test locally with `kuchdesk-infisical ... capabilities`
