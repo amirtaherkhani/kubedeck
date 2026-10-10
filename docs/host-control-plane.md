@@ -26,7 +26,7 @@ after an authentication failure. Infisical enforces the machine identity's
 project role on every call; the host service also restricts project IDs when a
 project allowlist is configured. Project creation is a separate opt-in action.
 
-The network bridge is disabled by default. To enable it later, an operator
+The network bridge is disabled by default. To enable it, an operator
 must supply a host listener address, TLS certificate and private key, a
 dedicated bridge bearer token, and an explicit project allowlist. The agent
 needs only the bridge URL, a trusted CA certificate, and a separate bridge
@@ -34,11 +34,15 @@ bearer Secret referenced by name in Helm values. Its existing API bearer
 protects AI-facing routes. The chart does not accept a literal token or
 Infisical bootstrap pair. Both transports bound request and response sizes
 and timeouts. Host availability affects new commands, not existing Operator
-Secret synchronization.
+Secret synchronization. On this Mac, it is enabled with a dedicated bearer,
+certificate, and the existing home-lab project ID only. Other projects need
+[explicit onboarding](infisical-project-onboarding.md).
 
 Doctor is a separate host command using its existing typed checks. The agent
 can request a Doctor report through the same bridge, so a Helm-installed agent
 needs no Docker socket or host kubeconfig. Chart render tests must prove the
 bridge starts disabled and, when enabled, renders only Secret/ConfigMap
-references. A live rollout, listener, project role, MCP registration, and DNS
-probe remain separate operator decisions.
+references. The live rollout, listener, home-lab Project Admin membership,
+`doctor-repair` MCP registration, and a temporary DNS probe were verified.
+The probe was removed after its exact record and wildcard fallback were
+checked. Cross-project grants and project creation remain disabled.
