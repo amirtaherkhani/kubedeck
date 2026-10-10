@@ -37,7 +37,7 @@ The runtime on Docker Desktop Kubernetes consists of Grafana and its image rende
 
 - The `docker-desktop` Kubernetes context is selected and its node is Ready.
 - DNS resolves the generated `grafanaUrl` and `infisicalUrl` hosts to the ingress address. For a private CA, trust its root certificate on the client host.
-- `platform-secrets/infisical-secrets`, `platform-secrets/infisical-postgresql`, and `platform-secrets/infisical-universal-auth` exist. Provision credentials through the established secret workflow; do not place them in Helm values or Git.
+- `platform-secrets/infisical-secrets`, `platform-secrets/infisical-postgresql`, and `platform-secrets/infisical-universal-auth` exist. Provision credentials through the established secret workflow; do not place them in Helm values or Git. The Operator scope includes `development-tools` for the opt-in [Infisical-to-Helm probe](tests/infisical-helm-probe/README.md); the probe uses a dedicated Infisical path and creates no public Service.
 - A new Infisical PostgreSQL installation needs a default StorageClass. The checked-in StatefulSet manifest leaves its class unset. On an existing installation, keep the bound PVC and StatefulSet template unchanged; this field is immutable and reapplying the manifest will fail.
 - Set `INFISICAL_PROJECT_SLUG` and `INFISICAL_ENV_SLUG` to the active Infisical project and environment. Override the chart's sample scope for every deployment.
 
