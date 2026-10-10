@@ -76,7 +76,8 @@ helm upgrade --install traefik traefik/traefik -n platform-system --version 39.0
 kubectl apply -f .generated/manifests/20-default-tlsstore.json -f core/exposure/docker-desktop/traefik-lan.yaml
 helm upgrade --install infisical infisical-helm-charts/infisical -n platform-secrets --version 0.4.2 -f apps/platform/infisical/values.yaml -f .generated/infisical-values.json --wait
 kubectl apply -f apps/platform/infisical/manifests/https-redirect.yaml
-helm upgrade --install infisical-operator infisical-helm-charts/secrets-operator -n platform-secrets --version 0.11.11 -f apps/platform/infisical-operator/values.yaml --wait
+# Infisical Operator: use the approval-gated, checksum-pinned local-chart workflow
+# in apps/platform/infisical-operator/README.md; a bare upstream upgrade restores broad TokenRequest grants.
 helm upgrade --install loki grafana/loki -n observability --version 7.0.0 -f apps/observability/loki/values.yaml --wait
 helm upgrade --install monitoring prometheus-community/kube-prometheus-stack -n observability --version 87.15.1 -f apps/observability/kube-prometheus-stack/values.yaml --wait
 kubectl apply -f .generated/manifests/30-dns-blackbox-config.json
