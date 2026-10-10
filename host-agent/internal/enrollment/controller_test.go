@@ -16,6 +16,10 @@ type fakeAPI struct {
 	writes, enrolls, creates int
 	fail                     string
 	extra                    bool
+	lostResponse             string
+	k8HumanWrites            int
+	machineDenied            bool
+	onMembers                func(string)
 }
 
 func (f *fakeAPI) Projects(context.Context, int) ([]Project, error) { return f.projects, nil }
@@ -27,8 +31,14 @@ func (f *fakeAPI) CreateIdentity(_ context.Context, name string) (Identity, erro
 	return i, nil
 }
 func (f *fakeAPI) Memberships(_ context.Context, p string, human bool) ([]Membership, error) {
+	if f.onMembers != nil {
+		f.onMembers(p)
+	}
 	if human && f.human[p] {
 		return f.members[p], nil
+	}
+	if !human && f.machineDenied {
+		return nil, ErrDenied
 	}
 	for _, m := range f.members[p] {
 		if m.IdentityID == "host" && m.Exact("admin") {
@@ -44,6 +54,9 @@ func (f *fakeAPI) EnrollHuman(_ context.Context, p string) error {
 }
 func (f *fakeAPI) SetMembership(_ context.Context, p, id, role string, exists, human bool) error {
 	f.writes++
+	if id != "host" && human {
+		f.k8HumanWrites++
+	}
 	if f.fail == p {
 		return ErrUnavailable
 	}
@@ -55,6 +68,10 @@ func (f *fakeAPI) SetMembership(_ context.Context, p, id, role string, exists, h
 		}
 	}
 	f.members[p] = append(f.members[p], m)
+	if f.lostResponse == id {
+		f.lostResponse = ""
+		return ErrUnavailable
+	}
 	return nil
 }
 func (f *fakeAPI) ReadOnlyIdentity(context.Context, Project, string) error {
@@ -252,5 +269,59 @@ func TestImmediateWriteAuthorizationSeesPolicyRevocation(t *testing.T) {
 	putPolicy(t, c.PolicyPath, changed)
 	if e := c.authorizeWrite(p, "two"); e == nil {
 		t.Fatal("disabled apply permitted a write")
+	}
+}
+
+func TestAppliedHostGrantLostResponseRecoversAfterRestart(t *testing.T) {
+	p := testPolicy()
+	p.Include = []string{"one"}
+	c, f := newTestController(t, p)
+	f.lostResponse = "host"
+	if r := c.Cycle(context.Background()); r.Status != "partial_failure" || f.writes != 1 || len(c.Access.Projects()) != 0 {
+		t.Fatal("ambiguous grant was not isolated", r)
+	}
+	restarted, e := NewController(f, c.Store, c.Access, c.PolicyPath, p)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if r := restarted.Cycle(context.Background()); r.Status != "ready" || f.writes != 2 || !c.Access.Projects()["one"] {
+		t.Fatal("observed Host grant did not resume K8 enrollment", r)
+	}
+	if f.k8HumanWrites != 0 {
+		t.Fatal("K8 grant used human authority after Host enrollment")
+	}
+	if r := restarted.Cycle(context.Background()); r.Status != "ready" || f.writes != 2 {
+		t.Fatal("recovered writes were replayed")
+	}
+}
+
+func TestExistingHostMembershipCannotFallbackToHumanK8Grant(t *testing.T) {
+	p := testPolicy()
+	p.Include = []string{"one"}
+	c, f := newTestController(t, p)
+	f.machineDenied = true
+	f.human["one"] = true
+	f.members["one"] = []Membership{{IdentityID: "host", Roles: []Role{{Role: "admin"}}}}
+	if r := c.Cycle(context.Background()); r.Status != "partial_failure" || f.writes != 0 || len(c.Access.Projects()) != 0 {
+		t.Fatal("machine denial escalated K8 provisioning to human authority", r)
+	}
+}
+
+func TestRevokedProjectWithdrawnBeforeLaterProjectChecks(t *testing.T) {
+	c, f := newTestController(t, testPolicy())
+	c.Cycle(context.Background())
+	f.members["one"] = f.members["one"][:1]
+	checked := false
+	f.onMembers = func(project string) {
+		if project == "two" {
+			checked = true
+			if c.Access.Projects()["one"] {
+				t.Error("revoked project remained eligible during later checks")
+			}
+		}
+	}
+	c.Cycle(context.Background())
+	if !checked {
+		t.Fatal("later project was not checked")
 	}
 }

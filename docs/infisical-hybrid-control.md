@@ -38,7 +38,11 @@ separate writes with read-back verification.
 
 The official Go SDK v0.8.0 authentication package was evaluated. Dependency
 installation was blocked by HTTP 403 for `google.golang.org/api@v0.267.0`;
-a direct-source attempt did not complete. This change therefore retains the
+a direct-source attempt did not complete. A follow-up official archive check
+failed DNS in the restricted environment; escalation was rejected because the
+user prohibited bypassing denied network access. Cached SDK source confirms
+that even its auth package imports the shared error/util dependency chain.
+No alternate mirror, dependency substitution, or network bypass was used. This change therefore retains the
 existing bounded Universal Auth client, rather than claiming SDK adoption.
 The typed enrollment adapter is isolated behind `Backend` so supported SDK
 methods can replace REST methods after dependency and transport review.
@@ -88,7 +92,10 @@ See `host-agent/config/enrollment-policy.example.json`. Start with explicit IDs,
 invalid JSON or changed organization/version/identity bindings deny access.
 Identity binding changes require restart and reviewed state migration.
 Includes/all-project discovery authorize nothing outside the approved policy;
-excludes always win. Policy does not remove upstream memberships when excluding
+excludes always win. Eligibility is withdrawn as each project is revalidated, so an observed
+revocation cannot stay eligible while later projects are checked. Upstream
+changes otherwise become visible on the next bounded polling cycle.
+Policy does not remove upstream memberships when excluding
 a project; it removes bridge eligibility.
 
 The Host identity must already exist from the manual Host bootstrap. Its

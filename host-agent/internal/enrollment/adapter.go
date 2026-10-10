@@ -88,7 +88,7 @@ func (a *API) Projects(ctx context.Context, max int) ([]Project, error) {
 		if e := a.call(ctx, false, "GET", "/api/v1/organization-admin/projects", url.Values{"offset": {strconv.Itoa(offset)}, "limit": {strconv.Itoa(n)}}, nil, &res); e != nil {
 			return nil, e
 		}
-		if res.Count == nil || *res.Count > max || *res.Count < 0 || len(res.Projects) > n {
+		if res.Count == nil || *res.Count > max || *res.Count < offset+len(res.Projects) || len(res.Projects) > n {
 			return nil, errors.New("discovery_limit_or_contract")
 		}
 		for _, p := range res.Projects {
@@ -113,19 +113,21 @@ func (a *API) Identities(ctx context.Context) ([]Identity, error) {
 		Identities []struct {
 			Identity Identity `json:"identity"`
 		} `json:"identities"`
-		TotalCount int `json:"totalCount"`
+		TotalCount *int `json:"totalCount"`
 	}
 	if e := a.call(ctx, false, "GET", "/api/v1/identities", url.Values{"orgId": {a.OrganizationID}}, nil, &res); e != nil {
 		return nil, e
 	}
-	if len(res.Identities) != res.TotalCount || len(res.Identities) > 1000 {
+	if res.TotalCount == nil || len(res.Identities) != *res.TotalCount || len(res.Identities) > 1000 {
 		return nil, ErrUnavailable
 	}
 	out := []Identity{}
+	seen := map[string]bool{}
 	for _, i := range res.Identities {
-		if !identifier.MatchString(i.Identity.ID) {
+		if !identifier.MatchString(i.Identity.ID) || seen[i.Identity.ID] {
 			return nil, ErrUnavailable
 		}
+		seen[i.Identity.ID] = true
 		out = append(out, i.Identity)
 	}
 	return out, nil
@@ -155,7 +157,7 @@ func (a *API) Memberships(ctx context.Context, project string, human bool) ([]Me
 		if e != nil {
 			return nil, e
 		}
-		if res.Total == nil || *res.Total > 2000 || len(res.Items) > 100 {
+		if res.Total == nil || *res.Total > 2000 || *res.Total < offset+len(res.Items) || len(res.Items) > 100 {
 			return nil, ErrUnavailable
 		}
 		for _, m := range res.Items {

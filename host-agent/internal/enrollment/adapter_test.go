@@ -157,3 +157,51 @@ func TestSelfEnrollmentUsesOnlyHumanSession(t *testing.T) {
 		t.Fatal("unverified version accepted")
 	}
 }
+
+func TestIdentityDedupAndMembershipPaginationContracts(t *testing.T) {
+	invalid := false
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/v1/auth/universal-auth/login":
+			fmt.Fprint(w, `{"accessToken":"machine-test","expiresIn":3600,"tokenType":"Bearer"}`)
+		case "/api/v1/identities":
+			fmt.Fprint(w, `{"identities":[{"identity":{"id":"same"}},{"identity":{"id":"same"}}],"totalCount":2}`)
+		case "/api/v1/projects/project/identity-memberships":
+			calls++
+			items := []Membership{}
+			if invalid {
+				fmt.Fprint(w, `{"identityMemberships":[],"totalCount":-1}`)
+				return
+			}
+			if r.URL.Query().Get("offset") == "0" {
+				for i := 0; i < 100; i++ {
+					items = append(items, Membership{IdentityID: fmt.Sprintf("id-%d", i)})
+				}
+			} else {
+				items = append(items, Membership{IdentityID: "last"})
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"identityMemberships": items, "totalCount": 101})
+		default:
+			t.Errorf("unexpected route %s", r.URL.Path)
+			w.WriteHeader(404)
+		}
+	}))
+	defer srv.Close()
+	machine, _ := infisical.NewClient(srv.URL, "test-id", "test-bootstrap", srv.Client())
+	h, _ := NewTransport(srv.URL, srv.Client())
+	h.MinInterval = 0
+	a := API{HTTP: h, Machine: machine, Version: "v0.151.0", OrganizationID: "org"}
+	if _, e := a.Identities(context.Background()); e == nil {
+		t.Fatal("duplicate identity IDs accepted")
+	}
+	items, e := a.Memberships(context.Background(), "project", false)
+	if e != nil || len(items) != 101 || calls != 2 {
+		t.Fatal("membership pagination failed", e)
+	}
+	invalid = true
+	if _, e = a.Memberships(context.Background(), "project", false); e == nil {
+		t.Fatal("negative count accepted")
+	}
+}

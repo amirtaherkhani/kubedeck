@@ -215,6 +215,7 @@ func (c *Controller) Cycle(ctx context.Context) Report {
 		if !p.Allows(project.ID) {
 			continue
 		}
+		c.Access.Withdraw(project.ID)
 		result, err := c.project(ctx, p, project, k8ID)
 		report.Results = append(report.Results, result)
 		if err != nil {
@@ -309,10 +310,22 @@ func (c *Controller) project(ctx context.Context, p Policy, project Project, k8 
 	}{{p.HostIdentityID, "admin", &entry.HostSeen}, {k8, "viewer", &entry.K8Seen}} {
 		m, exists := findMembership(items, target.id)
 		if exists && m.Exact(target.role) {
+			// Conclusive read-back completes this write, including a lost response.
+			if entry.Pending == target.id {
+				entry.Pending = ""
+			}
 			*target.seen = true
 			c.ledger.Projects[project.ID] = entry
 			if e = c.save(); e != nil {
 				return finish(e)
+			}
+			if target.id == p.HostIdentityID && human {
+				// Existing membership is not evidence that machine auth works.
+				human = false
+				items, e = c.Backend.Memberships(ctx, project.ID, false)
+				if e != nil {
+					return finish(e)
+				}
 			}
 			continue
 		}

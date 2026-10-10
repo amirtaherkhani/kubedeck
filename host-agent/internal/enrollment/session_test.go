@@ -117,3 +117,30 @@ func TestSessionRevocationRequiresRelogin(t *testing.T) {
 		t.Fatal("revoked session retried")
 	}
 }
+
+func TestSessionExpiryAndRotatedSaveFailure(t *testing.T) {
+	now := time.Now()
+	m := &memoryStore{}
+	calls := 0
+	s, _ := NewSession(SessionData{Version: "v0.166.3", OrganizationID: "org", AccessToken: testJWT(now.Add(time.Minute)), RefreshToken: "old-test"}, m, func(context.Context, string) (RefreshResult, error) {
+		calls++
+		m.fail = true // remote rotation succeeded; local durable commit fails
+		return RefreshResult{Token: testJWT(now.Add(time.Hour)), RefreshToken: "new-test", OrganizationID: "org"}, nil
+	})
+	s.now = func() time.Time { return now }
+	if _, e := s.Token(context.Background()); e != nil || calls != 0 {
+		t.Fatal("valid session refreshed")
+	}
+	now = now.Add(time.Minute)
+	if _, e := s.Token(context.Background()); !errors.Is(e, ErrExpired) || calls != 1 {
+		t.Fatal("failed rotation commit was accepted")
+	}
+	if !m.data.Pending || m.data.RefreshToken != "old-test" {
+		t.Fatal("durable crash marker lost")
+	}
+	m.fail = false
+	restarted, _ := NewSession(m.data, m, s.refresh)
+	if _, e := restarted.Token(context.Background()); !errors.Is(e, ErrExpired) || calls != 1 {
+		t.Fatal("restart reused uncertain rotated credential")
+	}
+}

@@ -104,6 +104,14 @@ type Access struct {
 }
 
 func (a *Access) Publish(ids map[string]bool) { a.mu.Lock(); defer a.mu.Unlock(); a.verified = ids }
+
+// Withdraw immediately removes eligibility while this project's authority is checked.
+func (a *Access) Withdraw(id string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	delete(a.verified, id)
+}
+
 func (a *Access) Projects() map[string]bool {
 	p, e := LoadPolicy(a.Path)
 	if e != nil || !sameBinding(p, a.Binding) {
