@@ -269,3 +269,16 @@ permissions and literal `KEY=value` syntax used for credentials. File metadata i
 Process environment changes require a restart; enrollment include/exclude
 policy continues to reload independently. Cluster processes use Helm values,
 not the Host credential file.
+
+### Explicit Host Agent Admin login
+
+`kuchdesk-host-agent admin-login --project-root /absolute/project` opens the
+configured official Infisical browser login and provides hidden paste recovery.
+You can instead set `KUCHDESK_PROJECT_ROOT` to an absolute root and run the
+installed binary from any directory. Use `admin-login --help` for usage.
+This is an explicit interactive command: ordinary DNS reconciliation and daemon
+startup never prompt. It reuses the enrollment CLI implementation, requires an
+interactive terminal and existing private enrollment policy/state, and refuses
+a competing controller writer. Stop the controller before login, then resume it
+after successful validation; this command does not manage service lifecycle.
+See [human login](../docs/infisical-human-login.md) for browser recovery and status.

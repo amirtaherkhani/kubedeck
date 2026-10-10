@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/amirtaherkhani/kuchdesk/host-agent/internal/enrollmentcli"
 	"io"
 	"net"
 	"net/http"
@@ -40,6 +41,14 @@ type apiClient struct {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "admin-login" {
+		if err := runAdminLogin(os.Args[2:], os.Stdout, os.Stderr, enrollmentcli.Run); err != nil {
+			fmt.Fprintln(os.Stderr, "host-agent admin login failed:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	cfg, err := parseConfig(os.Args[1:])
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "host-agent configuration failed:", err)

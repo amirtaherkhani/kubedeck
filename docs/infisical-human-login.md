@@ -1,6 +1,22 @@
 # User-run Infisical browser login (v0.151.0)
 
-From the project root, run:
+The Host Agent provides an explicit login command. From any directory, run the
+installed binary with the configured absolute project root:
+
+```sh
+KUCHDESK_PROJECT_ROOT=/Users/mac/Documents/GitHub/kuchdesk \
+  /Users/mac/.local/bin/kuchdesk-host-agent admin-login
+```
+
+Alternatively pass `admin-login --project-root /absolute/project`. The installed
+binary must include this command; rebuilding/installing it is a separate step.
+`admin-login --help` shows configuration without opening a browser. Ordinary DNS
+startup never prompts or performs human login. This command and the enrollment
+CLI use the same Go launcher, hidden input and authentication implementation.
+The root is explicit or comes from `KUCHDESK_PROJECT_ROOT`, never the current
+working directory or a guessed neighboring checkout.
+
+The existing project-root launcher remains compatible:
 
 ```sh
 ./infisical-login
@@ -22,8 +38,9 @@ both paths. If opening the browser fails, use the exact URL printed by this same
 attempt. Never use an old callback URL. Input waits up to five minutes; a timed
 out or expired attempt requires running this short command again yourself.
 
-The launcher expects `.kuchdesk/bin/kuchdesk-enrollment-easy` installed in this
-project. Missing binary, invalid site settings, missing/private policy or state,
+The optional wrapper invokes `~/.local/bin/kuchdesk-host-agent`; set
+`KUCHDESK_HOST_AGENT` to override its location. No separate enrollment binary
+is needed for login. Missing binary, invalid site settings, missing/private policy or state,
 and active writers fail before browser launch. Server rejection preserves prior
 session state. A success JSON must verify authentication, organization,
 AccessAllProjects and refresh availability; browser completion alone is not proof.

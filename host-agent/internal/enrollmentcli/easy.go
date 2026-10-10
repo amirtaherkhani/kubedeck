@@ -1,4 +1,4 @@
-package main
+package enrollmentcli
 
 import (
 	"context"
@@ -14,6 +14,9 @@ import (
 type loginSettings struct{ origin, policy, state string }
 
 func loadProjectLogin(root string) (loginSettings, error) {
+	if root == "" {
+		root = os.Getenv("KUCHDESK_PROJECT_ROOT")
+	}
 	if !filepath.IsAbs(root) {
 		return loginSettings{}, errors.New("absolute_project_root_required")
 	}
